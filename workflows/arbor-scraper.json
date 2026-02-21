@@ -1,0 +1,415 @@
+{
+  "name": "arbor-message-scraper",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": "everyXMinutes",
+        "interval": 15
+      },
+      "id": "Schedule",
+      "name": "Schedule",
+      "type": "n8n-nodes-base.cronTrigger",
+      "typeVersion": 1,
+      "position": [250, 100]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "https://knqhcipfgypzfszrwrsu.supabase.co/rest/v1/categories?select=id,name,keywords&limit=1"
+      },
+      "id": "Check Supabase",
+      "name": "Check Supabase",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [450, 100],
+      "credentials": {
+        "httpHeaderAuth": "supabaseHeaderAuth"
+      }
+    },
+    {
+      "parameters": {
+        "browserType": "chrome",
+        "headless": true,
+        "closeBrowserAfterCompletion": false
+      },
+      "id": "Open Browser",
+      "name": "Open Browser",
+      "type": "n8n-nodes-base.playwright",
+      "typeVersion": 1,
+      "position": [650, 100]
+    },
+    {
+      "parameters": {
+        "browserAction": "goto",
+        "url": "https://archbishop-cranmer-church-of-england-academy.uk.arbor.sc/?/guardians/home-ui/dashboard"
+      },
+      "id": "Navigate to Arbor",
+      "name": "Navigate to Arbor",
+      "type": "n8n-nodes-base.playwright",
+      "typeVersion": 1,
+      "position": [850, 100]
+    },
+    {
+      "parameters": {
+        "browserAction": "fill",
+        "selector": "input[type='email']",
+        "value": "={{ $env.ARBOR_EMAIL }}"
+      },
+      "id": "Fill Email",
+      "name": "Fill Email",
+      "type": "n8n-nodes-base.playwright",
+      "typeVersion": 1,
+      "position": [1050, 100]
+    },
+    {
+      "parameters": {
+        "browserAction": "fill",
+        "selector": "input[type='password']",
+        "value": "={{ $env.ARBOR_PASSWORD }}"
+      },
+      "id": "Fill Password",
+      "name": "Fill Password",
+      "type": "n8n-nodes-base.playwright",
+      "typeVersion": 1,
+      "position": [1250, 100]
+    },
+    {
+      "parameters": {
+        "browserAction": "click",
+        "selector": "button[type='submit']"
+      },
+      "id": "Click Login",
+      "name": "Click Login",
+      "type": "n8n-nodes-base.playwright",
+      "typeVersion": 1,
+      "position": [1450, 100]
+    },
+    {
+      "parameters": {
+        "browserAction": "wait",
+        "timeout": 5000
+      },
+      "id": "Wait for Dashboard",
+      "name": "Wait for Dashboard",
+      "type": "n8n-nodes-base.playwright",
+      "typeVersion": 1,
+      "position": [1650, 100]
+    },
+    {
+      "parameters": {
+        "browserAction": "goto",
+        "url": "https://archbishop-cranmer-church-of-england-academy.uk.arbor.sc/?/guardians/messages"
+      },
+      "id": "Navigate to Messages",
+      "name": "Navigate to Messages",
+      "type": "n8n-nodes-base.playwright",
+      "typeVersion": 1,
+      "position": [1850, 100]
+    },
+    {
+      "parameters": {
+        "browserAction": "extractData",
+        "selector": ".message-item",
+        "attributes": [
+          {
+            "name": "subject",
+            "selector": ".message-subject"
+          },
+          {
+            "name": "sender",
+            "selector": ".message-sender"
+          },
+          {
+            "name": "date",
+            "selector": ".message-date"
+          },
+          {
+            "name": "url",
+            "attribute": "href"
+          }
+        ]
+      },
+      "id": "Extract Messages",
+      "name": "Extract Messages",
+      "type": "n8n-nodes-base.playwright",
+      "typeVersion": 1,
+      "position": [2050, 100]
+    },
+    {
+      "parameters": {
+        "language": "javaScript",
+        "jsCode": "// Parse and clean extracted message data\nreturn $input.all().map(item => ({\n  messages: item.json.messages?.map(msg => ({\n    arbor_message_id: msg.url?.split('/').pop() || 'unknown',\n    subject: msg.subject?.trim() || '',\n    sender_name: msg.sender?.split('<')[0].trim() || '',\n    sender_email: msg.sender?.match(/<(.+?)>/)?.[1] || '',\n    received_at: new Date(msg.date || new Date()).toISOString(),\n    content: '', // Will be filled from detail page\n    attachments: [],\n    detail_url: msg.url\n  })) || []\n}));"
+      },
+      "id": "Parse Messages",
+      "name": "Parse Messages",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2250, 100]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "https://knqhcipfgypzfszrwrsu.supabase.co/rest/v1/messages?select=arbor_message_id&arbor_message_id=in.(\"{{ $node[\"Parse Messages\"].json.messages.map(m => m.arbor_message_id).join(\",\") }}\")",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabase"
+      },
+      "id": "Check Existing Messages",
+      "name": "Check Existing Messages",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [2450, 100],
+      "credentials": {
+        "supabase": "supabaseCredentials"
+      }
+    },
+    {
+      "parameters": {
+        "language": "javaScript",
+        "jsCode": "// Filter out duplicate messages\nconst existingIds = $node[\"Check Existing Messages\"].json.map(m => m.arbor_message_id);\nconst newMessages = $node[\"Parse Messages\"].json[0].messages.filter(\n  msg => !existingIds.includes(msg.arbor_message_id)\n);\n\nreturn [{ newMessages }];"
+      },
+      "id": "Filter Duplicates",
+      "name": "Filter Duplicates",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2650, 100]
+    },
+    {
+      "parameters": {
+        "loopProperty": "newMessages"
+      },
+      "id": "Loop Over Messages",
+      "name": "Loop Over Messages",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 1,
+      "position": [2850, 100]
+    },
+    {
+      "parameters": {
+        "browserAction": "goto",
+        "url": "={{ $node[\"Loop Over Messages\"].json.detail_url }}"
+      },
+      "id": "Navigate to Message Detail",
+      "name": "Navigate to Message Detail",
+      "type": "n8n-nodes-base.playwright",
+      "typeVersion": 1,
+      "position": [3050, 100]
+    },
+    {
+      "parameters": {
+        "browserAction": "extractData",
+        "selector": ".message-content",
+        "attributes": [
+          {
+            "name": "content",
+            "selector": ".message-body"
+          },
+          {
+            "name": "attachments",
+            "selector": ".attachments .attachment"
+          }
+        ]
+      },
+      "id": "Extract Message Detail",
+      "name": "Extract Message Detail",
+      "type": "n8n-nodes-base.playwright",
+      "typeVersion": 1,
+      "position": [3250, 100]
+    },
+    {
+      "parameters": {
+        "language": "javaScript",
+        "jsCode": "// Auto-categorize message based on keywords\nconst keywords = {\n  'Academic': ['homework', 'assignment', 'test', 'exam', 'grade', 'progress', 'report', 'results'],\n  'Events': ['trip', 'event', 'sports day', 'parents evening', 'concert', 'assembly', 'excursion'],\n  'Health': ['medical', 'illness', 'injury', 'nurse', 'first aid', 'hospital', 'doctor', 'health'],\n  'Admin': ['uniform', 'payment', 'consent', 'permission', 'form', 'document', 'fee'],\n  'Pastoral': ['behaviour', 'wellbeing', 'pastoral', 'safeguarding', 'conduct', 'discipline'],\n  'General': []\n};\n\nconst text = ($node[\"Loop Over Messages\"].json.subject + ' ' + ($node[\"Extract Message Detail\"].json.content || '')).toLowerCase();\n\nlet category = 'General';\nlet maxScore = 0;\n\nfor (const [cat, kws] of Object.entries(keywords)) {\n  const score = kws.filter(kw => text.includes(kw)).length;\n  if (score > maxScore) {\n    maxScore = score;\n    category = cat;\n  }\n}\n\nreturn [{\n  ...($node[\"Loop Over Messages\"].json),\n  content: $node[\"Extract Message Detail\"].json.content || '',\n  category: category,\n  attachments: $node[\"Extract Message Detail\"].json.attachments || []\n}];"
+      },
+      "id": "Auto-Categorize",
+      "name": "Auto-Categorize",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [3450, 100]
+    },
+    {
+      "parameters": {
+        "resource": "database",
+        "operation": "executeQuery",
+        "query": "INSERT INTO messages (arbor_message_id, subject, content, sender_name, sender_email, received_at, category_id, is_read, created_at, updated_at) SELECT '{{ $node[\"Auto-Categorize\"].json.arbor_message_id }}', '{{ $node[\"Auto-Categorize\"].json.subject }}', '{{ $node[\"Auto-Categorize\"].json.content }}', '{{ $node[\"Auto-Categorize\"].json.sender_name }}', '{{ $node[\"Auto-Categorize\"].json.sender_email }}', '{{ $node[\"Auto-Categorize\"].json.received_at }}', c.id, false, NOW(), NOW() FROM categories c WHERE c.name = '{{ $node[\"Auto-Categorize\"].json.category }}' RETURNING id;"
+      },
+      "id": "Insert Message",
+      "name": "Insert Message",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [3650, 100],
+      "credentials": {
+        "supabase": "supabaseCredentials"
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": [
+            {
+              "condition": "isNotEmpty",
+              "value1": "={{ $node[\"Auto-Categorize\"].json.attachments }}"
+            }
+          ]
+        }
+      },
+      "id": "Has Attachments",
+      "name": "Has Attachments",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [3850, 100]
+    },
+    {
+      "parameters": {
+        "loopProperty": "attachments"
+      },
+      "id": "Loop Over Attachments",
+      "name": "Loop Over Attachments",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 1,
+      "position": [3850, 300]
+    },
+    {
+      "parameters": {
+        "browserAction": "downloadFile",
+        "selector": "{{ $node[\"Loop Over Attachments\"].json.url }}"
+      },
+      "id": "Download Attachment",
+      "name": "Download Attachment",
+      "type": "n8n-nodes-base.playwright",
+      "typeVersion": 1,
+      "position": [4050, 300]
+    },
+    {
+      "parameters": {
+        "operation": "upload",
+        "bucket": "charlie-attachments",
+        "path": "={{ $node[\"Insert Message\"].json[0].id }}/{{ $node[\"Loop Over Attachments\"].json.filename }}"
+      },
+      "id": "Upload to Storage",
+      "name": "Upload to Storage",
+      "type": "n8n-nodes-base.supabaseStorage",
+      "typeVersion": 1,
+      "position": [4250, 300],
+      "credentials": {
+        "supabase": "supabaseCredentials"
+      }
+    },
+    {
+      "parameters": {
+        "resource": "database",
+        "operation": "executeQuery",
+        "query": "INSERT INTO attachments (message_id, filename, file_path, file_size, mime_type, created_at) VALUES ('{{ $node[\"Insert Message\"].json[0].id }}', '{{ $node[\"Loop Over Attachments\"].json.filename }}', '{{ $node[\"Upload to Storage\"].json.path }}', {{ $node[\"Loop Over Attachments\"].json.size }}, '{{ $node[\"Loop Over Attachments\"].json.mime_type }}', NOW());"
+      },
+      "id": "Insert Attachment Metadata",
+      "name": "Insert Attachment Metadata",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [4450, 300],
+      "credentials": {
+        "supabase": "supabaseCredentials"
+      }
+    },
+    {
+      "parameters": {
+        "resource": "database",
+        "operation": "executeQuery",
+        "query": "INSERT INTO sync_log (sync_started_at, sync_completed_at, messages_found, messages_new, status, created_at) VALUES (NOW() - INTERVAL '15 minutes', NOW(), {{ $node[\"Parse Messages\"].json[0].messages.length }}, {{ $node[\"Filter Duplicates\"].json[0].newMessages.length }}, 'success', NOW());"
+      },
+      "id": "Log Sync Success",
+      "name": "Log Sync Success",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [4650, 100],
+      "credentials": {
+        "supabase": "supabaseCredentials"
+      }
+    },
+    {
+      "parameters": {
+        "browserAction": "closeBrowser"
+      },
+      "id": "Close Browser",
+      "name": "Close Browser",
+      "type": "n8n-nodes-base.playwright",
+      "typeVersion": 1,
+      "position": [4850, 100]
+    }
+  ],
+  "connections": {
+    "Schedule": {
+      "main": [[{ "node": "Check Supabase", "type": "main", "index": 0 }]]
+    },
+    "Check Supabase": {
+      "main": [[{ "node": "Open Browser", "type": "main", "index": 0 }]]
+    },
+    "Open Browser": {
+      "main": [[{ "node": "Navigate to Arbor", "type": "main", "index": 0 }]]
+    },
+    "Navigate to Arbor": {
+      "main": [[{ "node": "Fill Email", "type": "main", "index": 0 }]]
+    },
+    "Fill Email": {
+      "main": [[{ "node": "Fill Password", "type": "main", "index": 0 }]]
+    },
+    "Fill Password": {
+      "main": [[{ "node": "Click Login", "type": "main", "index": 0 }]]
+    },
+    "Click Login": {
+      "main": [[{ "node": "Wait for Dashboard", "type": "main", "index": 0 }]]
+    },
+    "Wait for Dashboard": {
+      "main": [[{ "node": "Navigate to Messages", "type": "main", "index": 0 }]]
+    },
+    "Navigate to Messages": {
+      "main": [[{ "node": "Extract Messages", "type": "main", "index": 0 }]]
+    },
+    "Extract Messages": {
+      "main": [[{ "node": "Parse Messages", "type": "main", "index": 0 }]]
+    },
+    "Parse Messages": {
+      "main": [[{ "node": "Check Existing Messages", "type": "main", "index": 0 }]]
+    },
+    "Check Existing Messages": {
+      "main": [[{ "node": "Filter Duplicates", "type": "main", "index": 0 }]]
+    },
+    "Filter Duplicates": {
+      "main": [[{ "node": "Loop Over Messages", "type": "main", "index": 0 }]]
+    },
+    "Loop Over Messages": {
+      "main": [[{ "node": "Navigate to Message Detail", "type": "main", "index": 0 }]]
+    },
+    "Navigate to Message Detail": {
+      "main": [[{ "node": "Extract Message Detail", "type": "main", "index": 0 }]]
+    },
+    "Extract Message Detail": {
+      "main": [[{ "node": "Auto-Categorize", "type": "main", "index": 0 }]]
+    },
+    "Auto-Categorize": {
+      "main": [[{ "node": "Insert Message", "type": "main", "index": 0 }]]
+    },
+    "Insert Message": {
+      "main": [[{ "node": "Has Attachments", "type": "main", "index": 0 }]]
+    },
+    "Has Attachments": {
+      "main": [
+        [{ "node": "Loop Over Attachments", "type": "main", "index": 0 }],
+        [{ "node": "Log Sync Success", "type": "main", "index": 0 }]
+      ]
+    },
+    "Loop Over Attachments": {
+      "main": [[{ "node": "Download Attachment", "type": "main", "index": 0 }]]
+    },
+    "Download Attachment": {
+      "main": [[{ "node": "Upload to Storage", "type": "main", "index": 0 }]]
+    },
+    "Upload to Storage": {
+      "main": [[{ "node": "Insert Attachment Metadata", "type": "main", "index": 0 }]]
+    },
+    "Insert Attachment Metadata": {
+      "main": [[{ "node": "Log Sync Success", "type": "main", "index": 0 }]]
+    },
+    "Log Sync Success": {
+      "main": [[{ "node": "Close Browser", "type": "main", "index": 0 }]]
+    }
+  }
+}
