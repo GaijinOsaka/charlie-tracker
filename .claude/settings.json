@@ -9,7 +9,24 @@
       "Bash(npm run build:*)",
       "Bash(timeout 5 npm run dev)",
       "Bash(git add:*)",
-      "Bash(git commit:*)"
+      "Bash(git commit:*)",
+      "Read(//c/Users/david/.claude/**)",
+      "Bash(npm search:*)",
+      "mcp__n8n_mcp__search_nodes",
+      "mcp__n8n_mcp__get_node",
+      "mcp__n8n_mcp__validate_node",
+      "mcp__n8n_mcp__validate_workflow",
+      "mcp__n8n_mcp__n8n_create_workflow",
+      "mcp__n8n_mcp__n8n_update_partial_workflow",
+      "mcp__n8n_mcp__n8n_list_workflows",
+      "mcp__n8n_mcp__n8n_get_workflow",
+      "Bash(npx n8n-mcp:*)",
+      "mcp__plugin_context7_context7__resolve-library-id",
+      "mcp__plugin_context7_context7__query-docs",
+      "Bash(docker:*)"
+    ],
+    "additionalDirectories": [
+      "c:\\Users\\david\\.claude"
     ]
   }
 }

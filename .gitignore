@@ -44,3 +44,5 @@ node_modules/
 *.pem
 credentials.json
 .env
+.claude/settings.local.json
+.mcp.json

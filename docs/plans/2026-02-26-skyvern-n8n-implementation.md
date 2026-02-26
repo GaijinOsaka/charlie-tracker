@@ -2,9 +2,11 @@
 
 > **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
 
-**Goal:** Install Skyvern on the 4GB DO droplet alongside Docling, then build an n8n workflow that triggers Skyvern to scrape Arbor messages and store them in Supabase.
+**Goal:** Install Skyvern as a Docker container on the **bfc-docling-serve** droplet (4GB), then build an n8n workflow that triggers Skyvern to scrape Arbor messages and store them in Supabase.
 
-**Architecture:** n8n (1GB droplet) triggers Skyvern (4GB droplet) via HTTP API over DO private network. Skyvern navigates Arbor using AI vision, extracts unread messages as JSON, returns them to n8n. n8n deduplicates and inserts into Supabase.
+**Architecture:** n8n (1GB droplet) triggers Skyvern (running on the 4GB docling server) via HTTP API over DO private network. Skyvern navigates Arbor using AI vision, extracts unread messages as JSON, returns them to n8n. n8n deduplicates and inserts into Supabase.
+
+**Important:** Skyvern and Docling run as separate Docker containers on the same 4GB droplet—they share resources but operate independently.
 
 **Tech Stack:** Skyvern (Docker), n8n (self-hosted DO), Supabase (PostgreSQL), Docker Compose
 
@@ -22,11 +24,11 @@
 
 ---
 
-## Task 1: Verify 4GB Droplet State
+## Task 1: Verify 4GB Docling Droplet State
 
-**Goal:** Confirm what's running, available resources, and Docker setup before installing anything.
+**Goal:** Confirm the bfc-docling-serve droplet is healthy and has resources available to add Skyvern as a second Docker container.
 
-**Step 1: SSH into the 4GB droplet and check Docker**
+**Step 1: SSH into the 4GB docling droplet (139.59.165.79) and check Docker**
 
 ```bash
 ssh root@<4GB-DROPLET-IP>
@@ -76,11 +78,11 @@ If no private IP exists, you'll need to enable VPC networking in the DO console 
 
 ---
 
-## Task 2: Prepare Skyvern Files on the Droplet
+## Task 2: Prepare Skyvern Files on the Docling Droplet
 
-**Goal:** Copy the necessary Skyvern config files to the droplet and adapt them for server use.
+**Goal:** Create Skyvern configuration and Docker setup on the 4GB bfc-docling-serve droplet, ready to run alongside Docling.
 
-**Step 1: Create the Skyvern directory on the droplet**
+**Step 1: Create the Skyvern directory on the docling droplet**
 
 ```bash
 mkdir -p /opt/skyvern
