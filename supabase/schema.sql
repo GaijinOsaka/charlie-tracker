@@ -13,7 +13,8 @@ CREATE TABLE categories (
 -- 2. Create messages table
 CREATE TABLE messages (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  arbor_message_id TEXT UNIQUE NOT NULL,
+  source_message_id TEXT UNIQUE NOT NULL,
+  source TEXT DEFAULT '',
   subject TEXT NOT NULL,
   content TEXT,
   sender_name TEXT,
@@ -48,13 +49,26 @@ CREATE TABLE sync_log (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- 5. Create indexes for performance
-CREATE INDEX idx_messages_arbor_id ON messages(arbor_message_id);
+-- 5. Create events table (key dates extracted from messages)
+CREATE TABLE events (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  message_id UUID NOT NULL REFERENCES messages(id) ON DELETE CASCADE,
+  event_date DATE NOT NULL,
+  event_time TIME,
+  title TEXT NOT NULL,
+  description TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- 6. Create indexes for performance
+CREATE INDEX idx_messages_source_message_id ON messages(source_message_id);
 CREATE INDEX idx_messages_category_id ON messages(category_id);
 CREATE INDEX idx_messages_received_at ON messages(received_at DESC);
 CREATE INDEX idx_messages_created_at ON messages(created_at DESC);
 CREATE INDEX idx_attachments_message_id ON attachments(message_id);
 CREATE INDEX idx_sync_log_created_at ON sync_log(created_at DESC);
+CREATE INDEX idx_events_message_id ON events(message_id);
+CREATE INDEX idx_events_event_date ON events(event_date);
 
 -- 6. Seed categories with default values
 INSERT INTO categories (name, color, keywords) VALUES
@@ -84,6 +98,7 @@ ALTER TABLE messages ENABLE ROW LEVEL SECURITY;
 ALTER TABLE attachments ENABLE ROW LEVEL SECURITY;
 ALTER TABLE categories ENABLE ROW LEVEL SECURITY;
 ALTER TABLE sync_log ENABLE ROW LEVEL SECURITY;
+ALTER TABLE events ENABLE ROW LEVEL SECURITY;
 
 -- 9. Create RLS policies (allow authenticated users to read all)
 CREATE POLICY "Allow authenticated users to read messages"
@@ -100,6 +115,10 @@ CREATE POLICY "Allow authenticated users to read categories"
 
 CREATE POLICY "Allow authenticated users to read sync_log"
   ON sync_log FOR SELECT
+  USING (auth.role() = 'authenticated');
+
+CREATE POLICY "Allow authenticated users to read events"
+  ON events FOR SELECT
   USING (auth.role() = 'authenticated');
 
 -- 10. Create storage bucket for attachments (run this via dashboard Storage tab instead)
