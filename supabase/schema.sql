@@ -37,6 +37,35 @@ CREATE TABLE attachments (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+CREATE INDEX IF NOT EXISTS idx_attachments_message_id ON attachments(message_id);
+
+ALTER TABLE attachments ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Allow all read attachments" ON attachments FOR SELECT USING (true);
+
+-- Trigger: auto-create document row when attachment is inserted
+CREATE OR REPLACE FUNCTION sync_attachment_to_document()
+RETURNS TRIGGER AS $$
+BEGIN
+  INSERT INTO documents (filename, file_path, source_type, source_url, category, tags, file_size_bytes)
+  VALUES (
+    NEW.filename,
+    NEW.file_path,
+    'email_attachment',
+    NULL,
+    'other',
+    ARRAY[]::TEXT[],
+    NEW.file_size
+  )
+  ON CONFLICT DO NOTHING;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trg_sync_attachment_to_document
+  AFTER INSERT ON attachments
+  FOR EACH ROW
+  EXECUTE FUNCTION sync_attachment_to_document();
+
 -- 4. Create sync_log table
 CREATE TABLE sync_log (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -121,5 +150,98 @@ CREATE POLICY "Allow authenticated users to read events"
   ON events FOR SELECT
   USING (auth.role() = 'authenticated');
 
--- 10. Create storage bucket for attachments (run this via dashboard Storage tab instead)
--- Or use: SELECT storage.create_bucket('charlie-attachments', public => false);
+-- 10. Create storage buckets
+-- charlie-attachments: email attachments
+-- charlie-documents: scraped PDFs from website
+-- Or use: INSERT INTO storage.buckets (id, name, public) VALUES ('charlie-attachments', 'charlie-attachments', false);
+-- INSERT INTO storage.buckets (id, name, public) VALUES ('charlie-documents', 'charlie-documents', false);
+
+-- 11. Enable pgvector for RAG search
+CREATE EXTENSION IF NOT EXISTS vector;
+
+-- 12. Web pages table (scraped school website content)
+CREATE TABLE web_pages (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  url TEXT UNIQUE NOT NULL,
+  title TEXT,
+  content TEXT,
+  content_hash TEXT,
+  embedding vector(1536),
+  last_scraped_at TIMESTAMPTZ DEFAULT NOW(),
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- 13. Documents table (PDFs from web scraping and email attachments)
+CREATE TABLE documents (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  source_url TEXT,
+  filename TEXT NOT NULL,
+  file_path TEXT NOT NULL,
+  content_text TEXT,
+  embedding vector(1536),
+  source_type TEXT DEFAULT 'web_scrape',
+  tags TEXT[] DEFAULT ARRAY[]::TEXT[],
+  category TEXT DEFAULT 'other',
+  indexed_for_rag BOOLEAN DEFAULT FALSE,
+  last_indexed_at TIMESTAMPTZ,
+  file_size_bytes INTEGER,
+  description TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- 14. Document chunks table (selective RAG embeddings)
+CREATE TABLE document_chunks (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  document_id UUID NOT NULL REFERENCES documents(id) ON DELETE CASCADE,
+  chunk_index INTEGER NOT NULL,
+  content TEXT NOT NULL,
+  embedding vector(1536),
+  char_start INTEGER,
+  char_end INTEGER,
+  page_number INTEGER,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  CONSTRAINT unique_document_chunk UNIQUE(document_id, chunk_index)
+);
+
+CREATE INDEX idx_web_pages_url ON web_pages(url);
+CREATE INDEX idx_documents_source_url ON documents(source_url);
+CREATE INDEX idx_documents_tags ON documents USING GIN(tags);
+CREATE INDEX idx_documents_category ON documents(category);
+CREATE INDEX idx_documents_indexed_for_rag ON documents(indexed_for_rag);
+CREATE INDEX idx_chunks_document_id ON document_chunks(document_id);
+CREATE INDEX idx_chunks_embedding ON document_chunks
+  USING ivfflat (embedding vector_cosine_ops) WITH (lists = 100);
+
+ALTER TABLE web_pages ENABLE ROW LEVEL SECURITY;
+ALTER TABLE documents ENABLE ROW LEVEL SECURITY;
+ALTER TABLE document_chunks ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Allow authenticated read web_pages" ON web_pages FOR SELECT
+  USING (auth.role() = 'authenticated');
+CREATE POLICY "Allow authenticated read documents" ON documents FOR SELECT
+  USING (auth.role() = 'authenticated');
+CREATE POLICY "Allow authenticated read chunks" ON document_chunks FOR SELECT
+  USING (auth.role() = 'authenticated');
+
+-- 15. RAG search function (only searches indexed documents)
+CREATE OR REPLACE FUNCTION search_knowledge_base(
+  query_embedding vector(1536),
+  match_threshold float DEFAULT 0.7,
+  match_count int DEFAULT 5
+)
+RETURNS TABLE (
+  chunk_id uuid, document_id uuid, content text,
+  similarity float, document_name text, page_number integer
+) AS $$
+BEGIN
+  RETURN QUERY
+  SELECT dc.id, dc.document_id, dc.content,
+    (1 - (dc.embedding <=> query_embedding))::float, d.filename, dc.page_number
+  FROM document_chunks dc
+  JOIN documents d ON d.id = dc.document_id
+  WHERE (1 - (dc.embedding <=> query_embedding)) > match_threshold
+  AND d.indexed_for_rag = true
+  ORDER BY dc.embedding <=> query_embedding
+  LIMIT match_count;
+END;
+$$ LANGUAGE plpgsql;

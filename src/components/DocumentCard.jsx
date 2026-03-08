@@ -1,0 +1,138 @@
+import React, { useState } from 'react'
+import { supabase } from '../lib/supabase'
+import TagEditor from './TagEditor'
+
+const CATEGORY_COLORS = {
+  academic: { bg: '#dbeafe', color: '#1e40af' },
+  admin: { bg: '#fef3c7', color: '#92400e' },
+  events: { bg: '#d1fae5', color: '#065f46' },
+  health: { bg: '#fee2e2', color: '#991b1b' },
+  pastoral: { bg: '#ede9fe', color: '#5b21b6' },
+  general: { bg: '#f3f4f6', color: '#374151' },
+  other: { bg: '#f3f4f6', color: '#374151' },
+}
+
+export default function DocumentCard({ document, onUpdate, onDelete, selected, onToggleSelect }) {
+  const [downloading, setDownloading] = useState(false)
+  const [deleting, setDeleting] = useState(false)
+
+  const tags = document.tags || []
+  const categoryStyle = CATEGORY_COLORS[document.category] || CATEGORY_COLORS.other
+
+  async function handleDownload() {
+    setDownloading(true)
+    try {
+      const bucket = document.source_type === 'email_attachment' ? 'charlie-attachments' : 'charlie-documents'
+      const { data, error } = await supabase.storage
+        .from(bucket)
+        .createSignedUrl(document.file_path, 3600)
+
+      if (error) throw error
+      window.open(data.signedUrl, '_blank')
+    } catch (err) {
+      console.error('Download error:', err)
+    } finally {
+      setDownloading(false)
+    }
+  }
+
+  async function toggleRagFlag() {
+    const newValue = !document.indexed_for_rag
+    const { error } = await supabase
+      .from('documents')
+      .update({ indexed_for_rag: newValue })
+      .eq('id', document.id)
+
+    if (!error && onUpdate) {
+      onUpdate({ ...document, indexed_for_rag: newValue })
+    }
+  }
+
+  async function handleDelete() {
+    if (!window.confirm(`Delete "${document.filename}"? This will remove the file from storage and the database.`)) {
+      return
+    }
+    setDeleting(true)
+    try {
+      // Delete from storage
+      if (document.file_path) {
+        await supabase.storage.from('charlie-documents').remove([document.file_path])
+      }
+      // Delete from database (cascades to document_chunks)
+      const { error } = await supabase.from('documents').delete().eq('id', document.id)
+      if (error) throw error
+      if (onDelete) onDelete(document.id)
+    } catch (err) {
+      console.error('Delete error:', err)
+      alert('Failed to delete document: ' + err.message)
+      setDeleting(false)
+    }
+  }
+
+  return (
+    <div className={`doc-card ${selected ? 'doc-card-selected' : ''}`}>
+      <div className="doc-card-header">
+        <input
+          type="checkbox"
+          className="doc-checkbox"
+          checked={!!selected}
+          onChange={onToggleSelect}
+        />
+        <span className="doc-icon">
+          {document.filename?.endsWith('.pdf') ? '\u{1F4C4}' : '\u{1F4CE}'}
+        </span>
+        <h4 className="doc-filename" title={document.filename}>
+          {document.filename}
+        </h4>
+      </div>
+
+      <div className="doc-card-meta">
+        <span
+          className="doc-category-badge"
+          style={{ background: categoryStyle.bg, color: categoryStyle.color }}
+        >
+          {document.category || 'other'}
+        </span>
+        <span className={`doc-rag-badge ${document.indexed_for_rag ? 'rag-yes' : 'rag-no'}`}>
+          {document.indexed_for_rag ? '\u26A1 Indexed' : '\u{1F512} Not Indexed'}
+        </span>
+      </div>
+
+      {tags.length > 0 && (
+        <div className="doc-tags">
+          {tags.slice(0, 4).map(tag => (
+            <span key={tag} className="doc-tag">{tag}</span>
+          ))}
+          {tags.length > 4 && (
+            <span className="doc-tag doc-tag-more">+{tags.length - 4}</span>
+          )}
+        </div>
+      )}
+
+      <div className="doc-card-actions">
+        <button
+          className="btn-doc btn-download"
+          onClick={handleDownload}
+          disabled={downloading}
+        >
+          {downloading ? 'Opening...' : 'Download'}
+        </button>
+        <button
+          className={`btn-doc ${document.indexed_for_rag ? 'btn-remove-rag' : 'btn-add-rag'}`}
+          onClick={toggleRagFlag}
+        >
+          {document.indexed_for_rag ? 'Remove from RAG' : 'Add to RAG'}
+        </button>
+        <button
+          className="btn-doc btn-delete"
+          onClick={handleDelete}
+          disabled={deleting}
+        >
+          {deleting ? 'Deleting...' : 'Delete'}
+        </button>
+      </div>
+
+      <TagEditor document={document} onUpdate={onUpdate} />
+    </div>
+  )
+}

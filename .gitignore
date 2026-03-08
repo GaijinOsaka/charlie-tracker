@@ -44,5 +44,6 @@ node_modules/
 *.pem
 credentials.json
 .env
-.claude/settings.local.json
+.claude/
+.playwright-mcp/
 .mcp.json

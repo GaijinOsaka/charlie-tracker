@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react'
 import { supabase } from './lib/supabase'
+import DocumentBrowser from './components/DocumentBrowser'
 import './App.css'
 
 function App() {
+  const [activeTab, setActiveTab] = useState('messages')
   const [messages, setMessages] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -59,7 +61,7 @@ function App() {
       setLoading(true)
       const { data, error } = await supabase
         .from('messages')
-        .select('*')
+        .select('*, attachments(id, filename, file_path, mime_type, file_size)')
         .order('received_at', { ascending: false })
         .limit(100)
 
@@ -107,6 +109,19 @@ function App() {
     return filtered
   }
 
+  async function downloadAttachment(filePath, filename) {
+    try {
+      const { data, error } = await supabase.storage
+        .from('charlie-attachments')
+        .createSignedUrl(filePath, 3600)
+      if (error) throw error
+      window.open(data.signedUrl, '_blank')
+    } catch (err) {
+      console.error('Attachment download error:', err)
+      addToast('Failed to download attachment', 'error')
+    }
+  }
+
   async function toggleReadStatus(message) {
     try {
       const { error } = await supabase
@@ -130,7 +145,25 @@ function App() {
         <p className="subtitle">Communication Dashboard</p>
       </header>
 
+      <nav className="tab-nav">
+        <button
+          className={`tab-btn ${activeTab === 'messages' ? 'active' : ''}`}
+          onClick={() => setActiveTab('messages')}
+        >
+          Messages
+        </button>
+        <button
+          className={`tab-btn ${activeTab === 'documents' ? 'active' : ''}`}
+          onClick={() => setActiveTab('documents')}
+        >
+          Documents
+        </button>
+      </nav>
+
       <main>
+        {activeTab === 'documents' && <DocumentBrowser />}
+
+        {activeTab === 'messages' && <>
         <div className="filters">
           <div className="filter-group">
             <label>Status</label>
@@ -196,6 +229,30 @@ function App() {
                   {msg.content && msg.content.length > 200 ? '...' : ''}
                 </div>
 
+                {msg.attachments && msg.attachments.length > 0 && (
+                  <div className="message-attachments">
+                    <span className="attachments-label">Attachments:</span>
+                    {msg.attachments.map(att => (
+                      <button
+                        key={att.id}
+                        className="attachment-link"
+                        onClick={() => downloadAttachment(att.file_path, att.filename)}
+                        title={att.filename}
+                      >
+                        <span className="attachment-icon">
+                          {att.mime_type?.includes('pdf') ? '\u{1F4C4}' : '\u{1F4CE}'}
+                        </span>
+                        <span className="attachment-name">{att.filename}</span>
+                        {att.file_size && (
+                          <span className="attachment-size">
+                            ({Math.round(att.file_size / 1024)}KB)
+                          </span>
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                )}
+
                 <button
                   className="btn-mark-read"
                   onClick={() => toggleReadStatus(msg)}
@@ -206,6 +263,7 @@ function App() {
             ))}
           </ul>
         )}
+        </>}
       </main>
 
       {/* Toast Container */}
