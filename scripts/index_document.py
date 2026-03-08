@@ -13,24 +13,25 @@ Usage:
 """
 
 import argparse
+import json
 import os
 import sys
 import time
 
 import requests
-from dotenv import load_dotenv
-from openai import OpenAI
 
-load_dotenv()
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    pass
 
-SUPABASE_URL = os.environ["SUPABASE_URL"]
-SUPABASE_KEY = os.environ["SUPABASE_SERVICE_KEY"]
-OPENAI_API_KEY = os.environ["OPENAI_API_KEY"]
+SUPABASE_URL = os.environ.get("SUPABASE_URL", "https://knqhcipfgypzfszrwrsu.supabase.co")
+SUPABASE_KEY = os.environ.get("SUPABASE_SERVICE_KEY", "")
+OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY", "")
 
 CHUNK_SIZE = 800
 CHUNK_OVERLAP = 100
-
-openai_client = OpenAI(api_key=OPENAI_API_KEY)
 
 
 def supabase_request(method, path, json_data=None, headers=None):
@@ -70,11 +71,17 @@ def generate_embedding(text):
         return None
     truncated = text[:32000]
     try:
-        resp = openai_client.embeddings.create(
-            model="text-embedding-3-small",
-            input=truncated,
+        resp = requests.post(
+            "https://api.openai.com/v1/embeddings",
+            headers={
+                "Authorization": f"Bearer {OPENAI_API_KEY}",
+                "Content-Type": "application/json",
+            },
+            json={"model": "text-embedding-3-small", "input": truncated},
+            timeout=30,
         )
-        return resp.data[0].embedding
+        resp.raise_for_status()
+        return resp.json()["data"][0]["embedding"]
     except Exception as e:
         print(f"  [Embedding] FAILED: {e}")
         return None
@@ -118,7 +125,7 @@ def index_document(doc_id):
             "document_id": doc_id,
             "chunk_index": i,
             "content": chunk["content"],
-            "embedding": embedding,
+            "embedding": json.dumps(embedding),
             "char_start": chunk["char_start"],
             "char_end": chunk["char_end"],
         }
@@ -208,6 +215,8 @@ def batch_index():
 
 def main():
     parser = argparse.ArgumentParser(description="Document RAG indexing")
+    parser.add_argument("--supabase-key", help="Supabase service key")
+    parser.add_argument("--openai-key", help="OpenAI API key")
     group = parser.add_mutually_exclusive_group(required=True)
     group.add_argument("--index", metavar="DOC_ID", help="Index a single document")
     group.add_argument("--remove", metavar="DOC_ID", help="Remove document from RAG")
@@ -215,6 +224,20 @@ def main():
     group.add_argument("--batch", action="store_true", help="Index all unindexed documents with content")
     group.add_argument("--list", action="store_true", help="List documents with RAG status")
     args = parser.parse_args()
+
+    global SUPABASE_KEY, OPENAI_API_KEY
+    if args.supabase_key:
+        SUPABASE_KEY = args.supabase_key
+    if args.openai_key:
+        OPENAI_API_KEY = args.openai_key
+
+    if not SUPABASE_KEY:
+        print("[ERROR] Supabase service key required. Use --supabase-key or set SUPABASE_SERVICE_KEY env var")
+        sys.exit(1)
+
+    if not args.list and not OPENAI_API_KEY:
+        print("[ERROR] OpenAI API key required for indexing. Use --openai-key or set OPENAI_API_KEY env var")
+        sys.exit(1)
 
     if args.index:
         index_document(args.index)

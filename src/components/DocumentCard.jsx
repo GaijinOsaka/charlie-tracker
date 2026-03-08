@@ -15,6 +15,7 @@ const CATEGORY_COLORS = {
 export default function DocumentCard({ document, onUpdate, onDelete, selected, onToggleSelect }) {
   const [downloading, setDownloading] = useState(false)
   const [deleting, setDeleting] = useState(false)
+  const [indexing, setIndexing] = useState(false)
 
   const tags = document.tags || []
   const categoryStyle = CATEGORY_COLORS[document.category] || CATEGORY_COLORS.other
@@ -37,14 +38,38 @@ export default function DocumentCard({ document, onUpdate, onDelete, selected, o
   }
 
   async function toggleRagFlag() {
-    const newValue = !document.indexed_for_rag
-    const { error } = await supabase
-      .from('documents')
-      .update({ indexed_for_rag: newValue })
-      .eq('id', document.id)
+    const action = document.indexed_for_rag ? 'remove' : 'index'
+    setIndexing(true)
+    try {
+      const { data, error } = await supabase.functions.invoke('index-document', {
+        body: { doc_id: document.id, action },
+      })
 
-    if (!error && onUpdate) {
-      onUpdate({ ...document, indexed_for_rag: newValue })
+      if (error) {
+        let msg = error.message
+        try {
+          if (error.context && typeof error.context.json === 'function') {
+            const body = await error.context.json()
+            msg = body.error || msg
+          }
+        } catch (_) {}
+        throw new Error(msg)
+      }
+      if (data && !data.success) throw new Error(data.error || 'Indexing failed')
+
+      if (data?.status === 'extracting') {
+        alert(data.message || 'PDF text extraction started. This takes 2-3 minutes. The document will be indexed automatically.')
+        return
+      }
+
+      if (onUpdate) {
+        onUpdate({ ...document, indexed_for_rag: action === 'index' })
+      }
+    } catch (err) {
+      console.error('RAG toggle error:', err)
+      alert(`Failed to ${action} document: ${err.message}`)
+    } finally {
+      setIndexing(false)
     }
   }
 
@@ -120,8 +145,11 @@ export default function DocumentCard({ document, onUpdate, onDelete, selected, o
         <button
           className={`btn-doc ${document.indexed_for_rag ? 'btn-remove-rag' : 'btn-add-rag'}`}
           onClick={toggleRagFlag}
+          disabled={indexing}
         >
-          {document.indexed_for_rag ? 'Remove from RAG' : 'Add to RAG'}
+          {indexing
+            ? (document.indexed_for_rag ? 'Removing...' : 'Indexing...')
+            : (document.indexed_for_rag ? 'Remove from RAG' : 'Add to RAG')}
         </button>
         <button
           className="btn-doc btn-delete"
