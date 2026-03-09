@@ -53,7 +53,7 @@ BEGIN
     'email_attachment',
     NULL,
     'other',
-    ARRAY[]::TEXT[],
+    ARRAY['email']::TEXT[],
     NEW.file_size
   )
   ON CONFLICT DO NOTHING;
@@ -150,10 +150,8 @@ CREATE POLICY "Allow authenticated users to read events"
   ON events FOR SELECT
   USING (auth.role() = 'authenticated');
 
--- 10. Create storage buckets
--- charlie-attachments: email attachments
--- charlie-documents: scraped PDFs from website
--- Or use: INSERT INTO storage.buckets (id, name, public) VALUES ('charlie-attachments', 'charlie-attachments', false);
+-- 10. Create storage bucket
+-- charlie-documents: all documents (web scraped PDFs under web_scrape/, email attachments under email/)
 -- INSERT INTO storage.buckets (id, name, public) VALUES ('charlie-documents', 'charlie-documents', false);
 
 -- 11. Enable pgvector for RAG search

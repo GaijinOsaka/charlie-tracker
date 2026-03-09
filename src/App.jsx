@@ -112,7 +112,7 @@ function App() {
   async function downloadAttachment(filePath, filename) {
     try {
       const { data, error } = await supabase.storage
-        .from('charlie-attachments')
+        .from('charlie-documents')
         .createSignedUrl(filePath, 3600)
       if (error) throw error
       window.open(data.signedUrl, '_blank')

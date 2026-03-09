@@ -23,9 +23,8 @@ export default function DocumentCard({ document, onUpdate, onDelete, selected, o
   async function handleDownload() {
     setDownloading(true)
     try {
-      const bucket = document.source_type === 'email_attachment' ? 'charlie-attachments' : 'charlie-documents'
       const { data, error } = await supabase.storage
-        .from(bucket)
+        .from('charlie-documents')
         .createSignedUrl(document.file_path, 3600)
 
       if (error) throw error
