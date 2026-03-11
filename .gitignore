@@ -47,3 +47,8 @@ credentials.json
 .claude/
 .playwright-mcp/
 .mcp.json
+.vercel
+.env*.local
+
+# Git Worktrees
+.worktrees/
