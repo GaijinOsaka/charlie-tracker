@@ -1409,6 +1409,47 @@ header h1 {
   cursor: not-allowed;
 }
 
+/* Document source in events */
+.event-document-source {
+  color: #7c3aed;
+}
+
+.event-doc-panel {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.event-doc-icon {
+  font-size: 24px;
+}
+
+.event-doc-info {
+  flex: 1;
+}
+
+.event-doc-filename {
+  font-size: 14px;
+  font-weight: 600;
+  color: #1f2937;
+}
+
+.btn-doc-download {
+  padding: 6px 12px;
+  border: 1px solid #3B82F6;
+  background: white;
+  color: #3B82F6;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-doc-download:hover {
+  background: #eff6ff;
+}
+
 /* Responsive */
 @media (max-width: 768px) {
   .app {

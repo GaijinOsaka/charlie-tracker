@@ -1,21 +1,40 @@
 import React, { useState, useEffect } from 'react'
 import { supabase } from './lib/supabase'
 import DocumentBrowser from './components/DocumentBrowser'
+import CalendarView from './components/CalendarView'
 import './App.css'
+
+function linkify(text) {
+  if (!text) return text
+  const urlRegex = /(https?:\/\/[^\s<>"{}|\\^`[\]]+)/g
+  const parts = text.split(urlRegex)
+  return parts.map((part, i) =>
+    urlRegex.test(part)
+      ? <a key={i} href={part} target="_blank" rel="noopener noreferrer" className="inline-link">{part}</a>
+      : part
+  )
+}
 
 function App() {
   const [activeTab, setActiveTab] = useState('messages')
   const [messages, setMessages] = useState([])
+  const [events, setEvents] = useState([])
   const [loading, setLoading] = useState(true)
+  const [eventsLoading, setEventsLoading] = useState(true)
   const [error, setError] = useState(null)
   const [toasts, setToasts] = useState([])
   const [statusFilter, setStatusFilter] = useState('all')
   const [sourceFilter, setSourceFilter] = useState('all')
   const [searchQuery, setSearchQuery] = useState('')
+  const [eventsFilter, setEventsFilter] = useState('upcoming')
+  const [eventsTagFilter, setEventsTagFilter] = useState('all')
+  const [expandedMessages, setExpandedMessages] = useState(new Set())
+  const [expandedEvents, setExpandedEvents] = useState(new Set())
 
-  // Load initial messages
+  // Load initial data
   useEffect(() => {
     loadMessages()
+    loadEvents()
   }, [])
 
   // Subscribe to realtime updates
@@ -72,6 +91,120 @@ function App() {
       console.error('Error loading messages:', error)
     } finally {
       setLoading(false)
+    }
+  }
+
+  async function loadEvents() {
+    try {
+      setEventsLoading(true)
+      const { data, error } = await supabase
+        .from('events')
+        .select('*, messages(id, subject, sender_name, sender_email, content, source, received_at, is_read, attachments(id, filename, file_path, mime_type, file_size)), documents(id, filename, file_path), event_tags(tag)')
+        .order('event_date', { ascending: true })
+        .eq('archived', false)
+      if (error) throw error
+      setEvents(data || [])
+    } catch (error) {
+      console.error('Error loading events:', error)
+    } finally {
+      setEventsLoading(false)
+    }
+  }
+
+  function getFilteredEvents() {
+    const today = new Date().toISOString().split('T')[0]
+    let filtered = events
+    if (eventsFilter === 'upcoming') {
+      filtered = filtered.filter(e => e.event_date >= today)
+    } else if (eventsFilter === 'past') {
+      filtered = filtered.filter(e => e.event_date < today)
+    } else if (eventsFilter === 'actions') {
+      filtered = filtered.filter(e => e.action_required)
+    }
+    if (eventsTagFilter !== 'all') {
+      filtered = filtered.filter(e =>
+        e.event_tags && e.event_tags.some(t => t.tag === eventsTagFilter)
+      )
+    }
+    return filtered
+  }
+
+  function getAllTags() {
+    const tags = new Set()
+    events.forEach(e => {
+      if (e.event_tags) e.event_tags.forEach(t => tags.add(t.tag))
+    })
+    return Array.from(tags).sort()
+  }
+
+  function toggleEventExpanded(eventId) {
+    setExpandedEvents(prev => {
+      const next = new Set(prev)
+      if (next.has(eventId)) next.delete(eventId)
+      else next.add(eventId)
+      return next
+    })
+  }
+
+  function toggleExpanded(msgId) {
+    setExpandedMessages(prev => {
+      const next = new Set(prev)
+      if (next.has(msgId)) next.delete(msgId)
+      else next.add(msgId)
+      return next
+    })
+  }
+
+  async function archiveEvent(eventId) {
+    try {
+      const { error } = await supabase.from('events').update({ archived: true }).eq('id', eventId)
+      if (error) throw error
+      setEvents(prev => prev.filter(e => e.id !== eventId))
+      addToast('Event archived', 'success')
+    } catch (err) {
+      console.error('Error archiving event:', err)
+      addToast('Failed to archive event', 'error')
+    }
+  }
+
+  async function deleteMessage(msgId) {
+    if (!window.confirm('Delete this message and its attachments/events?')) return
+    try {
+      // Delete event_tags for any events linked to this message
+      const linkedEvents = events.filter(e => e.message_id === msgId)
+      for (const evt of linkedEvents) {
+        await supabase.from('event_tags').delete().eq('event_id', evt.id)
+      }
+      // Events and attachments cascade on message delete
+      const { error } = await supabase.from('messages').delete().eq('id', msgId)
+      if (error) throw error
+      setMessages(prev => prev.filter(m => m.id !== msgId))
+      setEvents(prev => prev.filter(e => e.message_id !== msgId))
+      addToast('Message deleted', 'success')
+    } catch (err) {
+      console.error('Error deleting message:', err)
+      addToast('Failed to delete message', 'error')
+    }
+  }
+
+  async function actionMessage(msg) {
+    try {
+      const isUndoing = !!msg.actioned_at
+      const updates = isUndoing
+        ? { actioned_at: null, actioned_by: null }
+        : { actioned_at: new Date().toISOString(), actioned_by: 'David' }
+      const { error } = await supabase
+        .from('messages')
+        .update(updates)
+        .eq('id', msg.id)
+      if (error) throw error
+      setMessages(prev => prev.map(m =>
+        m.id === msg.id ? { ...m, ...updates } : m
+      ))
+      addToast(isUndoing ? 'Action removed' : 'Message actioned', 'success')
+    } catch (err) {
+      console.error('Error actioning message:', err)
+      addToast('Failed to update message', 'error')
     }
   }
 
@@ -153,6 +286,18 @@ function App() {
           Messages
         </button>
         <button
+          className={`tab-btn ${activeTab === 'events' ? 'active' : ''}`}
+          onClick={() => setActiveTab('events')}
+        >
+          Events
+        </button>
+        <button
+          className={`tab-btn ${activeTab === 'calendar' ? 'active' : ''}`}
+          onClick={() => setActiveTab('calendar')}
+        >
+          Calendar
+        </button>
+        <button
           className={`tab-btn ${activeTab === 'documents' ? 'active' : ''}`}
           onClick={() => setActiveTab('documents')}
         >
@@ -161,6 +306,154 @@ function App() {
       </nav>
 
       <main>
+        {activeTab === 'events' && <>
+          <div className="filters">
+            <div className="filter-group">
+              <label>Show</label>
+              <select value={eventsFilter} onChange={(e) => setEventsFilter(e.target.value)}>
+                <option value="upcoming">Upcoming</option>
+                <option value="actions">Action Required</option>
+                <option value="all">All Events</option>
+                <option value="past">Past</option>
+              </select>
+            </div>
+            <div className="filter-group">
+              <label>Tag</label>
+              <select value={eventsTagFilter} onChange={(e) => setEventsTagFilter(e.target.value)}>
+                <option value="all">All Tags</option>
+                {getAllTags().map(tag => (
+                  <option key={tag} value={tag}>{tag}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          {eventsLoading && <p className="loading">Loading events...</p>}
+
+          {!eventsLoading && getFilteredEvents().length === 0 && (
+            <p className="no-messages">No events found. Events are automatically extracted from school emails.</p>
+          )}
+
+          {!eventsLoading && getFilteredEvents().length > 0 && (
+            <ul className="event-list">
+              {getFilteredEvents().map(evt => {
+                const today = new Date().toISOString().split('T')[0]
+                const isPast = evt.event_date < today
+                const isToday = evt.event_date === today
+                return (
+                  <li key={evt.id} className={`event-item ${isPast ? 'event-past' : ''} ${isToday ? 'event-today' : ''} ${expandedEvents.has(evt.id) ? 'event-expanded' : ''}`}>
+                    <div className="event-row" onClick={() => toggleEventExpanded(evt.id)}>
+                      <div className="event-date-col">
+                        <span className="event-day">{new Date(evt.event_date + 'T00:00:00').toLocaleDateString('en-GB', { day: 'numeric' })}</span>
+                        <span className="event-month">{new Date(evt.event_date + 'T00:00:00').toLocaleDateString('en-GB', { month: 'short' })}</span>
+                        {evt.event_time && (
+                          <span className="event-time">
+                            {evt.event_time.slice(0, 5)}{evt.event_end_time ? `–${evt.event_end_time.slice(0, 5)}` : ''}
+                          </span>
+                        )}
+                      </div>
+                      <div className="event-details">
+                        <h4 className="event-title">{evt.title}</h4>
+                        {evt.description && <p className="event-desc">{evt.description}</p>}
+                        <div className="event-meta">
+                          {evt.action_required && (
+                            <span className="event-action-badge">
+                              {evt.action_detail || 'Action Required'}
+                            </span>
+                          )}
+                          {isToday && <span className="event-today-badge">Today</span>}
+                          {evt.event_tags && evt.event_tags.map(t => (
+                            <span key={t.tag} className="event-tag" onClick={(e) => { e.stopPropagation(); setEventsTagFilter(t.tag); }}>{t.tag}</span>
+                          ))}
+                          {evt.messages && <span className="event-source">From: {evt.messages.sender_name || evt.messages.subject}</span>}
+                          {evt.documents && !evt.messages && <span className="event-source event-document-source">From: {evt.documents.filename}</span>}
+                          <span className="event-expand-hint">
+                            {expandedEvents.has(evt.id)
+                              ? (evt.messages ? 'Hide message ▲' : 'Hide document ▲')
+                              : (evt.messages ? 'Show message ▼' : evt.documents ? 'Show document ▼' : '')}
+                          </span>
+                        </div>
+                      </div>
+                      <button
+                        className="btn-event-delete"
+                        onClick={(e) => { e.stopPropagation(); archiveEvent(evt.id); }}
+                        title="Archive event"
+                      >
+                        &times;
+                      </button>
+                    </div>
+                    {expandedEvents.has(evt.id) && evt.messages && (
+                      <div className="event-message-panel">
+                        <div className="event-message-header">
+                          <h4 className="message-subject">{evt.messages.subject}</h4>
+                          <div className="event-message-meta-row">
+                            <span className="message-sender">{evt.messages.sender_name || evt.messages.sender_email}</span>
+                            <span className="message-time">{new Date(evt.messages.received_at).toLocaleString()}</span>
+                            <span className={`source-badge source-${evt.messages.source}`}>
+                              {(evt.messages.source || 'arbor').toUpperCase()}
+                            </span>
+                          </div>
+                        </div>
+                        <div className="message-content">
+                          {linkify(evt.messages.content)}
+                        </div>
+                        {evt.messages.attachments && evt.messages.attachments.length > 0 && (
+                          <div className="message-attachments">
+                            <span className="attachments-label">Attachments:</span>
+                            {evt.messages.attachments.map(att => (
+                              <button
+                                key={att.id}
+                                className="attachment-link"
+                                onClick={(e) => { e.stopPropagation(); downloadAttachment(att.file_path, att.filename); }}
+                                title={att.filename}
+                              >
+                                <span className="attachment-icon">
+                                  {att.mime_type?.includes('pdf') ? '\u{1F4C4}' : '\u{1F4CE}'}
+                                </span>
+                                <span className="attachment-name">{att.filename}</span>
+                                {att.file_size && (
+                                  <span className="attachment-size">
+                                    ({Math.round(att.file_size / 1024)}KB)
+                                  </span>
+                                )}
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                    {expandedEvents.has(evt.id) && !evt.messages && evt.documents && (
+                      <div className="event-message-panel">
+                        <div className="event-doc-panel">
+                          <span className="event-doc-icon">{evt.documents.filename?.endsWith('.pdf') ? '\u{1F4C4}' : '\u{1F4CE}'}</span>
+                          <div className="event-doc-info">
+                            <span className="event-doc-filename">{evt.documents.filename}</span>
+                          </div>
+                          <button
+                            className="btn-doc-download"
+                            onClick={(e) => { e.stopPropagation(); downloadAttachment(evt.documents.file_path, evt.documents.filename); }}
+                          >
+                            Download
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                    {expandedEvents.has(evt.id) && !evt.messages && !evt.documents && (
+                      <div className="event-message-panel">
+                        <p className="no-messages" style={{ padding: '16px 0' }}>No linked source for this event.</p>
+                      </div>
+                    )}
+                  </li>
+                )
+              })}
+            </ul>
+          )}
+        </>}
+
+        {activeTab === 'calendar' && (
+          <CalendarView events={events} linkify={linkify} downloadAttachment={downloadAttachment} archiveEvent={archiveEvent} />
+        )}
+
         {activeTab === 'documents' && <DocumentBrowser />}
 
         {activeTab === 'messages' && <>
@@ -194,6 +487,34 @@ function App() {
           </div>
         </div>
 
+        {(() => {
+          const actioned = messages
+            .filter(m => m.actioned_at)
+            .sort((a, b) => new Date(b.actioned_at) - new Date(a.actioned_at))
+            .slice(0, 5)
+          if (actioned.length === 0) return null
+          return (
+            <div className="actioned-box">
+              <h4 className="actioned-box-title">Recently Actioned</h4>
+              <ul className="actioned-list">
+                {actioned.map(msg => (
+                  <li key={msg.id} className="actioned-item">
+                    <div className="actioned-info">
+                      <span className="actioned-subject">{msg.subject}</span>
+                      <span className="actioned-meta">
+                        {msg.actioned_by} &middot; {new Date(msg.actioned_at).toLocaleString()}
+                      </span>
+                    </div>
+                    <span className={`source-badge source-${msg.source}`} style={{ fontSize: '10px', padding: '2px 6px' }}>
+                      {(msg.source || 'arbor').toUpperCase()}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )
+        })()}
+
         {loading && <p className="loading">Loading messages...</p>}
         {error && <p className="error">Error: {error}</p>}
 
@@ -221,12 +542,26 @@ function App() {
                       {(msg.source || 'arbor').toUpperCase()}
                     </span>
                     {!msg.is_read && <span className="unread-dot"></span>}
+                    {msg.actioned_at && <span className="actioned-badge">Actioned</span>}
                   </div>
                 </div>
 
-                <div className="message-content">
-                  {msg.content?.substring(0, 200)}
-                  {msg.content && msg.content.length > 200 ? '...' : ''}
+                <div
+                  className={`message-content ${msg.content && msg.content.length > 200 ? 'expandable' : ''}`}
+                  onClick={() => msg.content && msg.content.length > 200 && toggleExpanded(msg.id)}
+                >
+                  {expandedMessages.has(msg.id)
+                    ? linkify(msg.content)
+                    : <>
+                        {linkify(msg.content?.substring(0, 200))}
+                        {msg.content && msg.content.length > 200 ? '...' : ''}
+                      </>
+                  }
+                  {msg.content && msg.content.length > 200 && (
+                    <span className="expand-toggle">
+                      {expandedMessages.has(msg.id) ? 'Show less' : 'Show more'}
+                    </span>
+                  )}
                 </div>
 
                 {msg.attachments && msg.attachments.length > 0 && (
@@ -253,12 +588,26 @@ function App() {
                   </div>
                 )}
 
-                <button
-                  className="btn-mark-read"
-                  onClick={() => toggleReadStatus(msg)}
-                >
-                  {msg.is_read ? 'Mark as Unread' : 'Mark as Read'}
-                </button>
+                <div className="message-actions">
+                  <button
+                    className="btn-mark-read"
+                    onClick={() => toggleReadStatus(msg)}
+                  >
+                    {msg.is_read ? 'Mark as Unread' : 'Mark as Read'}
+                  </button>
+                  <button
+                    className={`btn-action ${msg.actioned_at ? 'btn-action-undo' : ''}`}
+                    onClick={() => actionMessage(msg)}
+                  >
+                    {msg.actioned_at ? 'Undo Action' : 'Mark Actioned'}
+                  </button>
+                  <button
+                    className="btn-msg-delete"
+                    onClick={() => deleteMessage(msg.id)}
+                  >
+                    Delete
+                  </button>
+                </div>
               </li>
             ))}
           </ul>
