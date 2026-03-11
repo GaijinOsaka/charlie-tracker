@@ -3,6 +3,7 @@ import { supabase } from './lib/supabase'
 import { useAuth } from './lib/AuthContext'
 import LoginPage from './components/LoginPage'
 import DocumentBrowser from './components/DocumentBrowser'
+import SettingsPanel from './components/SettingsPanel'
 import CalendarView from './components/CalendarView'
 import ChatDrawer from './components/ChatDrawer'
 import ActionModal from './components/ActionModal'
@@ -446,6 +447,12 @@ function App() {
         >
           Documents
         </button>
+        <button
+          className={`tab-btn ${activeTab === 'settings' ? 'active' : ''}`}
+          onClick={() => setActiveTab('settings')}
+        >
+          Settings
+        </button>
       </nav>
 
       <main>
@@ -598,6 +605,8 @@ function App() {
         )}
 
         {activeTab === 'documents' && <DocumentBrowser />}
+
+        {activeTab === 'settings' && <SettingsPanel />}
 
         {activeTab === 'messages' && <>
         <div className="filters">

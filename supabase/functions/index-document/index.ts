@@ -178,6 +178,15 @@ Deno.serve(async (req) => {
   }
 
   try {
+    // Verify authentication (accepts user tokens and service role key)
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader) {
+      return new Response(
+        JSON.stringify({ error: "Not authenticated" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     const { doc_id, action } = await req.json();
 
     if (!doc_id || !action) {
