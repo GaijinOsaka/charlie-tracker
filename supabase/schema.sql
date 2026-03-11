@@ -21,11 +21,12 @@ CREATE TABLE messages (
   sender_email TEXT,
   received_at TIMESTAMPTZ NOT NULL,
   category_id UUID REFERENCES categories(id) ON DELETE SET NULL,
-  is_read BOOLEAN DEFAULT FALSE,
   actioned_at TIMESTAMPTZ,
-  actioned_by TEXT,
+  actioned_by UUID REFERENCES auth.users(id),
+  action_note TEXT,
   created_at TIMESTAMPTZ DEFAULT NOW(),
-  updated_at TIMESTAMPTZ DEFAULT NOW()
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+  indexed_for_rag BOOLEAN DEFAULT FALSE
 );
 
 -- 3. Create attachments table
@@ -42,7 +43,8 @@ CREATE TABLE attachments (
 CREATE INDEX IF NOT EXISTS idx_attachments_message_id ON attachments(message_id);
 
 ALTER TABLE attachments ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "Allow all read attachments" ON attachments FOR SELECT USING (true);
+CREATE POLICY "Authenticated users can read attachments" ON attachments FOR SELECT
+  USING (auth.role() = 'authenticated');
 
 -- Trigger: auto-create document row when attachment is inserted
 CREATE OR REPLACE FUNCTION sync_attachment_to_document()
@@ -138,24 +140,28 @@ ALTER TABLE categories ENABLE ROW LEVEL SECURITY;
 ALTER TABLE sync_log ENABLE ROW LEVEL SECURITY;
 ALTER TABLE events ENABLE ROW LEVEL SECURITY;
 
--- 9. Create RLS policies (allow authenticated users to read all)
-CREATE POLICY "Allow authenticated users to read messages"
+-- 9. Create RLS policies (authenticated users can read; service_role for writes)
+CREATE POLICY "Authenticated users can read messages"
   ON messages FOR SELECT
   USING (auth.role() = 'authenticated');
 
-CREATE POLICY "Allow authenticated users to read attachments"
+CREATE POLICY "Authenticated users can update messages"
+  ON messages FOR UPDATE
+  USING (auth.role() = 'authenticated');
+
+CREATE POLICY "Authenticated users can read attachments"
   ON attachments FOR SELECT
   USING (auth.role() = 'authenticated');
 
-CREATE POLICY "Allow authenticated users to read categories"
+CREATE POLICY "Authenticated users can read categories"
   ON categories FOR SELECT
   USING (auth.role() = 'authenticated');
 
-CREATE POLICY "Allow authenticated users to read sync_log"
+CREATE POLICY "Authenticated users can read sync_log"
   ON sync_log FOR SELECT
   USING (auth.role() = 'authenticated');
 
-CREATE POLICY "Allow authenticated users to read events"
+CREATE POLICY "Authenticated users can read events"
   ON events FOR SELECT
   USING (auth.role() = 'authenticated');
 
@@ -219,17 +225,17 @@ CREATE INDEX idx_documents_category ON documents(category);
 CREATE INDEX idx_documents_indexed_for_rag ON documents(indexed_for_rag);
 CREATE INDEX idx_chunks_document_id ON document_chunks(document_id);
 CREATE INDEX idx_chunks_embedding ON document_chunks
-  USING ivfflat (embedding vector_cosine_ops) WITH (lists = 100);
+  USING hnsw (embedding vector_cosine_ops);
 
 ALTER TABLE web_pages ENABLE ROW LEVEL SECURITY;
 ALTER TABLE documents ENABLE ROW LEVEL SECURITY;
 ALTER TABLE document_chunks ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "Allow authenticated read web_pages" ON web_pages FOR SELECT
+CREATE POLICY "Authenticated users can read web_pages" ON web_pages FOR SELECT
   USING (auth.role() = 'authenticated');
-CREATE POLICY "Allow authenticated read documents" ON documents FOR SELECT
+CREATE POLICY "Authenticated users can read documents" ON documents FOR SELECT
   USING (auth.role() = 'authenticated');
-CREATE POLICY "Allow authenticated read chunks" ON document_chunks FOR SELECT
+CREATE POLICY "Authenticated users can read chunks" ON document_chunks FOR SELECT
   USING (auth.role() = 'authenticated');
 
 -- 15. RAG search function (only searches indexed documents)
@@ -254,3 +260,103 @@ BEGIN
   LIMIT match_count;
 END;
 $$ LANGUAGE plpgsql;
+
+-- 16. Profiles table (auto-created on sign-up)
+CREATE TABLE profiles (
+  id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+  display_name TEXT NOT NULL,
+  email TEXT NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Authenticated users can read all profiles"
+  ON profiles FOR SELECT
+  USING (auth.role() = 'authenticated');
+CREATE POLICY "Users can update own profile"
+  ON profiles FOR UPDATE
+  USING (auth.uid() = id);
+
+-- Auto-create profile on sign-up
+CREATE OR REPLACE FUNCTION handle_new_user()
+RETURNS TRIGGER AS $$
+BEGIN
+  INSERT INTO profiles (id, display_name, email)
+  VALUES (
+    NEW.id,
+    COALESCE(NEW.raw_user_meta_data->>'display_name', split_part(NEW.email, '@', 1)),
+    NEW.email
+  );
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+CREATE TRIGGER on_auth_user_created
+  AFTER INSERT ON auth.users
+  FOR EACH ROW EXECUTE FUNCTION handle_new_user();
+
+-- 17. Per-user read status table (replaces messages.is_read)
+CREATE TABLE message_read_status (
+  user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
+  message_id UUID REFERENCES messages(id) ON DELETE CASCADE,
+  read_at TIMESTAMPTZ DEFAULT NOW(),
+  PRIMARY KEY (user_id, message_id)
+);
+
+CREATE INDEX idx_read_status_user ON message_read_status(user_id);
+CREATE INDEX idx_read_status_message ON message_read_status(message_id);
+
+ALTER TABLE message_read_status ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Users manage own read status"
+  ON message_read_status FOR ALL
+  USING (auth.uid() = user_id)
+  WITH CHECK (auth.uid() = user_id);
+
+-- 18. User notifications table
+CREATE TABLE user_notifications (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
+  message_id UUID REFERENCES messages(id) ON DELETE CASCADE,
+  type TEXT NOT NULL DEFAULT 'actioned',
+  summary TEXT NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  dismissed_at TIMESTAMPTZ
+);
+
+CREATE INDEX idx_notifications_user_undismissed
+  ON user_notifications(user_id) WHERE dismissed_at IS NULL;
+
+ALTER TABLE user_notifications ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Users manage own notifications"
+  ON user_notifications FOR ALL
+  USING (auth.uid() = user_id)
+  WITH CHECK (auth.uid() = user_id);
+
+-- Trigger: create notification for other user when message is actioned
+CREATE OR REPLACE FUNCTION create_action_notification()
+RETURNS TRIGGER AS $$
+DECLARE
+  other_user_id UUID;
+  actor_name TEXT;
+BEGIN
+  IF NEW.actioned_at IS NOT NULL AND (OLD.actioned_at IS NULL) THEN
+    SELECT id INTO other_user_id FROM profiles WHERE id != NEW.actioned_by LIMIT 1;
+    SELECT display_name INTO actor_name FROM profiles WHERE id = NEW.actioned_by;
+
+    IF other_user_id IS NOT NULL THEN
+      INSERT INTO user_notifications (user_id, message_id, type, summary)
+      VALUES (
+        other_user_id,
+        NEW.id,
+        'actioned',
+        actor_name || ' actioned ''' || LEFT(NEW.subject, 60) || ''''
+      );
+    END IF;
+  END IF;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+CREATE TRIGGER trg_action_notification
+  AFTER UPDATE ON messages
+  FOR EACH ROW EXECUTE FUNCTION create_action_notification();
