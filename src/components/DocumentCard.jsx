@@ -16,7 +16,6 @@ export default function DocumentCard({ document, onUpdate, onDelete, selected, o
   const [downloading, setDownloading] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const [indexing, setIndexing] = useState(false)
-  const [extractingText, setExtractingText] = useState(false)
   const [extractingDates, setExtractingDates] = useState(false)
 
   const tags = document.tags || []
@@ -92,36 +91,6 @@ export default function DocumentCard({ document, onUpdate, onDelete, selected, o
       console.error('Delete error:', err)
       alert('Failed to delete document: ' + err.message)
       setDeleting(false)
-    }
-  }
-
-  async function handleExtractText() {
-    setExtractingText(true)
-    try {
-      const { data, error } = await supabase.functions.invoke('index-document', {
-        body: { doc_id: document.id, action: 'index' },
-      })
-
-      if (error) {
-        let msg = error.message
-        try {
-          if (error.context && typeof error.context.json === 'function') {
-            const body = await error.context.json()
-            msg = body.error || msg
-          }
-        } catch (_) {}
-        throw new Error(msg)
-      }
-      if (data && !data.success) throw new Error(data.error || 'Extraction failed')
-
-      if (data?.status === 'extracting') {
-        alert(data.message || 'Text extraction started. This takes 2-3 minutes.')
-      }
-    } catch (err) {
-      console.error('Extract text error:', err)
-      alert('Failed to extract text: ' + err.message)
-    } finally {
-      setExtractingText(false)
     }
   }
 
@@ -212,36 +181,25 @@ export default function DocumentCard({ document, onUpdate, onDelete, selected, o
         >
           {downloading ? 'Opening...' : 'Download'}
         </button>
-        {!document.content_text && (
-          <button
-            className="btn-doc btn-extract-text"
-            onClick={handleExtractText}
-            disabled={extractingText}
-          >
-            {extractingText ? 'Extracting...' : 'Extract Text'}
-          </button>
-        )}
         <button
           className={`btn-doc ${document.indexed_for_rag ? 'btn-remove-rag' : 'btn-add-rag'}`}
           onClick={toggleRagFlag}
-          disabled={indexing || !document.content_text}
-          title={!document.content_text ? 'Extract text first' : undefined}
+          disabled={indexing}
         >
           {indexing
             ? (document.indexed_for_rag ? 'Removing...' : 'Indexing...')
             : (document.indexed_for_rag ? 'Remove from RAG' : 'Add to RAG')}
         </button>
-        {document.content_text && (
-          <button
-            className="btn-doc btn-extract-dates"
-            onClick={handleExtractDates}
-            disabled={extractingDates}
-          >
-            {extractingDates
-              ? 'Extracting...'
-              : (document.dates_extracted ? 'Re-extract Dates' : 'Extract Dates')}
-          </button>
-        )}
+        <button
+          className="btn-doc btn-extract-dates"
+          onClick={handleExtractDates}
+          disabled={extractingDates || !document.content_text}
+          title={!document.content_text ? 'Extract text first (use Add to RAG)' : undefined}
+        >
+          {extractingDates
+            ? 'Extracting...'
+            : (document.dates_extracted ? 'Re-extract Dates' : 'Extract Dates')}
+        </button>
         <button
           className="btn-doc btn-delete"
           onClick={handleDelete}
