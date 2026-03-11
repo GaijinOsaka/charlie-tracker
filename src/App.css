@@ -391,11 +391,23 @@ header h1 {
   border-left: 3px solid var(--success);
 }
 
-.actioned-info {
+.actioned-item .actioned-info {
   display: flex;
   flex-direction: column;
   gap: 2px;
   min-width: 0;
+}
+
+.actioned-info {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.actioned-detail {
+  color: var(--text-secondary);
+  font-size: 0.8rem;
 }
 
 .actioned-subject {
@@ -2085,4 +2097,85 @@ header h1 {
   color: var(--text-secondary);
   margin-top: 0.25rem;
   display: block;
+}
+
+/* Modal */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.modal-card {
+  background: white;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 1.5rem;
+  width: 100%;
+  max-width: 440px;
+  margin: 1rem;
+}
+
+.modal-card h3 {
+  margin: 0 0 0.5rem;
+  color: var(--text);
+}
+
+.modal-subject {
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+  margin: 0 0 1rem;
+}
+
+.modal-card textarea {
+  width: 100%;
+  padding: 0.6rem 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: white;
+  color: var(--text);
+  font-size: 0.9rem;
+  resize: vertical;
+  font-family: inherit;
+  box-sizing: border-box;
+}
+
+.modal-card textarea:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+}
+
+.modal-actions {
+  display: flex;
+  gap: 0.75rem;
+  justify-content: flex-end;
+  margin-top: 1rem;
+}
+
+.modal-cancel-btn {
+  padding: 0.5rem 1rem;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+
+.modal-confirm-btn {
+  padding: 0.5rem 1rem;
+  background: var(--success);
+  border: none;
+  border-radius: 6px;
+  color: white;
+  cursor: pointer;
+  font-weight: 500;
+}
+
+.modal-confirm-btn:hover {
+  opacity: 0.9;
 }

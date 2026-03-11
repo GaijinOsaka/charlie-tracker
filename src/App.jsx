@@ -223,12 +223,23 @@ function App() {
     }
   }
 
-  async function actionMessage(msg) {
+  function openActionModal(msg) {
+    if (msg.actioned_at) {
+      undoAction(msg)
+    } else {
+      setActionModalMessage(msg)
+    }
+  }
+
+  async function confirmAction(note) {
+    const msg = actionModalMessage
+    setActionModalMessage(null)
     try {
-      const isUndoing = !!msg.actioned_at
-      const updates = isUndoing
-        ? { actioned_at: null, actioned_by: null }
-        : { actioned_at: new Date().toISOString(), actioned_by: 'David' }
+      const updates = {
+        actioned_at: new Date().toISOString(),
+        actioned_by: user.id,
+        action_note: note || null,
+      }
       const { error } = await supabase
         .from('messages')
         .update(updates)
@@ -237,10 +248,26 @@ function App() {
       setMessages(prev => prev.map(m =>
         m.id === msg.id ? { ...m, ...updates } : m
       ))
-      addToast(isUndoing ? 'Action removed' : 'Message actioned', 'success')
+      addToast('Message marked as actioned', 'success')
     } catch (err) {
-      console.error('Error actioning message:', err)
-      addToast('Failed to update message', 'error')
+      addToast('Failed to action message', 'error')
+    }
+  }
+
+  async function undoAction(msg) {
+    try {
+      const updates = { actioned_at: null, actioned_by: null, action_note: null }
+      const { error } = await supabase
+        .from('messages')
+        .update(updates)
+        .eq('id', msg.id)
+      if (error) throw error
+      setMessages(prev => prev.map(m =>
+        m.id === msg.id ? { ...m, ...updates } : m
+      ))
+      addToast('Action undone', 'info')
+    } catch (err) {
+      addToast('Failed to undo action', 'error')
     }
   }
 
@@ -618,7 +645,8 @@ function App() {
                     <div className="actioned-info">
                       <span className="actioned-subject">{msg.subject}</span>
                       <span className="actioned-meta">
-                        {msg.actioned_by} &middot; {new Date(msg.actioned_at).toLocaleString()}
+                        {profiles[msg.actioned_by]?.display_name || msg.actioned_by} &middot; {new Date(msg.actioned_at).toLocaleString()}
+                        {msg.action_note && <><br/>{msg.action_note}</>}
                       </span>
                     </div>
                     <span className={`source-badge source-${msg.source}`} style={{ fontSize: '10px', padding: '2px 6px' }}>
@@ -659,7 +687,15 @@ function App() {
                       {(msg.source || 'arbor').toUpperCase()}
                     </span>
                     {!msg.is_read && <span className="unread-dot"></span>}
-                    {msg.actioned_at && <span className="actioned-badge">Actioned</span>}
+                    {msg.actioned_at && (
+                      <div className="actioned-info">
+                        <span className="actioned-badge">Actioned</span>
+                        <span className="actioned-detail">
+                          by {profiles[msg.actioned_by]?.display_name || 'Unknown'}
+                          {msg.action_note && ` — ${msg.action_note}`}
+                        </span>
+                      </div>
+                    )}
                     {msg.indexed_for_rag && <span className="indexed-badge">RAG Indexed</span>}
                   </div>
                 </div>
@@ -715,7 +751,7 @@ function App() {
                   </button>
                   <button
                     className={`btn-action ${msg.actioned_at ? 'btn-action-undo' : ''}`}
-                    onClick={() => actionMessage(msg)}
+                    onClick={() => openActionModal(msg)}
                   >
                     {msg.actioned_at ? 'Undo Action' : 'Mark Actioned'}
                   </button>
@@ -759,6 +795,14 @@ function App() {
       </div>
 
       <ChatDrawer />
+
+      {actionModalMessage && (
+        <ActionModal
+          message={actionModalMessage}
+          onConfirm={confirmAction}
+          onCancel={() => setActionModalMessage(null)}
+        />
+      )}
     </div>
   )
 }
