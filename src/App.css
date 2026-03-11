@@ -2562,3 +2562,416 @@ select option {
     width: 100%;
   }
 }
+
+/* ===== Task 6: Message Card Styling ===== */
+.message-list,
+.event-list,
+.actioned-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.message-item {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 16px;
+  transition: all 0.2s ease;
+}
+
+.message-item:hover {
+  border-color: var(--border-light);
+  box-shadow: var(--shadow-md);
+  transform: translateY(-1px);
+}
+
+.message-item.unread {
+  border-left: 4px solid var(--primary);
+}
+
+.message-item.read {
+  opacity: 0.85;
+}
+
+.message-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 12px;
+  gap: 16px;
+}
+
+.message-info {
+  flex: 1;
+}
+
+.message-subject {
+  font-family: 'Inter', sans-serif;
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: var(--text);
+  margin: 0 0 6px 0;
+}
+
+.message-sender {
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+  display: block;
+  margin-bottom: 4px;
+}
+
+.message-time {
+  color: var(--text-tertiary);
+  font-size: 0.85rem;
+}
+
+.message-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+}
+
+.source-badge {
+  font-size: 0.75rem;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.source-arbor {
+  background: var(--primary);
+  color: var(--bg);
+}
+
+.source-gmail {
+  background: #4285F4;
+  color: white;
+}
+
+.unread-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  background: var(--primary);
+  border-radius: 50%;
+}
+
+.actioned-badge {
+  background: var(--accent);
+  color: white;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.actioned-detail {
+  color: var(--text-tertiary);
+  font-size: 0.85rem;
+}
+
+.indexed-badge {
+  background: var(--success);
+  color: var(--bg);
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.message-content {
+  color: var(--text-secondary);
+  line-height: 1.7;
+  margin-bottom: 12px;
+  word-wrap: break-word;
+}
+
+.message-content.expandable {
+  cursor: pointer;
+}
+
+.message-content.expandable:hover {
+  color: var(--text);
+}
+
+.expand-toggle {
+  color: var(--primary);
+  font-weight: 600;
+  font-size: 0.9rem;
+  margin-left: 8px;
+}
+
+.message-attachments {
+  margin-bottom: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+}
+
+.attachments-label {
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+  font-weight: 600;
+  margin-right: 8px;
+}
+
+.attachment-icon {
+  margin-right: 4px;
+}
+
+.attachment-name {
+  color: var(--text);
+}
+
+.attachment-size {
+  color: var(--text-tertiary);
+  font-size: 0.8rem;
+  margin-left: 4px;
+}
+
+.message-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  border-top: 1px solid var(--border);
+  padding-top: 12px;
+}
+
+.message-actions button {
+  font-size: 0.85rem;
+  padding: 8px 12px;
+}
+
+/* ===== Task 7: Event Card Styling ===== */
+.event-item {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 16px;
+  transition: all 0.2s ease;
+  margin-bottom: 0;
+}
+
+.event-item:hover {
+  border-color: var(--border-light);
+  box-shadow: var(--shadow-md);
+  transform: translateY(-1px);
+}
+
+.event-item.event-today {
+  border-left: 4px solid var(--success);
+}
+
+.event-item.event-past {
+  opacity: 0.7;
+}
+
+.event-item.event-expanded {
+  border-color: var(--primary);
+}
+
+.event-row {
+  display: flex;
+  gap: 16px;
+  cursor: pointer;
+  align-items: flex-start;
+  position: relative;
+}
+
+.event-date-col {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background: var(--bg);
+  padding: 12px 16px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  min-width: 70px;
+}
+
+.event-day {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.event-month {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+}
+
+.event-time {
+  font-size: 0.8rem;
+  color: var(--primary);
+  margin-top: 4px;
+  font-weight: 600;
+}
+
+.event-details {
+  flex: 1;
+}
+
+.event-title {
+  font-family: 'Inter', sans-serif;
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: var(--text);
+  margin: 0 0 6px 0;
+}
+
+.event-desc {
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+  margin: 4px 0;
+}
+
+.event-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
+  align-items: center;
+}
+
+.event-action-badge {
+  background: var(--accent);
+  color: white;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.event-today-badge {
+  background: var(--success);
+  color: var(--bg);
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.event-tag {
+  background: var(--bg);
+  border: 1px solid var(--primary);
+  color: var(--primary);
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.event-tag:hover {
+  background: var(--primary);
+  color: var(--bg);
+}
+
+.event-source {
+  color: var(--text-tertiary);
+  font-size: 0.8rem;
+}
+
+.event-document-source {
+  border-left: 2px solid var(--warning);
+  padding-left: 6px;
+}
+
+.event-expand-hint {
+  color: var(--text-tertiary);
+  font-size: 0.8rem;
+  margin-left: auto;
+}
+
+.event-message-panel {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+  background: var(--bg);
+  padding: 16px;
+  border-radius: 6px;
+}
+
+.event-message-header {
+  margin-bottom: 12px;
+}
+
+.event-message-meta-row {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  margin-top: 8px;
+  flex-wrap: wrap;
+  font-size: 0.9rem;
+}
+
+.event-doc-panel {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.event-doc-icon {
+  font-size: 1.5rem;
+}
+
+.event-doc-info {
+  flex: 1;
+}
+
+.event-doc-filename {
+  color: var(--text);
+  font-weight: 500;
+}
+
+/* ===== Task 8: Recently Actioned Section ===== */
+.actioned-box {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 24px;
+}
+
+.actioned-box-title {
+  font-family: 'Inter', sans-serif;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--primary);
+  margin: 0 0 12px 0;
+}
+
+.actioned-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px;
+  background: var(--bg);
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  gap: 12px;
+}
+
+.actioned-info {
+  flex: 1;
+}
+
+.actioned-subject {
+  display: block;
+  color: var(--text);
+  font-weight: 500;
+  font-size: 0.95rem;
+  margin-bottom: 2px;
+}
+
+.actioned-meta {
+  color: var(--text-tertiary);
+  font-size: 0.8rem;
+}
