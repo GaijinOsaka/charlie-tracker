@@ -48,15 +48,17 @@ function App() {
     setProfiles(map)
   }
 
-  // Load initial data
+  // Load initial data when user is available
   useEffect(() => {
+    if (!user) return
     loadMessages()
     loadEvents()
     loadProfiles()
-  }, [])
+  }, [user])
 
   // Subscribe to realtime updates
   useEffect(() => {
+    if (!user) return
     const channel = supabase
       .channel('public:messages')
       .on(
@@ -91,7 +93,7 @@ function App() {
     return () => {
       channel.unsubscribe()
     }
-  }, [])
+  }, [user])
 
   async function loadMessages() {
     try {

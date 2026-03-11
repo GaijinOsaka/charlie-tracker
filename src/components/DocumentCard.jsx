@@ -16,8 +16,6 @@ export default function DocumentCard({ document, onUpdate, onDelete, selected, o
   const [downloading, setDownloading] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const [indexing, setIndexing] = useState(false)
-  const [extractingDates, setExtractingDates] = useState(false)
-
   const tags = document.tags || []
   const categoryStyle = CATEGORY_COLORS[document.category] || CATEGORY_COLORS.other
 
@@ -94,39 +92,6 @@ export default function DocumentCard({ document, onUpdate, onDelete, selected, o
     }
   }
 
-  async function handleExtractDates() {
-    setExtractingDates(true)
-    try {
-      const { data, error } = await supabase.functions.invoke('extract-dates', {
-        body: { document_id: document.id },
-      })
-
-      if (error) {
-        let msg = error.message
-        try {
-          if (error.context && typeof error.context.json === 'function') {
-            const body = await error.context.json()
-            msg = body.error || msg
-          }
-        } catch (_) {}
-        throw new Error(msg)
-      }
-      if (data && !data.success) throw new Error(data.error || 'Date extraction failed')
-
-      const count = data?.events_created || 0
-      alert(`Date extraction complete. ${count} event${count !== 1 ? 's' : ''} created.`)
-
-      if (onUpdate) {
-        onUpdate({ ...document, dates_extracted: true })
-      }
-    } catch (err) {
-      console.error('Extract dates error:', err)
-      alert('Failed to extract dates: ' + err.message)
-    } finally {
-      setExtractingDates(false)
-    }
-  }
-
   return (
     <div className={`doc-card ${selected ? 'doc-card-selected' : ''}`}>
       <div className="doc-card-header">
@@ -189,16 +154,6 @@ export default function DocumentCard({ document, onUpdate, onDelete, selected, o
           {indexing
             ? (document.indexed_for_rag ? 'Removing...' : 'Indexing...')
             : (document.indexed_for_rag ? 'Remove from RAG' : 'Add to RAG')}
-        </button>
-        <button
-          className="btn-doc btn-extract-dates"
-          onClick={handleExtractDates}
-          disabled={extractingDates || !document.content_text}
-          title={!document.content_text ? 'Extract text first (use Add to RAG)' : undefined}
-        >
-          {extractingDates
-            ? 'Extracting...'
-            : (document.dates_extracted ? 'Re-extract Dates' : 'Extract Dates')}
         </button>
         <button
           className="btn-doc btn-delete"
