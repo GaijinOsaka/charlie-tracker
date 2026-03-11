@@ -244,6 +244,20 @@ Deno.serve(async (req) => {
       }
 
       const result = await indexDocument(supabase, doc_id, openaiKey);
+
+      // After successful indexing, automatically extract dates
+      if (result.success) {
+        const extractDatesUrl = `${supabaseUrl}/functions/v1/extract-dates`;
+        fetch(extractDatesUrl, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${supabaseKey}`,
+          },
+          body: JSON.stringify({ document_id: doc_id }),
+        }).catch(() => {});
+      }
+
       return new Response(JSON.stringify(result), {
         status: result.success ? 200 : 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
