@@ -1,7 +1,10 @@
 import React, { useState, useEffect } from 'react'
 import { supabase } from './lib/supabase'
+import { useAuth } from './lib/AuthContext'
+import LoginPage from './components/LoginPage'
 import DocumentBrowser from './components/DocumentBrowser'
 import CalendarView from './components/CalendarView'
+import ChatDrawer from './components/ChatDrawer'
 import './App.css'
 
 function linkify(text) {
@@ -16,6 +19,7 @@ function linkify(text) {
 }
 
 function App() {
+  const { user, profile, loading: authLoading, signOut } = useAuth()
   const [activeTab, setActiveTab] = useState('messages')
   const [messages, setMessages] = useState([])
   const [events, setEvents] = useState([])
@@ -30,6 +34,7 @@ function App() {
   const [eventsTagFilter, setEventsTagFilter] = useState('all')
   const [expandedMessages, setExpandedMessages] = useState(new Set())
   const [expandedEvents, setExpandedEvents] = useState(new Set())
+  const [indexingMessages, setIndexingMessages] = useState(new Set())
 
   // Load initial data
   useEffect(() => {
@@ -99,7 +104,7 @@ function App() {
       setEventsLoading(true)
       const { data, error } = await supabase
         .from('events')
-        .select('*, messages(id, subject, sender_name, sender_email, content, source, received_at, is_read, attachments(id, filename, file_path, mime_type, file_size)), documents(id, filename, file_path), event_tags(tag)')
+        .select('*, messages(id, subject, sender_name, sender_email, content, source, received_at, attachments(id, filename, file_path, mime_type, file_size)), documents(id, filename, file_path), event_tags(tag)')
         .order('event_date', { ascending: true })
         .eq('archived', false)
       if (error) throw error
@@ -208,6 +213,48 @@ function App() {
     }
   }
 
+  async function toggleMessageRag(msg) {
+    const action = msg.indexed_for_rag ? 'remove' : 'index'
+    setIndexingMessages(prev => new Set(prev).add(msg.id))
+    try {
+      const { data, error } = await supabase.functions.invoke('index-message', {
+        body: { message_id: msg.id, action },
+      })
+
+      if (error) {
+        let errMsg = error.message
+        try {
+          if (error.context && typeof error.context.json === 'function') {
+            const body = await error.context.json()
+            errMsg = body.error || errMsg
+          }
+        } catch (_) {}
+        throw new Error(errMsg)
+      }
+
+      if (data?.error) throw new Error(data.error)
+
+      setMessages(prev => prev.map(m =>
+        m.id === msg.id ? { ...m, indexed_for_rag: action === 'index' } : m
+      ))
+      addToast(
+        action === 'index'
+          ? `Indexed message${data?.attachments_dispatched ? ` + ${data.attachments_dispatched} attachment(s)` : ''}`
+          : 'Removed from RAG',
+        'success'
+      )
+    } catch (err) {
+      console.error('RAG toggle error:', err)
+      addToast(`Failed to ${action} message: ${err.message}`, 'error')
+    } finally {
+      setIndexingMessages(prev => {
+        const next = new Set(prev)
+        next.delete(msg.id)
+        return next
+      })
+    }
+  }
+
   function addToast(message, type = 'info') {
     const id = Date.now()
     setToasts(prev => [...prev, { id, message, type }])
@@ -257,12 +304,16 @@ function App() {
 
   async function toggleReadStatus(message) {
     try {
+      const newStatus = !message.is_read
       const { error } = await supabase
         .from('messages')
-        .update({ is_read: !message.is_read })
+        .update({ is_read: newStatus })
         .eq('id', message.id)
 
       if (error) throw error
+      setMessages(prev => prev.map(m =>
+        m.id === message.id ? { ...m, is_read: newStatus } : m
+      ))
     } catch (error) {
       console.error('Error updating message:', error)
       addToast('Error updating message', 'error')
@@ -271,11 +322,27 @@ function App() {
 
   const filteredMessages = getFilteredMessages()
 
+  if (authLoading) {
+    return <div className="loading-screen">Loading...</div>
+  }
+
+  if (!user) {
+    return <LoginPage />
+  }
+
   return (
     <div className="app">
       <header>
-        <h1>Charlie Oakes Tracker</h1>
-        <p className="subtitle">Communication Dashboard</p>
+        <div className="header-top">
+          <div>
+            <h1>Charlie Oakes Tracker</h1>
+            <p className="subtitle">Communication Dashboard</p>
+          </div>
+          <div className="header-right">
+            <span className="user-name">{profile?.display_name}</span>
+            <button className="sign-out-btn" onClick={signOut}>Sign Out</button>
+          </div>
+        </div>
       </header>
 
       <nav className="tab-nav">
@@ -543,6 +610,7 @@ function App() {
                     </span>
                     {!msg.is_read && <span className="unread-dot"></span>}
                     {msg.actioned_at && <span className="actioned-badge">Actioned</span>}
+                    {msg.indexed_for_rag && <span className="indexed-badge">RAG Indexed</span>}
                   </div>
                 </div>
 
@@ -602,6 +670,15 @@ function App() {
                     {msg.actioned_at ? 'Undo Action' : 'Mark Actioned'}
                   </button>
                   <button
+                    className={`btn-rag-toggle ${msg.indexed_for_rag ? 'btn-rag-remove' : 'btn-rag-add'}`}
+                    onClick={() => toggleMessageRag(msg)}
+                    disabled={indexingMessages.has(msg.id)}
+                  >
+                    {indexingMessages.has(msg.id)
+                      ? (msg.indexed_for_rag ? 'Removing...' : 'Indexing...')
+                      : (msg.indexed_for_rag ? 'Remove from RAG' : 'Add to RAG')}
+                  </button>
+                  <button
                     className="btn-msg-delete"
                     onClick={() => deleteMessage(msg.id)}
                   >
@@ -630,6 +707,8 @@ function App() {
           </div>
         ))}
       </div>
+
+      <ChatDrawer />
     </div>
   )
 }
