@@ -1,12 +1,51 @@
 :root {
-  --primary: #3B82F6;
+  --primary: #06B6D4;
+  --primary-dark: #0891B2;
+  --primary-light: #22D3EE;
+  --accent: #EC4899;
+  --accent-dark: #DB2777;
   --success: #10B981;
   --danger: #EF4444;
   --warning: #F59E0B;
-  --bg: #f9fafb;
-  --border: #e5e7eb;
-  --text: #1f2937;
-  --text-secondary: #6b7280;
+
+  --bg: #0F172A;
+  --bg-secondary: #1E293B;
+  --bg-tertiary: #334155;
+
+  --border: #334155;
+  --border-light: #475569;
+
+  --text: #F1F5F9;
+  --text-secondary: #CBD5E1;
+  --text-tertiary: #94A3B8;
+
+  --shadow-sm: 0 4px 12px rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 8px 16px rgba(0, 0, 0, 0.4);
+  --glow: 0 0 12px rgba(6, 182, 212, 0.3);
+}
+
+html {
+  scrollbar-color: var(--primary) var(--border);
+  scrollbar-width: thin;
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--border);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--primary);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--primary-light);
 }
 
 * {
@@ -16,14 +55,16 @@
 }
 
 body {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  background-color: var(--bg);
+  font-family: 'Inter', 'Raleway', sans-serif;
+  background: linear-gradient(135deg, #0F172A 0%, #1A1F2E 100%);
   color: var(--text);
+  line-height: 1.7;
+  letter-spacing: 0.5px;
 }
 
 .app {
   min-height: 100vh;
-  padding: 20px;
+  padding: 32px 24px;
   max-width: 1200px;
   margin: 0 auto;
 }
