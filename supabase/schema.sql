@@ -22,6 +22,8 @@ CREATE TABLE messages (
   received_at TIMESTAMPTZ NOT NULL,
   category_id UUID REFERENCES categories(id) ON DELETE SET NULL,
   is_read BOOLEAN DEFAULT FALSE,
+  actioned_at TIMESTAMPTZ,
+  actioned_by TEXT,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -78,15 +80,21 @@ CREATE TABLE sync_log (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- 5. Create events table (key dates extracted from messages)
+-- 5. Create events table (key dates extracted from messages or documents)
 CREATE TABLE events (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  message_id UUID NOT NULL REFERENCES messages(id) ON DELETE CASCADE,
+  message_id UUID REFERENCES messages(id) ON DELETE CASCADE,
+  document_id UUID REFERENCES documents(id) ON DELETE CASCADE,
   event_date DATE NOT NULL,
   event_time TIME,
+  event_end_time TIME,
   title TEXT NOT NULL,
   description TEXT,
-  created_at TIMESTAMPTZ DEFAULT NOW()
+  action_required BOOLEAN DEFAULT FALSE,
+  action_detail TEXT,
+  archived BOOLEAN DEFAULT FALSE,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  CONSTRAINT events_has_source CHECK (message_id IS NOT NULL OR document_id IS NOT NULL)
 );
 
 -- 6. Create indexes for performance
@@ -97,6 +105,7 @@ CREATE INDEX idx_messages_created_at ON messages(created_at DESC);
 CREATE INDEX idx_attachments_message_id ON attachments(message_id);
 CREATE INDEX idx_sync_log_created_at ON sync_log(created_at DESC);
 CREATE INDEX idx_events_message_id ON events(message_id);
+CREATE INDEX idx_events_document_id ON events(document_id);
 CREATE INDEX idx_events_event_date ON events(event_date);
 
 -- 6. Seed categories with default values
@@ -182,6 +191,8 @@ CREATE TABLE documents (
   category TEXT DEFAULT 'other',
   indexed_for_rag BOOLEAN DEFAULT FALSE,
   last_indexed_at TIMESTAMPTZ,
+  dates_extracted BOOLEAN DEFAULT FALSE,
+  dates_extracted_at TIMESTAMPTZ,
   file_size_bytes INTEGER,
   description TEXT,
   created_at TIMESTAMPTZ DEFAULT NOW()
