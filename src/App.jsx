@@ -85,12 +85,22 @@ function App() {
       setLoading(true)
       const { data, error } = await supabase
         .from('messages')
-        .select('*, attachments(id, filename, file_path, mime_type, file_size)')
+        .select(`
+          *,
+          attachments(id, filename, file_path, mime_type, file_size),
+          message_read_status!left(user_id, read_at)
+        `)
         .order('received_at', { ascending: false })
         .limit(100)
 
       if (error) throw error
-      setMessages(data || [])
+
+      const annotated = (data || []).map(msg => ({
+        ...msg,
+        is_read: (msg.message_read_status || []).some(rs => rs.user_id === user.id),
+      }))
+
+      setMessages(annotated)
     } catch (error) {
       setError(error.message)
       console.error('Error loading messages:', error)
@@ -154,8 +164,17 @@ function App() {
   function toggleExpanded(msgId) {
     setExpandedMessages(prev => {
       const next = new Set(prev)
-      if (next.has(msgId)) next.delete(msgId)
-      else next.add(msgId)
+      if (next.has(msgId)) {
+        next.delete(msgId)
+      } else {
+        next.add(msgId)
+        const msg = messages.find(m => m.id === msgId)
+        if (msg && !msg.is_read) {
+          setTimeout(() => {
+            toggleReadStatus(msg)
+          }, 1000)
+        }
+      }
       return next
     })
   }
@@ -303,20 +322,25 @@ function App() {
   }
 
   async function toggleReadStatus(message) {
+    const currentlyRead = message.is_read
     try {
-      const newStatus = !message.is_read
-      const { error } = await supabase
-        .from('messages')
-        .update({ is_read: newStatus })
-        .eq('id', message.id)
+      if (currentlyRead) {
+        await supabase
+          .from('message_read_status')
+          .delete()
+          .eq('user_id', user.id)
+          .eq('message_id', message.id)
+      } else {
+        await supabase
+          .from('message_read_status')
+          .upsert({ user_id: user.id, message_id: message.id })
+      }
 
-      if (error) throw error
       setMessages(prev => prev.map(m =>
-        m.id === message.id ? { ...m, is_read: newStatus } : m
+        m.id === message.id ? { ...m, is_read: !currentlyRead } : m
       ))
-    } catch (error) {
-      console.error('Error updating message:', error)
-      addToast('Error updating message', 'error')
+    } catch (err) {
+      addToast('Failed to update read status', 'error')
     }
   }
 
@@ -351,6 +375,9 @@ function App() {
           onClick={() => setActiveTab('messages')}
         >
           Messages
+          {messages.filter(m => !m.is_read).length > 0 && (
+            <span className="tab-badge">{messages.filter(m => !m.is_read).length}</span>
+          )}
         </button>
         <button
           className={`tab-btn ${activeTab === 'events' ? 'active' : ''}`}
