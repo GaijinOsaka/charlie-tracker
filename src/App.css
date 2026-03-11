@@ -2342,3 +2342,223 @@ header .subtitle {
   opacity: 0.6;
   cursor: not-allowed;
 }
+
+/* ===== Task 4: Comprehensive Button Styles ===== */
+button {
+  font-family: inherit;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+/* Primary button style */
+.btn-primary,
+.btn-mark-read,
+.btn-msg-delete {
+  background: var(--primary);
+  color: var(--bg);
+  border: none;
+  padding: 10px 16px;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.btn-primary:hover,
+.btn-mark-read:hover,
+.btn-msg-delete:hover {
+  background: var(--primary-dark);
+  transform: translateY(-2px);
+  box-shadow: var(--glow);
+}
+
+.btn-primary:active,
+.btn-mark-read:active,
+.btn-msg-delete:active {
+  transform: scale(0.98);
+}
+
+/* Action button */
+.btn-action {
+  background: var(--accent);
+  color: white;
+  border: none;
+  padding: 10px 16px;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.btn-action:hover {
+  background: var(--accent-dark);
+  transform: translateY(-2px);
+  box-shadow: 0 0 12px rgba(236, 72, 153, 0.3);
+}
+
+.btn-action-undo {
+  background: var(--text-tertiary);
+  color: var(--bg);
+}
+
+.btn-action-undo:hover {
+  background: var(--text-secondary);
+  box-shadow: 0 0 12px rgba(203, 213, 225, 0.2);
+}
+
+/* RAG toggle buttons */
+.btn-rag-toggle {
+  border: 1px solid var(--success);
+  color: var(--success);
+  background: transparent;
+  padding: 10px 16px;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.btn-rag-toggle:hover {
+  background: rgba(16, 185, 129, 0.1);
+  transform: translateY(-2px);
+}
+
+.btn-rag-add {
+  border-color: var(--success);
+  color: var(--success);
+}
+
+.btn-rag-remove {
+  border-color: var(--danger);
+  color: var(--danger);
+  background: rgba(239, 68, 68, 0.05);
+}
+
+.btn-rag-remove:hover {
+  background: rgba(239, 68, 68, 0.1);
+}
+
+.btn-rag-toggle:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Event delete button */
+.btn-event-delete {
+  background: transparent;
+  border: none;
+  color: var(--text-tertiary);
+  font-size: 1.5rem;
+  cursor: pointer;
+  padding: 4px 8px;
+  transition: all 0.2s ease;
+}
+
+.btn-event-delete:hover {
+  color: var(--danger);
+  transform: scale(1.2);
+}
+
+/* Document download button */
+.btn-doc-download {
+  background: var(--primary);
+  color: var(--bg);
+  border: none;
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-doc-download:hover {
+  background: var(--primary-dark);
+  transform: translateY(-1px);
+  box-shadow: var(--glow);
+}
+
+/* Attachment link button */
+.attachment-link {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--primary);
+  padding: 8px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.9rem;
+  transition: all 0.2s ease;
+  margin-right: 8px;
+  margin-bottom: 8px;
+}
+
+.attachment-link:hover {
+  border-color: var(--primary);
+  background: rgba(6, 182, 212, 0.05);
+  transform: translateY(-1px);
+}
+
+/* ===== Task 5: Form Controls ===== */
+input[type="text"],
+select {
+  background: var(--bg);
+  border: 2px solid var(--border);
+  color: var(--text);
+  padding: 10px 12px;
+  border-radius: 6px;
+  font-size: 0.95rem;
+  font-family: inherit;
+  transition: all 0.2s ease;
+}
+
+input[type="text"]::placeholder {
+  color: var(--text-tertiary);
+}
+
+input[type="text"]:focus,
+select:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: var(--glow);
+  background: var(--bg-secondary);
+}
+
+select {
+  cursor: pointer;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='%2306B6D4' d='M1 1l5 5 5-5'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  padding-right: 32px;
+}
+
+select option {
+  background: var(--bg-secondary);
+  color: var(--text);
+}
+
+.filters {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 24px;
+  background: var(--bg-secondary);
+  padding: 16px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+}
+
+.filters .filter-group.search input {
+  width: 300px;
+  max-width: 100%;
+}
+
+@media (max-width: 768px) {
+  .filters {
+    flex-direction: column;
+  }
+
+  .filters .filter-group.search input {
+    width: 100%;
+  }
+}
