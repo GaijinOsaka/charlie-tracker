@@ -2975,3 +2975,148 @@ select option {
   color: var(--text-tertiary);
   font-size: 0.8rem;
 }
+
+/* ===== Task 9: Global Transitions and Focus States ===== */
+:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+input:focus,
+select:focus {
+  outline: none;
+}
+
+/* ===== Task 10: Loading and Toast Styles ===== */
+.loading-screen {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  background: linear-gradient(135deg, var(--bg) 0%, var(--bg-secondary) 100%);
+  color: var(--text);
+  font-size: 1.2rem;
+  font-family: 'Inter', sans-serif;
+  font-weight: 500;
+}
+
+.loading {
+  text-align: center;
+  color: var(--text-secondary);
+  padding: 32px;
+  font-style: italic;
+}
+
+.error {
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid var(--danger);
+  color: #FCA5A5;
+  padding: 16px;
+  border-radius: 8px;
+  margin-bottom: 16px;
+}
+
+.no-messages {
+  text-align: center;
+  color: var(--text-tertiary);
+  padding: 32px;
+  font-style: italic;
+}
+
+.toast-container {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.toast {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 16px;
+  color: var(--text);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  min-width: 300px;
+  animation: slideIn 0.3s ease-out;
+  box-shadow: var(--shadow-md);
+}
+
+.toast p {
+  margin: 0;
+  flex: 1;
+}
+
+.toast-info {
+  border-left: 4px solid var(--primary);
+}
+
+.toast-success {
+  border-left: 4px solid var(--success);
+}
+
+.toast-error {
+  border-left: 4px solid var(--danger);
+}
+
+.toast-warning {
+  border-left: 4px solid var(--warning);
+}
+
+.toast-close {
+  background: transparent;
+  border: none;
+  color: var(--text-tertiary);
+  font-size: 1.5rem;
+  cursor: pointer;
+  padding: 0;
+  margin-left: 16px;
+  transition: all 0.2s ease;
+}
+
+.toast-close:hover {
+  color: var(--text);
+}
+
+/* ===== Task 11: Inline Links and Special Elements ===== */
+.inline-link {
+  color: var(--primary);
+  text-decoration: none;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+.inline-link:hover {
+  color: var(--primary-light);
+  text-decoration: underline;
+}
+
+/* Chat drawer and modals styling */
+.chat-drawer {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  color: var(--text);
+}
+
+.modal-overlay {
+  background: rgba(0, 0, 0, 0.7);
+}
+
+.modal-content {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  color: var(--text);
+}
+
+.modal-header {
+  border-bottom: 1px solid var(--border);
+}
+
+.modal-footer {
+  border-top: 1px solid var(--border);
+}
