@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { supabase } from '../lib/supabase'
 import DocumentCard from './DocumentCard'
 import { AVAILABLE_TAGS } from './TagEditor'
@@ -15,6 +15,8 @@ export default function DocumentBrowser() {
   const [searchQuery, setSearchQuery] = useState('')
   const [selected, setSelected] = useState(new Set())
   const [batchDeleting, setBatchDeleting] = useState(false)
+  const [uploading, setUploading] = useState(false)
+  const fileInputRef = useRef(null)
 
   useEffect(() => {
     loadDocuments()
@@ -25,7 +27,7 @@ export default function DocumentBrowser() {
       setLoading(true)
       const { data, error } = await supabase
         .from('documents')
-        .select('id, filename, file_path, source_url, source_type, tags, category, indexed_for_rag, created_at')
+        .select('id, filename, file_path, source_url, source_type, tags, category, indexed_for_rag, dates_extracted, created_at, content_text')
         .order('filename', { ascending: true })
 
       if (error) throw error
@@ -34,6 +36,39 @@ export default function DocumentBrowser() {
       setError(err.message)
     } finally {
       setLoading(false)
+    }
+  }
+
+  async function handleUpload(e) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setUploading(true)
+    try {
+      const storagePath = `uploads/${Date.now()}_${file.name}`
+      const { error: uploadError } = await supabase.storage
+        .from('charlie-documents')
+        .upload(storagePath, file)
+      if (uploadError) throw uploadError
+
+      const { error: insertError } = await supabase
+        .from('documents')
+        .insert({
+          filename: file.name,
+          file_path: storagePath,
+          source_type: 'upload',
+          category: 'other',
+          tags: ['upload'],
+        })
+      if (insertError) throw insertError
+
+      await loadDocuments()
+    } catch (err) {
+      console.error('Upload error:', err)
+      alert('Failed to upload document: ' + err.message)
+    } finally {
+      setUploading(false)
+      // Reset file input so the same file can be uploaded again
+      if (fileInputRef.current) fileInputRef.current.value = ''
     }
   }
 
@@ -194,6 +229,20 @@ export default function DocumentBrowser() {
 
       {/* Batch action bar */}
       <div className="batch-bar">
+        <button
+          className="btn-upload"
+          onClick={() => fileInputRef.current?.click()}
+          disabled={uploading}
+        >
+          {uploading ? 'Uploading...' : 'Upload Document'}
+        </button>
+        <input
+          type="file"
+          ref={fileInputRef}
+          accept=".pdf,.doc,.docx,.png,.jpg,.jpeg"
+          onChange={handleUpload}
+          style={{ display: 'none' }}
+        />
         <label className="batch-select-all">
           <input
             type="checkbox"

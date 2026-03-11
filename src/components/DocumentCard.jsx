@@ -16,6 +16,8 @@ export default function DocumentCard({ document, onUpdate, onDelete, selected, o
   const [downloading, setDownloading] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const [indexing, setIndexing] = useState(false)
+  const [extractingText, setExtractingText] = useState(false)
+  const [extractingDates, setExtractingDates] = useState(false)
 
   const tags = document.tags || []
   const categoryStyle = CATEGORY_COLORS[document.category] || CATEGORY_COLORS.other
@@ -93,6 +95,69 @@ export default function DocumentCard({ document, onUpdate, onDelete, selected, o
     }
   }
 
+  async function handleExtractText() {
+    setExtractingText(true)
+    try {
+      const { data, error } = await supabase.functions.invoke('index-document', {
+        body: { doc_id: document.id, action: 'index' },
+      })
+
+      if (error) {
+        let msg = error.message
+        try {
+          if (error.context && typeof error.context.json === 'function') {
+            const body = await error.context.json()
+            msg = body.error || msg
+          }
+        } catch (_) {}
+        throw new Error(msg)
+      }
+      if (data && !data.success) throw new Error(data.error || 'Extraction failed')
+
+      if (data?.status === 'extracting') {
+        alert(data.message || 'Text extraction started. This takes 2-3 minutes.')
+      }
+    } catch (err) {
+      console.error('Extract text error:', err)
+      alert('Failed to extract text: ' + err.message)
+    } finally {
+      setExtractingText(false)
+    }
+  }
+
+  async function handleExtractDates() {
+    setExtractingDates(true)
+    try {
+      const { data, error } = await supabase.functions.invoke('extract-dates', {
+        body: { document_id: document.id },
+      })
+
+      if (error) {
+        let msg = error.message
+        try {
+          if (error.context && typeof error.context.json === 'function') {
+            const body = await error.context.json()
+            msg = body.error || msg
+          }
+        } catch (_) {}
+        throw new Error(msg)
+      }
+      if (data && !data.success) throw new Error(data.error || 'Date extraction failed')
+
+      const count = data?.events_created || 0
+      alert(`Date extraction complete. ${count} event${count !== 1 ? 's' : ''} created.`)
+
+      if (onUpdate) {
+        onUpdate({ ...document, dates_extracted: true })
+      }
+    } catch (err) {
+      console.error('Extract dates error:', err)
+      alert('Failed to extract dates: ' + err.message)
+    } finally {
+      setExtractingDates(false)
+    }
+  }
+
   return (
     <div className={`doc-card ${selected ? 'doc-card-selected' : ''}`}>
       <div className="doc-card-header">
@@ -120,6 +185,12 @@ export default function DocumentCard({ document, onUpdate, onDelete, selected, o
         <span className={`doc-rag-badge ${document.indexed_for_rag ? 'rag-yes' : 'rag-no'}`}>
           {document.indexed_for_rag ? '\u26A1 Indexed' : '\u{1F512} Not Indexed'}
         </span>
+        {document.content_text && (
+          <span className="doc-text-badge">Text Extracted</span>
+        )}
+        {document.dates_extracted && (
+          <span className="doc-dates-badge">Dates Extracted</span>
+        )}
       </div>
 
       {tags.length > 0 && (
@@ -141,15 +212,36 @@ export default function DocumentCard({ document, onUpdate, onDelete, selected, o
         >
           {downloading ? 'Opening...' : 'Download'}
         </button>
+        {!document.content_text && (
+          <button
+            className="btn-doc btn-extract-text"
+            onClick={handleExtractText}
+            disabled={extractingText}
+          >
+            {extractingText ? 'Extracting...' : 'Extract Text'}
+          </button>
+        )}
         <button
           className={`btn-doc ${document.indexed_for_rag ? 'btn-remove-rag' : 'btn-add-rag'}`}
           onClick={toggleRagFlag}
-          disabled={indexing}
+          disabled={indexing || !document.content_text}
+          title={!document.content_text ? 'Extract text first' : undefined}
         >
           {indexing
             ? (document.indexed_for_rag ? 'Removing...' : 'Indexing...')
             : (document.indexed_for_rag ? 'Remove from RAG' : 'Add to RAG')}
         </button>
+        {document.content_text && (
+          <button
+            className="btn-doc btn-extract-dates"
+            onClick={handleExtractDates}
+            disabled={extractingDates}
+          >
+            {extractingDates
+              ? 'Extracting...'
+              : (document.dates_extracted ? 'Re-extract Dates' : 'Extract Dates')}
+          </button>
+        )}
         <button
           className="btn-doc btn-delete"
           onClick={handleDelete}
