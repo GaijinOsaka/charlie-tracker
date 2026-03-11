@@ -20,6 +20,39 @@ export default function DocumentBrowser() {
 
   useEffect(() => {
     loadDocuments()
+
+    // Subscribe to realtime updates on documents table
+    const channel = supabase
+      .channel('public:documents')
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'documents' },
+        (payload) => {
+          setDocuments(prev => prev.map(d =>
+            d.id === payload.new.id ? { ...d, ...payload.new } : d
+          ))
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'documents' },
+        () => {
+          // Reload to get full document with all fields
+          loadDocuments()
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: 'DELETE', schema: 'public', table: 'documents' },
+        (payload) => {
+          setDocuments(prev => prev.filter(d => d.id !== payload.old.id))
+        }
+      )
+      .subscribe()
+
+    return () => {
+      channel.unsubscribe()
+    }
   }, [])
 
   async function loadDocuments() {
