@@ -5,6 +5,8 @@ import LoginPage from './components/LoginPage'
 import DocumentBrowser from './components/DocumentBrowser'
 import CalendarView from './components/CalendarView'
 import ChatDrawer from './components/ChatDrawer'
+import ActionModal from './components/ActionModal'
+import NotificationBell from './components/NotificationBell'
 import './App.css'
 
 function linkify(text) {
@@ -35,11 +37,21 @@ function App() {
   const [expandedMessages, setExpandedMessages] = useState(new Set())
   const [expandedEvents, setExpandedEvents] = useState(new Set())
   const [indexingMessages, setIndexingMessages] = useState(new Set())
+  const [actionModalMessage, setActionModalMessage] = useState(null)
+  const [profiles, setProfiles] = useState({})
+
+  async function loadProfiles() {
+    const { data } = await supabase.from('profiles').select('*')
+    const map = {}
+    ;(data || []).forEach(p => { map[p.id] = p })
+    setProfiles(map)
+  }
 
   // Load initial data
   useEffect(() => {
     loadMessages()
     loadEvents()
+    loadProfiles()
   }, [])
 
   // Subscribe to realtime updates
@@ -344,6 +356,15 @@ function App() {
     }
   }
 
+  function navigateToMessage(messageId) {
+    setActiveTab('messages')
+    setExpandedMessages(prev => new Set([...prev, messageId]))
+    setTimeout(() => {
+      const el = document.getElementById(`message-${messageId}`)
+      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    }, 100)
+  }
+
   const filteredMessages = getFilteredMessages()
 
   if (authLoading) {
@@ -363,6 +384,7 @@ function App() {
             <p className="subtitle">Communication Dashboard</p>
           </div>
           <div className="header-right">
+            <NotificationBell onNavigateToMessage={navigateToMessage} />
             <span className="user-name">{profile?.display_name}</span>
             <button className="sign-out-btn" onClick={signOut}>Sign Out</button>
           </div>
@@ -621,6 +643,7 @@ function App() {
             {filteredMessages.map(msg => (
               <li
                 key={msg.id}
+                id={`message-${msg.id}`}
                 className={`message-item ${msg.is_read ? 'read' : 'unread'}`}
               >
                 <div className="message-header">
