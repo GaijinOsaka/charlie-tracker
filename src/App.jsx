@@ -9,6 +9,7 @@ import ChatDrawer from './components/ChatDrawer'
 import ActionModal from './components/ActionModal'
 import NotificationBell from './components/NotificationBell'
 import MobileNav from './components/MobileNav'
+import MobileFilters from './components/MobileFilters'
 import './App.css'
 
 function linkify(text) {
@@ -43,6 +44,7 @@ function App() {
   const [profiles, setProfiles] = useState({})
   const [theme, setTheme] = useState('light')
   const [mobileNavOpen, setMobileNavOpen] = useState(false)
+  const [filtersOpen, setFiltersOpen] = useState(false)
 
   async function loadProfiles() {
     const { data } = await supabase.from('profiles').select('*')
@@ -370,6 +372,18 @@ function App() {
     return filtered
   }
 
+  function handleFilterChange(key, value) {
+    if (key === 'type') {
+      setSourceFilter(value)
+    } else if (key === 'startDate') {
+      // Store start date for filtering if needed
+      console.log('Start date:', value)
+    } else if (key === 'endDate') {
+      // Store end date for filtering if needed
+      console.log('End date:', value)
+    }
+  }
+
   async function downloadAttachment(filePath, filename) {
     try {
       const { data, error } = await supabase.storage
@@ -641,6 +655,11 @@ function App() {
         {activeTab === 'settings' && <SettingsPanel />}
 
         {activeTab === 'messages' && <>
+        <MobileFilters
+          isOpen={filtersOpen}
+          onToggle={() => setFiltersOpen(!filtersOpen)}
+          onFilterChange={handleFilterChange}
+        />
         <div className="filters">
           <div className="filter-group">
             <label>Status</label>
