@@ -37,7 +37,6 @@ Thumbs.db
 
 # n8n
 .n8n-cache/
-node_modules/
 
 # Credentials (NEVER COMMIT)
 *.key

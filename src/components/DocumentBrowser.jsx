@@ -60,7 +60,7 @@ export default function DocumentBrowser() {
       setLoading(true)
       const { data, error } = await supabase
         .from('documents')
-        .select('id, filename, file_path, source_url, source_type, tags, category, indexed_for_rag, dates_extracted, created_at, content_text')
+        .select('id, filename, file_path, source_url, source_type, tags, category, indexed_for_rag, dates_extracted, created_at')
         .order('filename', { ascending: true })
 
       if (error) throw error

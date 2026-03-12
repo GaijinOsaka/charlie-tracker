@@ -42,22 +42,30 @@ export default function NotificationBell({ onNavigateToMessage }) {
   }, [])
 
   async function loadNotifications() {
-    const { data } = await supabase
-      .from('user_notifications')
-      .select('*')
-      .eq('user_id', user.id)
-      .is('dismissed_at', null)
-      .order('created_at', { ascending: false })
-      .limit(20)
-    setNotifications(data || [])
+    try {
+      const { data } = await supabase
+        .from('user_notifications')
+        .select('*')
+        .eq('user_id', user.id)
+        .is('dismissed_at', null)
+        .order('created_at', { ascending: false })
+        .limit(20)
+      setNotifications(data || [])
+    } catch (err) {
+      console.error('Error loading notifications:', err)
+    }
   }
 
   async function dismiss(id) {
-    await supabase
-      .from('user_notifications')
-      .update({ dismissed_at: new Date().toISOString() })
-      .eq('id', id)
-    setNotifications(prev => prev.filter(n => n.id !== id))
+    try {
+      await supabase
+        .from('user_notifications')
+        .update({ dismissed_at: new Date().toISOString() })
+        .eq('id', id)
+      setNotifications(prev => prev.filter(n => n.id !== id))
+    } catch (err) {
+      console.error('Error dismissing notification:', err)
+    }
   }
 
   async function dismissAll() {

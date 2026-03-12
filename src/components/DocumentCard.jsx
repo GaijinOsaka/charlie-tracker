@@ -119,7 +119,7 @@ export default function DocumentCard({ document, onUpdate, onDelete, selected, o
         <span className={`doc-rag-badge ${document.indexed_for_rag ? 'rag-yes' : 'rag-no'}`}>
           {document.indexed_for_rag ? '\u26A1 Indexed' : '\u{1F512} Not Indexed'}
         </span>
-        {document.content_text && (
+        {document.indexed_for_rag && (
           <span className="doc-text-badge">Text Extracted</span>
         )}
         {document.dates_extracted && (

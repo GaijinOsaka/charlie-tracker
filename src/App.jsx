@@ -17,7 +17,7 @@ function linkify(text) {
   const urlRegex = /(https?:\/\/[^\s<>"{}|\\^`[\]]+)/g
   const parts = text.split(urlRegex)
   return parts.map((part, i) =>
-    urlRegex.test(part)
+    /^https?:\/\//.test(part)
       ? <a key={i} href={part} target="_blank" rel="noopener noreferrer" className="inline-link">{part}</a>
       : part
   )
@@ -47,10 +47,14 @@ function App() {
   const [filtersOpen, setFiltersOpen] = useState(false)
 
   async function loadProfiles() {
-    const { data } = await supabase.from('profiles').select('*')
-    const map = {}
-    ;(data || []).forEach(p => { map[p.id] = p })
-    setProfiles(map)
+    try {
+      const { data } = await supabase.from('profiles').select('*')
+      const map = {}
+      ;(data || []).forEach(p => { map[p.id] = p })
+      setProfiles(map)
+    } catch (err) {
+      console.error('Error loading profiles:', err)
+    }
   }
 
   // Initialize theme from localStorage
@@ -76,6 +80,7 @@ function App() {
     loadMessages()
     loadEvents()
     loadProfiles()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user])
 
   // Subscribe to realtime updates
@@ -91,7 +96,13 @@ function App() {
           table: 'messages',
         },
         (payload) => {
-          setMessages(prev => [payload.new, ...prev])
+          const newMsg = {
+            ...payload.new,
+            is_read: false,
+            message_read_status: [],
+            attachments: [],
+          }
+          setMessages(prev => [newMsg, ...prev])
           addToast(`New message from ${payload.new.sender_name}`, 'info')
         }
       )
@@ -115,6 +126,7 @@ function App() {
     return () => {
       channel.unsubscribe()
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user])
 
   async function loadMessages() {
@@ -341,6 +353,9 @@ function App() {
   function addToast(message, type = 'info') {
     const id = Date.now()
     setToasts(prev => [...prev, { id, message, type }])
+    setTimeout(() => {
+      setToasts(prev => prev.filter(t => t.id !== id))
+    }, 4000)
   }
 
   function removeToast(id) {
@@ -430,6 +445,8 @@ function App() {
   }
 
   const filteredMessages = getFilteredMessages()
+  const filteredEvents = getFilteredEvents()
+  const unreadCount = messages.filter(m => !m.is_read).length
 
   if (authLoading) {
     return <div className="loading-screen">Loading...</div>
@@ -471,8 +488,8 @@ function App() {
           onClick={() => setActiveTab('messages')}
         >
           Messages
-          {messages.filter(m => !m.is_read).length > 0 && (
-            <span className="tab-badge">{messages.filter(m => !m.is_read).length}</span>
+          {unreadCount > 0 && (
+            <span className="tab-badge">{unreadCount}</span>
           )}
         </button>
         <button
@@ -526,13 +543,13 @@ function App() {
 
           {eventsLoading && <p className="loading">Loading events...</p>}
 
-          {!eventsLoading && getFilteredEvents().length === 0 && (
+          {!eventsLoading && filteredEvents.length === 0 && (
             <p className="no-messages">No events found. Events are automatically extracted from school emails.</p>
           )}
 
-          {!eventsLoading && getFilteredEvents().length > 0 && (
+          {!eventsLoading && filteredEvents.length > 0 && (
             <ul className="event-list">
-              {getFilteredEvents().map(evt => {
+              {filteredEvents.map(evt => {
                 const today = new Date().toISOString().split('T')[0]
                 const isPast = evt.event_date < today
                 const isToday = evt.event_date === today

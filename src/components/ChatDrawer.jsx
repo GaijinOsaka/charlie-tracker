@@ -116,7 +116,7 @@ export default function ChatDrawer() {
           )}
 
           {messages.map((msg, i) => (
-            <div key={i} className={`chat-msg chat-msg-${msg.role}`}>
+            <div key={`${msg.role}-${i}`} className={`chat-msg chat-msg-${msg.role}`}>
               <div className="chat-msg-bubble">
                 {msg.content}
               </div>
