@@ -1536,6 +1536,8 @@ header .subtitle {
   font-weight: 600;
   color: var(--text);
   margin-bottom: 2px;
+  word-break: break-word;
+  overflow-wrap: break-word;
 }
 
 .cal-event-time {
@@ -1549,6 +1551,8 @@ header .subtitle {
   color: var(--text-secondary);
   line-height: 1.4;
   margin-top: 4px;
+  word-break: break-word;
+  overflow-wrap: break-word;
 }
 
 .cal-event-meta {
@@ -1592,6 +1596,7 @@ header .subtitle {
   font-weight: 600;
   color: var(--text-secondary);
   text-transform: uppercase;
+  min-width: 40px;
 }
 
 /* Upload Button */
