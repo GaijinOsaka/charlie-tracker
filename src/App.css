@@ -176,8 +176,15 @@ body {
 .app {
   min-height: 100vh;
   padding: 48px 32px;
-  max-width: 1200px;
+  max-width: 100%;
+  width: 100%;
   margin: 0 auto;
+}
+
+@media (min-width: 1024px) {
+  .app {
+    max-width: 1200px;
+  }
 }
 
 header {
@@ -1686,49 +1693,187 @@ header .subtitle {
   background: #eff6ff;
 }
 
-/* Responsive */
-@media (max-width: 768px) {
+/* ===== MOBILE FIRST RESPONSIVE DESIGN ===== */
+
+/* Extra Small (320px - 479px) */
+@media (max-width: 479px) {
   .app {
-    padding: 15px;
+    padding: 20px 12px;
+  }
+
+  header {
+    margin-bottom: 32px;
+    padding-bottom: 20px;
   }
 
   header h1 {
-    font-size: 22px;
+    font-size: 1.5rem;
+  }
+
+  header .subtitle {
+    font-size: 0.85rem;
+  }
+
+  .header-right {
+    gap: 12px;
+  }
+
+  .user-name {
+    display: none;
+  }
+
+  .sign-out-btn {
+    padding: 6px 10px;
+    font-size: 0.8rem;
+  }
+
+  .tab-nav {
+    gap: 8px;
+    margin-bottom: 24px;
+    padding-bottom: 12px;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .tab-btn {
+    padding: 10px 14px;
+    font-size: 0.85rem;
+    white-space: nowrap;
   }
 
   .filters {
     flex-direction: column;
+    gap: 12px;
+    padding: 16px;
+    margin-bottom: 20px;
+    border-radius: 8px;
+  }
+
+  .filter-group {
+    width: 100%;
+  }
+
+  .filter-group label {
+    font-size: 0.85rem;
+  }
+
+  .filter-group select,
+  .filter-group input {
+    padding: 8px 10px;
+    font-size: 0.9rem;
+    border-radius: 6px;
   }
 
   .filter-group.search {
     min-width: auto;
   }
 
+  .message-list,
+  .event-list {
+    gap: 12px;
+  }
+
   .message-item {
-    padding: 12px;
+    padding: 16px;
+    border-radius: 10px;
   }
 
   .message-header {
     flex-direction: column;
+    gap: 8px;
+  }
+
+  .message-info {
+    width: 100%;
+  }
+
+  .message-subject {
+    font-size: 0.95rem;
+    word-break: break-word;
+  }
+
+  .message-sender {
+    font-size: 0.85rem;
+    word-break: break-word;
+  }
+
+  .message-time {
+    font-size: 0.8rem;
   }
 
   .message-meta {
     width: 100%;
-    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .source-badge {
+    font-size: 0.75rem;
+    padding: 4px 8px;
+  }
+
+  .btn-action,
+  .btn-read {
+    padding: 8px 12px;
+    font-size: 0.8rem;
+    border-radius: 6px;
   }
 
   .cal {
     padding: 12px;
   }
 
-  .cal-cell {
-    min-height: 52px;
-    padding: 4px;
+  .cal-title {
+    font-size: 0.9rem;
+    min-width: 120px;
   }
 
-  .cal-title {
-    font-size: 15px;
-    min-width: 140px;
+  .cal-cell {
+    min-height: 48px;
+    padding: 3px;
+    font-size: 0.75rem;
+  }
+
+  .event-item {
+    padding: 12px;
+  }
+
+  .event-title {
+    font-size: 0.95rem;
+  }
+
+  .event-desc {
+    font-size: 0.85rem;
+  }
+
+  .event-meta {
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+
+  .event-tag {
+    font-size: 0.75rem;
+    padding: 2px 6px;
+  }
+
+  .actioned-item {
+    padding: 12px;
+  }
+
+  .actioned-subject {
+    font-size: 0.9rem;
+    word-break: break-word;
+  }
+
+  .actioned-meta {
+    font-size: 0.8rem;
+  }
+
+  .tab-badge {
+    font-size: 0.7rem;
+    min-width: 18px;
+    min-height: 18px;
+    padding: 2px 4px;
   }
 
   .toast-container {
@@ -1749,6 +1894,129 @@ header .subtitle {
 
   .chat-fab-label {
     display: none;
+  }
+}
+
+/* Small (480px - 767px) */
+@media (min-width: 480px) and (max-width: 767px) {
+  .app {
+    padding: 28px 16px;
+  }
+
+  header h1 {
+    font-size: 2rem;
+  }
+
+  header .subtitle {
+    font-size: 0.9rem;
+  }
+
+  .tab-nav {
+    gap: 10px;
+    margin-bottom: 32px;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .tab-btn {
+    padding: 10px 16px;
+    font-size: 0.9rem;
+  }
+
+  .filters {
+    flex-direction: column;
+    gap: 14px;
+    padding: 20px;
+    margin-bottom: 24px;
+  }
+
+  .message-item {
+    padding: 18px;
+  }
+
+  .message-subject {
+    font-size: 1rem;
+  }
+
+  .message-sender {
+    font-size: 0.9rem;
+  }
+
+  .cal {
+    padding: 14px;
+  }
+
+  .cal-title {
+    font-size: 0.95rem;
+    min-width: 130px;
+  }
+
+  .cal-cell {
+    min-height: 50px;
+    padding: 4px;
+    font-size: 0.8rem;
+  }
+
+  .toast-container {
+    left: 10px;
+    right: 10px;
+    top: auto;
+    bottom: 10px;
+  }
+
+  .toast {
+    min-width: auto;
+    width: 100%;
+  }
+
+  .chat-drawer {
+    width: 100% !important;
+  }
+
+  .chat-fab-label {
+    display: none;
+  }
+}
+
+/* Medium (768px - 1023px) */
+@media (min-width: 768px) and (max-width: 1023px) {
+  .app {
+    padding: 36px 24px;
+  }
+
+  .tab-nav {
+    gap: 10px;
+    margin-bottom: 36px;
+  }
+
+  .filters {
+    flex-direction: row;
+    gap: 16px;
+    padding: 24px;
+    margin-bottom: 28px;
+  }
+
+  .filter-group.search {
+    min-width: 180px;
+  }
+
+  .message-item {
+    padding: 20px;
+  }
+
+  .cal-title {
+    min-width: 140px;
+  }
+}
+
+/* Large (1024px+) */
+@media (min-width: 1024px) {
+  .hide-desktop {
+    display: none !important;
+  }
+
+  .app {
+    padding: 48px 32px;
   }
 }
 
