@@ -40,12 +40,30 @@ function App() {
   const [indexingMessages, setIndexingMessages] = useState(new Set())
   const [actionModalMessage, setActionModalMessage] = useState(null)
   const [profiles, setProfiles] = useState({})
+  const [theme, setTheme] = useState('light')
 
   async function loadProfiles() {
     const { data } = await supabase.from('profiles').select('*')
     const map = {}
     ;(data || []).forEach(p => { map[p.id] = p })
     setProfiles(map)
+  }
+
+  // Initialize theme from localStorage
+  useEffect(() => {
+    const savedTheme = localStorage.getItem('theme') || 'light'
+    setTheme(savedTheme)
+    document.documentElement.setAttribute('data-theme', savedTheme)
+  }, [])
+
+  // Update theme when it changes
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme)
+    localStorage.setItem('theme', theme)
+  }, [theme])
+
+  function toggleTheme() {
+    setTheme(theme === 'light' ? 'dark' : 'light')
   }
 
   // Load initial data when user is available
@@ -416,6 +434,9 @@ function App() {
           <div className="header-right">
             <NotificationBell onNavigateToMessage={navigateToMessage} />
             <span className="user-name">{profile?.display_name}</span>
+            <button className="theme-toggle-btn" onClick={toggleTheme} title="Toggle light/dark mode">
+              {theme === 'light' ? '🌙' : '☀️'}
+            </button>
             <button className="sign-out-btn" onClick={signOut}>Sign Out</button>
           </div>
         </div>
@@ -540,7 +561,7 @@ function App() {
                           <h4 className="message-subject">{evt.messages.subject}</h4>
                           <div className="event-message-meta-row">
                             <span className="message-sender">{evt.messages.sender_name || evt.messages.sender_email}</span>
-                            <span className="message-time">{new Date(evt.messages.received_at).toLocaleString()}</span>
+                            <span className="message-time">{new Date(evt.messages.received_at).toLocaleString('en-GB')}</span>
                             <span className={`source-badge source-${evt.messages.source}`}>
                               {(evt.messages.source || 'arbor').toUpperCase()}
                             </span>
@@ -656,7 +677,7 @@ function App() {
                     <div className="actioned-info">
                       <span className="actioned-subject">{msg.subject}</span>
                       <span className="actioned-meta">
-                        {profiles[msg.actioned_by]?.display_name || msg.actioned_by} &middot; {new Date(msg.actioned_at).toLocaleString()}
+                        {profiles[msg.actioned_by]?.display_name || msg.actioned_by} &middot; {new Date(msg.actioned_at).toLocaleString('en-GB')}
                         {msg.action_note && <><br/>{msg.action_note}</>}
                       </span>
                     </div>
@@ -690,7 +711,7 @@ function App() {
                     <h3 className="message-subject">{msg.subject}</h3>
                     <p className="message-sender">{msg.sender_name || msg.sender_email}</p>
                     <p className="message-time">
-                      {new Date(msg.received_at).toLocaleString()}
+                      {new Date(msg.received_at).toLocaleString('en-GB')}
                     </p>
                   </div>
                   <div className="message-meta">

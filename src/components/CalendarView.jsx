@@ -121,7 +121,7 @@ function CalendarView({ events, linkify, downloadAttachment, archiveEvent }) {
               <h4 className="message-subject">{evt.messages.subject}</h4>
               <div className="event-message-meta-row">
                 <span className="message-sender">{evt.messages.sender_name || evt.messages.sender_email}</span>
-                <span className="message-time">{new Date(evt.messages.received_at).toLocaleString()}</span>
+                <span className="message-time">{new Date(evt.messages.received_at).toLocaleString('en-GB')}</span>
                 <span className={`source-badge source-${evt.messages.source}`}>
                   {(evt.messages.source || 'arbor').toUpperCase()}
                 </span>
@@ -209,14 +209,16 @@ function CalendarView({ events, linkify, downloadAttachment, archiveEvent }) {
             >
               <span className="cal-day-num">{day}</span>
               {hasEvents && (
-                <div className="cal-dots">
-                  {dayEvents.length > 3
-                    ? <span className="cal-dot-count">{dayEvents.length}</span>
-                    : dayEvents.map((e, j) => (
-                      <span key={j} className={`cal-dot ${e.action_required ? 'cal-dot-action' : ''}`} />
-                    ))
-                  }
-                  {hasAction && dayEvents.length <= 3 && <span className="cal-dot-action-flag" />}
+                <div className="cal-day-events-preview">
+                  {dayEvents.slice(0, 2).map((e, j) => (
+                    <div key={j} className={`cal-event-summary ${e.action_required ? 'cal-event-has-action' : ''}`}>
+                      <span className="cal-summary-time">{e.event_time ? e.event_time.slice(0, 5) : 'All day'}</span>
+                      <span className="cal-summary-title">{e.title}</span>
+                    </div>
+                  ))}
+                  {dayEvents.length > 2 && (
+                    <div className="cal-event-more">+{dayEvents.length - 2} more</div>
+                  )}
                 </div>
               )}
             </div>

@@ -108,7 +108,7 @@ export default function NotificationBell({ onNavigateToMessage }) {
                 <li key={n.id} className="notification-item" onClick={() => handleClick(n)}>
                   <p className="notification-summary">{n.summary}</p>
                   <span className="notification-time">
-                    {new Date(n.created_at).toLocaleString()}
+                    {new Date(n.created_at).toLocaleString('en-GB')}
                   </span>
                 </li>
               ))}

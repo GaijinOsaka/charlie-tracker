@@ -9,24 +9,37 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setUser(session?.user ?? null)
-      if (session?.user) loadProfile(session.user.id)
-      else setLoading(false)
-    })
+    let mounted = true
+    let timeoutId
+
+    // Skip getSession() due to Navigator LockManager issues
+    // onAuthStateChange will still catch the current session
+    setLoading(false)
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (_event, session) => {
-        setUser(session?.user ?? null)
-        if (session?.user) await loadProfile(session.user.id)
-        else {
-          setProfile(null)
-          setLoading(false)
+        if (mounted) {
+          setUser(session?.user ?? null)
+          if (session?.user) {
+            try {
+              await loadProfile(session.user.id)
+            } catch (err) {
+              console.warn('Profile load error:', err)
+              setLoading(false)
+            }
+          } else {
+            setProfile(null)
+            setLoading(false)
+          }
         }
       }
     )
 
-    return () => subscription.unsubscribe()
+    return () => {
+      mounted = false
+      if (timeoutId) clearTimeout(timeoutId)
+      subscription.unsubscribe()
+    }
   }, [])
 
   async function loadProfile(userId) {
