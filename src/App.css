@@ -360,12 +360,16 @@ header .subtitle {
   font-weight: 600;
   color: var(--text);
   margin-bottom: 4px;
+  word-break: break-word;
+  overflow-wrap: break-word;
 }
 
 .message-sender {
   font-size: 14px;
   color: var(--text-secondary);
   margin-bottom: 2px;
+  word-break: break-word;
+  overflow-wrap: break-word;
 }
 
 .message-time {
@@ -415,6 +419,8 @@ header .subtitle {
   font-size: 14px;
   white-space: pre-wrap;
   word-wrap: break-word;
+  word-break: break-word;
+  overflow-wrap: break-word;
 }
 
 .message-content.expandable {
@@ -1211,6 +1217,7 @@ header .subtitle {
   font-weight: 600;
   color: var(--text-secondary);
   text-transform: uppercase;
+  min-width: 40px;
 }
 
 .event-time {
@@ -1229,6 +1236,8 @@ header .subtitle {
   font-weight: 600;
   color: var(--text);
   margin-bottom: 4px;
+  word-break: break-word;
+  overflow-wrap: break-word;
 }
 
 .event-desc {
@@ -1236,6 +1245,8 @@ header .subtitle {
   color: var(--text-secondary);
   line-height: 1.5;
   margin-bottom: 6px;
+  word-break: break-word;
+  overflow-wrap: break-word;
 }
 
 .event-meta {
