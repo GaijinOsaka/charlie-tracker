@@ -8,6 +8,7 @@ import CalendarView from './components/CalendarView'
 import ChatDrawer from './components/ChatDrawer'
 import ActionModal from './components/ActionModal'
 import NotificationBell from './components/NotificationBell'
+import MobileNav from './components/MobileNav'
 import './App.css'
 
 function linkify(text) {
@@ -41,6 +42,7 @@ function App() {
   const [actionModalMessage, setActionModalMessage] = useState(null)
   const [profiles, setProfiles] = useState({})
   const [theme, setTheme] = useState('light')
+  const [mobileNavOpen, setMobileNavOpen] = useState(false)
 
   async function loadProfiles() {
     const { data } = await supabase.from('profiles').select('*')
@@ -432,6 +434,13 @@ function App() {
             <p className="subtitle">Communication Dashboard</p>
           </div>
           <div className="header-right">
+            <button
+              className="hamburger-btn hide-desktop"
+              onClick={() => setMobileNavOpen(true)}
+              title="Open menu"
+            >
+              ☰
+            </button>
             <NotificationBell onNavigateToMessage={navigateToMessage} />
             <span className="user-name">{profile?.display_name}</span>
             <button className="theme-toggle-btn" onClick={toggleTheme} title="Toggle light/dark mode">
@@ -835,6 +844,14 @@ function App() {
           onCancel={() => setActionModalMessage(null)}
         />
       )}
+
+      <MobileNav
+        isOpen={mobileNavOpen}
+        onClose={() => setMobileNavOpen(false)}
+        activeTab={activeTab}
+        onTabChange={setActiveTab}
+        unreadCount={messages.filter(m => !m.is_read).length}
+      />
     </div>
   )
 }
