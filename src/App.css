@@ -229,11 +229,16 @@ header .subtitle {
   background: transparent;
   border: 1px solid var(--border);
   color: var(--text);
-  padding: 8px 12px;
+  padding: 12px 16px;
   border-radius: 6px;
   cursor: pointer;
   font-size: 0.9rem;
   transition: all 0.2s ease;
+  min-height: 44px;
+  min-width: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .sign-out-btn:hover {
@@ -503,7 +508,7 @@ header .subtitle {
 }
 
 .btn-mark-read {
-  padding: 8px 12px;
+  padding: 10px 14px;
   border: 1px solid var(--primary);
   background: white;
   color: var(--primary);
@@ -512,6 +517,11 @@ header .subtitle {
   font-weight: 500;
   cursor: pointer;
   transition: all 0.2s;
+  min-height: 44px;
+  min-width: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .btn-mark-read:hover {
@@ -529,7 +539,7 @@ header .subtitle {
 }
 
 .btn-msg-delete {
-  padding: 8px 12px;
+  padding: 10px 14px;
   border: 1px solid var(--border);
   background: white;
   color: var(--text-secondary);
@@ -538,6 +548,11 @@ header .subtitle {
   font-weight: 500;
   cursor: pointer;
   transition: all 0.2s;
+  min-height: 44px;
+  min-width: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .btn-msg-delete:hover {
@@ -547,7 +562,7 @@ header .subtitle {
 }
 
 .btn-action {
-  padding: 8px 12px;
+  padding: 10px 14px;
   border: 1px solid var(--success);
   background: white;
   color: var(--success);
@@ -556,6 +571,11 @@ header .subtitle {
   font-weight: 500;
   cursor: pointer;
   transition: all 0.2s;
+  min-height: 44px;
+  min-width: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .btn-action:hover {
@@ -849,7 +869,7 @@ header .subtitle {
 }
 
 .btn-batch-delete {
-  padding: 6px 14px;
+  padding: 10px 14px;
   border: 1px solid var(--danger);
   background: var(--danger);
   color: white;
@@ -858,6 +878,11 @@ header .subtitle {
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s;
+  min-height: 44px;
+  min-width: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .btn-batch-delete:hover {
@@ -870,13 +895,18 @@ header .subtitle {
 }
 
 .btn-batch-clear {
-  padding: 6px 12px;
+  padding: 10px 14px;
   border: 1px solid var(--border);
   background: var(--bg-tertiary);
   color: var(--text-secondary);
   border-radius: 4px;
   font-size: 12px;
   cursor: pointer;
+  min-height: 44px;
+  min-width: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .btn-batch-clear:hover {
@@ -1000,7 +1030,7 @@ header .subtitle {
 }
 
 .btn-doc {
-  padding: 6px 10px;
+  padding: 10px 14px;
   border: 1px solid var(--border);
   background: var(--bg-tertiary);
   color: var(--text);
@@ -1009,6 +1039,11 @@ header .subtitle {
   font-weight: 500;
   cursor: pointer;
   transition: all 0.2s;
+  min-height: 44px;
+  min-width: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .btn-doc:hover {
@@ -1055,7 +1090,7 @@ header .subtitle {
 }
 
 .btn-edit-tags {
-  padding: 4px 8px;
+  padding: 10px 12px;
   border: 1px solid var(--border);
   background: var(--bg-tertiary);
   border-radius: 4px;
@@ -1063,6 +1098,10 @@ header .subtitle {
   color: var(--text-secondary);
   cursor: pointer;
   width: 100%;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .btn-edit-tags:hover {
@@ -1093,13 +1132,18 @@ header .subtitle {
 }
 
 .tag-editor-close {
-  padding: 2px 8px;
+  padding: 8px 12px;
   border: none;
   background: var(--primary);
   color: white;
   border-radius: 3px;
   font-size: 11px;
   cursor: pointer;
+  min-height: 44px;
+  min-width: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .tag-editor-grid {
@@ -1109,7 +1153,7 @@ header .subtitle {
 }
 
 .tag-option {
-  padding: 3px 8px;
+  padding: 8px 12px;
   border: 1px solid var(--border);
   background: var(--bg-secondary);
   color: var(--text);
@@ -1117,6 +1161,11 @@ header .subtitle {
   font-size: 11px;
   cursor: pointer;
   transition: all 0.15s;
+  min-height: 44px;
+  min-width: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .tag-option:hover {
@@ -1305,11 +1354,16 @@ header .subtitle {
   font-size: 18px;
   color: #d1d5db;
   cursor: pointer;
-  padding: 4px 8px;
+  padding: 8px 12px;
   border-radius: 4px;
   flex-shrink: 0;
   line-height: 1;
   transition: all 0.2s;
+  min-height: 44px;
+  min-width: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .btn-event-delete:hover {
@@ -1345,8 +1399,8 @@ header .subtitle {
   border: 1px solid var(--border);
   border-radius: 4px;
   font-size: 20px;
-  width: 32px;
-  height: 32px;
+  width: 44px;
+  height: 44px;
   cursor: pointer;
   color: var(--text);
   display: flex;
@@ -1363,7 +1417,7 @@ header .subtitle {
 
 .cal-today-btn {
   margin-left: auto;
-  padding: 6px 14px;
+  padding: 10px 14px;
   border: 1px solid var(--primary);
   background: var(--primary);
   color: white;
@@ -1372,6 +1426,11 @@ header .subtitle {
   font-weight: 600;
   cursor: pointer;
   transition: all 0.15s;
+  min-height: 44px;
+  min-width: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .cal-today-btn:hover {
@@ -1603,7 +1662,7 @@ header .subtitle {
 
 /* Upload Button */
 .btn-upload {
-  padding: 8px 16px;
+  padding: 10px 16px;
   border: 1px solid var(--primary);
   background: var(--primary);
   color: white;
@@ -1612,6 +1671,11 @@ header .subtitle {
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s;
+  min-height: 44px;
+  min-width: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .btn-upload:hover {
@@ -1696,12 +1760,17 @@ header .subtitle {
 }
 
 .btn-doc-download {
-  padding: 6px 12px;
+  padding: 10px 14px;
   border: 1px solid #3B82F6;
   background: white;
   color: #3B82F6;
   border-radius: 4px;
   font-size: 12px;
+  min-height: 44px;
+  min-width: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   font-weight: 500;
   cursor: pointer;
   transition: all 0.2s;
@@ -2336,6 +2405,11 @@ header .subtitle {
   font-weight: 600;
   cursor: pointer;
   transition: background 0.2s;
+  min-height: 44px;
+  min-width: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .chat-send-btn:hover:not(:disabled) {
@@ -2349,12 +2423,17 @@ header .subtitle {
 
 /* Message RAG button */
 .btn-rag-toggle {
-  padding: 6px 12px;
+  padding: 10px 14px;
   border: 1px solid #d1d5db;
   border-radius: 6px;
   font-size: 12px;
   cursor: pointer;
   transition: all 0.15s;
+  min-height: 44px;
+  min-width: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .btn-rag-add {
