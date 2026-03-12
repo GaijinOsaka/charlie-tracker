@@ -767,6 +767,7 @@ header .subtitle {
   margin-bottom: 40px;
   border-bottom: 1px solid var(--border);
   padding-bottom: 20px;
+  flex-wrap: wrap;
 }
 
 .tab-btn {
@@ -780,6 +781,7 @@ header .subtitle {
   transition: all 0.2s ease;
   border-radius: 8px;
   position: relative;
+  flex-shrink: 1;
 }
 
 .tab-btn:hover {
@@ -1759,12 +1761,18 @@ header .subtitle {
     padding-bottom: 12px;
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
+    flex-wrap: nowrap;
+    scroll-behavior: smooth;
   }
 
   .tab-btn {
     padding: 10px 14px;
     font-size: 0.85rem;
     white-space: nowrap;
+    flex-shrink: 0;
+    min-height: 44px;
+    display: flex;
+    align-items: center;
   }
 
   .filters {
@@ -1951,11 +1959,18 @@ header .subtitle {
     margin-bottom: 32px;
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
+    flex-wrap: nowrap;
+    scroll-behavior: smooth;
   }
 
   .tab-btn {
     padding: 10px 16px;
     font-size: 0.9rem;
+    white-space: nowrap;
+    flex-shrink: 0;
+    min-height: 44px;
+    display: flex;
+    align-items: center;
   }
 
   .filters {
