@@ -32,8 +32,12 @@ export default function ChatDrawer() {
       // Build history from previous messages (exclude the one we just added)
       const history = messages.map(m => ({ role: m.role, content: m.content }))
 
+      const { data: { session } } = await supabase.auth.getSession()
       const { data, error } = await supabase.functions.invoke('rag-chat', {
         body: { question, history },
+        headers: session?.access_token
+          ? { Authorization: `Bearer ${session.access_token}` }
+          : {},
       })
 
       if (error) {
