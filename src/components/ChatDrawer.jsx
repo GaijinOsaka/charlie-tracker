@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react'
+import React, { useState, useRef, useEffect, useCallback } from 'react'
 import { supabase } from '../lib/supabase'
 
 export default function ChatDrawer() {
@@ -9,6 +9,11 @@ export default function ChatDrawer() {
   const messagesEndRef = useRef(null)
   const inputRef = useRef(null)
 
+  // Drag state
+  const fabRef = useRef(null)
+  const [pos, setPos] = useState({ top: 24, right: 24 })
+  const dragState = useRef({ dragging: false, startX: 0, startY: 0, startTop: 0, startLeft: 0, moved: false })
+
   useEffect(() => {
     if (isOpen && inputRef.current) {
       inputRef.current.focus()
@@ -18,6 +23,55 @@ export default function ChatDrawer() {
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
+
+  // Drag handlers
+  const onPointerDown = useCallback((e) => {
+    if (isOpen) return
+    const fab = fabRef.current
+    if (!fab) return
+    const rect = fab.getBoundingClientRect()
+    dragState.current = {
+      dragging: true,
+      startX: e.clientX,
+      startY: e.clientY,
+      startTop: rect.top,
+      startLeft: rect.left,
+      moved: false,
+    }
+    fab.classList.add('dragging')
+    fab.setPointerCapture(e.pointerId)
+  }, [isOpen])
+
+  const onPointerMove = useCallback((e) => {
+    const ds = dragState.current
+    if (!ds.dragging) return
+    const dx = e.clientX - ds.startX
+    const dy = e.clientY - ds.startY
+    if (Math.abs(dx) > 3 || Math.abs(dy) > 3) {
+      ds.moved = true
+    }
+    const newLeft = ds.startLeft + dx
+    const newTop = ds.startTop + dy
+    const fab = fabRef.current
+    if (!fab) return
+    const w = fab.offsetWidth
+    const h = fab.offsetHeight
+    const vw = window.innerWidth
+    const vh = window.innerHeight
+    const clampedTop = Math.max(4, Math.min(vh - h - 4, newTop))
+    const clampedRight = Math.max(4, Math.min(vw - w - 4, vw - newLeft - w))
+    setPos({ top: clampedTop, right: clampedRight })
+  }, [])
+
+  const onPointerUp = useCallback((e) => {
+    const ds = dragState.current
+    ds.dragging = false
+    const fab = fabRef.current
+    if (fab) fab.classList.remove('dragging')
+    if (!ds.moved) {
+      setIsOpen(prev => !prev)
+    }
+  }, [])
 
   async function handleSend(e) {
     e?.preventDefault()
@@ -76,10 +130,14 @@ export default function ChatDrawer() {
 
   return (
     <>
-      {/* Floating button */}
+      {/* Floating button — draggable */}
       <button
+        ref={fabRef}
         className={`chat-fab ${isOpen ? 'chat-fab-open' : ''}`}
-        onClick={() => setIsOpen(!isOpen)}
+        style={{ top: pos.top, right: pos.right, bottom: 'auto', left: 'auto' }}
+        onPointerDown={onPointerDown}
+        onPointerMove={onPointerMove}
+        onPointerUp={onPointerUp}
         title="Ask Charlie"
       >
         {isOpen ? '\u2715' : '\u{1F4AC}'}

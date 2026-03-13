@@ -683,7 +683,7 @@ function App() {
                         </div>
                       )}
                     </div>
-                    <span className={`source-badge source-${msg.source}`} style={{ fontSize: '10px', padding: '2px 6px' }}>
+                    <span className={`source-badge source-${msg.source}`} style={{ fontSize: '10px', padding: '2px 6px', flexShrink: 0 }}>
                       {(msg.source || 'arbor').toUpperCase()}
                     </span>
                   </li>

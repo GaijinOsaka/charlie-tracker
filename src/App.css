@@ -399,11 +399,12 @@ header h1 {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  gap: 12px;
+  gap: 8px;
   padding: 10px 12px;
   background: var(--bg-muted);
   border-radius: 6px;
   border-left: 3px solid var(--success);
+  overflow: hidden;
 }
 
 .actioned-item .actioned-info {
@@ -431,16 +432,17 @@ header h1 {
   font-size: 13px;
   font-weight: 500;
   color: var(--text);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
   text-align: left;
+  overflow-wrap: break-word;
+  word-break: break-word;
 }
 
 .actioned-meta {
   font-size: 11px;
   color: var(--text-secondary);
   text-align: left;
+  overflow-wrap: break-word;
+  word-break: break-word;
 }
 
 .actioned-note {
@@ -462,6 +464,8 @@ header h1 {
   font-size: 12px;
   color: var(--text);
   line-height: 1.4;
+  overflow-wrap: break-word;
+  word-break: break-word;
 }
 
 .loading,
@@ -1657,7 +1661,7 @@ header h1 {
 /* Chat Drawer */
 .chat-fab {
   position: fixed;
-  bottom: 24px;
+  top: 24px;
   right: 24px;
   z-index: 1000;
   display: flex;
@@ -1670,9 +1674,17 @@ header h1 {
   border-radius: 50px;
   font-size: 16px;
   font-weight: 600;
-  cursor: pointer;
+  cursor: grab;
   box-shadow: 0 4px 16px rgba(59, 130, 246, 0.4);
-  transition: all 0.2s;
+  transition: box-shadow 0.2s, background 0.2s;
+  touch-action: none;
+  user-select: none;
+}
+
+.chat-fab.dragging {
+  cursor: grabbing;
+  box-shadow: 0 8px 24px rgba(59, 130, 246, 0.6);
+  transition: none;
 }
 
 .chat-fab:hover {
