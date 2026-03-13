@@ -104,6 +104,8 @@ header h1 {
   display: flex;
   flex-direction: column;
   gap: 12px;
+  min-width: 0;
+  overflow: hidden;
 }
 
 .message-item {
@@ -113,6 +115,7 @@ header h1 {
   padding: 16px;
   cursor: pointer;
   transition: all 0.2s;
+  overflow: hidden;
 }
 
 .message-item.unread {
@@ -147,6 +150,8 @@ header h1 {
   font-weight: 600;
   color: var(--text);
   margin-bottom: 4px;
+  overflow-wrap: break-word;
+  word-break: break-word;
 }
 
 .message-sender {
@@ -202,6 +207,10 @@ header h1 {
   font-size: 14px;
   white-space: pre-wrap;
   word-wrap: break-word;
+  overflow-wrap: break-word;
+  word-break: break-word;
+  max-width: 100%;
+  overflow: hidden;
 }
 
 .message-content.expandable {
@@ -569,9 +578,18 @@ header h1 {
 /* Tab Navigation */
 .tab-nav {
   display: flex;
+  flex-wrap: nowrap;
   gap: 0;
   margin-bottom: 20px;
   border-bottom: 2px solid var(--border);
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scroll-behavior: smooth;
+  scrollbar-width: none;
+}
+
+.tab-nav::-webkit-scrollbar {
+  display: none;
 }
 
 .tab-btn {
@@ -585,6 +603,8 @@ header h1 {
   border-bottom: 2px solid transparent;
   margin-bottom: -2px;
   transition: all 0.2s;
+  flex-shrink: 0;
+  white-space: nowrap;
 }
 
 .tab-btn:hover {
@@ -1566,14 +1586,51 @@ header h1 {
     padding: 12px;
   }
 
+  .cal-grid {
+    grid-template-columns: repeat(7, 1fr);
+    gap: 1px;
+  }
+
+  .cal-dow {
+    font-size: 9px;
+    padding: 4px 0;
+  }
+
   .cal-cell {
-    min-height: 52px;
-    padding: 4px;
+    min-height: 36px;
+    padding: 2px;
+  }
+
+  .cal-day-num {
+    font-size: 11px;
+  }
+
+  .cal-event-summaries {
+    display: none;
+  }
+
+  .cal-has-events::after {
+    content: '';
+    display: block;
+    width: 6px;
+    height: 6px;
+    background: var(--primary);
+    border-radius: 50%;
+    margin: 2px auto 0;
   }
 
   .cal-title {
     font-size: 15px;
-    min-width: 140px;
+    min-width: 120px;
+  }
+
+  .cal-header {
+    gap: 8px;
+  }
+
+  .cal-today-btn {
+    padding: 4px 10px;
+    font-size: 11px;
   }
 
   .toast-container {
