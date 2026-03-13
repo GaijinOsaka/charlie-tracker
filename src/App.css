@@ -799,7 +799,10 @@ header .subtitle {
   margin-bottom: 40px;
   border-bottom: 1px solid var(--border);
   padding-bottom: 20px;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scroll-behavior: smooth;
 }
 
 .tab-btn {
@@ -813,7 +816,8 @@ header .subtitle {
   transition: all 0.2s ease;
   border-radius: 8px;
   position: relative;
-  flex-shrink: 1;
+  flex-shrink: 0;
+  white-space: nowrap;
 }
 
 .tab-btn:hover {
