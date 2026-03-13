@@ -121,7 +121,7 @@ function CalendarView({ events, linkify, downloadAttachment, archiveEvent }) {
               <h4 className="message-subject">{evt.messages.subject}</h4>
               <div className="event-message-meta-row">
                 <span className="message-sender">{evt.messages.sender_name || evt.messages.sender_email}</span>
-                <span className="message-time">{new Date(evt.messages.received_at).toLocaleString('en-GB')}</span>
+                <span className="message-time">{new Date(evt.messages.received_at).toLocaleString()}</span>
                 <span className={`source-badge source-${evt.messages.source}`}>
                   {(evt.messages.source || 'arbor').toUpperCase()}
                 </span>
@@ -209,15 +209,19 @@ function CalendarView({ events, linkify, downloadAttachment, archiveEvent }) {
             >
               <span className="cal-day-num">{day}</span>
               {hasEvents && (
-                <div className="cal-day-events-preview">
+                <div className="cal-event-summaries">
                   {dayEvents.slice(0, 2).map((e, j) => (
-                    <div key={j} className={`cal-event-summary ${e.action_required ? 'cal-event-has-action' : ''}`}>
-                      <span className="cal-summary-time">{e.event_time ? e.event_time.slice(0, 5) : 'All day'}</span>
-                      <span className="cal-summary-title">{e.title}</span>
+                    <div key={j} className={`cal-event-summary ${e.action_required ? 'cal-event-action' : ''}`}>
+                      <span className="cal-event-name">{e.title}</span>
+                      {e.event_time && (
+                        <span className="cal-event-time">
+                          {e.event_time.slice(0, 5)}{e.event_end_time ? `–${e.event_end_time.slice(0, 5)}` : ''}
+                        </span>
+                      )}
                     </div>
                   ))}
                   {dayEvents.length > 2 && (
-                    <div className="cal-event-more">+{dayEvents.length - 2} more</div>
+                    <span className="cal-event-more">+{dayEvents.length - 2} more</span>
                   )}
                 </div>
               )}

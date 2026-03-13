@@ -8,8 +8,7 @@ import CalendarView from './components/CalendarView'
 import ChatDrawer from './components/ChatDrawer'
 import ActionModal from './components/ActionModal'
 import NotificationBell from './components/NotificationBell'
-import MobileNav from './components/MobileNav'
-import MobileFilters from './components/MobileFilters'
+import { Agentation } from 'agentation'
 import './App.css'
 
 function linkify(text) {
@@ -42,9 +41,6 @@ function App() {
   const [indexingMessages, setIndexingMessages] = useState(new Set())
   const [actionModalMessage, setActionModalMessage] = useState(null)
   const [profiles, setProfiles] = useState({})
-  const [theme, setTheme] = useState('light')
-  const [mobileNavOpen, setMobileNavOpen] = useState(false)
-  const [filtersOpen, setFiltersOpen] = useState(false)
 
   async function loadProfiles() {
     try {
@@ -55,23 +51,6 @@ function App() {
     } catch (err) {
       console.error('Error loading profiles:', err)
     }
-  }
-
-  // Initialize theme from localStorage
-  useEffect(() => {
-    const savedTheme = localStorage.getItem('theme') || 'light'
-    setTheme(savedTheme)
-    document.documentElement.setAttribute('data-theme', savedTheme)
-  }, [])
-
-  // Update theme when it changes
-  useEffect(() => {
-    document.documentElement.setAttribute('data-theme', theme)
-    localStorage.setItem('theme', theme)
-  }, [theme])
-
-  function toggleTheme() {
-    setTheme(theme === 'light' ? 'dark' : 'light')
   }
 
   // Load initial data when user is available
@@ -387,18 +366,6 @@ function App() {
     return filtered
   }
 
-  function handleFilterChange(key, value) {
-    if (key === 'type') {
-      setSourceFilter(value)
-    } else if (key === 'startDate') {
-      // Store start date for filtering if needed
-      console.log('Start date:', value)
-    } else if (key === 'endDate') {
-      // Store end date for filtering if needed
-      console.log('End date:', value)
-    }
-  }
-
   async function downloadAttachment(filePath, filename) {
     try {
       const { data, error } = await supabase.storage
@@ -465,18 +432,8 @@ function App() {
             <p className="subtitle">Communication Dashboard</p>
           </div>
           <div className="header-right">
-            <button
-              className="hamburger-btn hide-desktop"
-              onClick={() => setMobileNavOpen(true)}
-              title="Open menu"
-            >
-              ☰
-            </button>
             <NotificationBell onNavigateToMessage={navigateToMessage} />
             <span className="user-name">{profile?.display_name}</span>
-            <button className="theme-toggle-btn" onClick={toggleTheme} title="Toggle light/dark mode">
-              {theme === 'light' ? '🌙' : '☀️'}
-            </button>
             <button className="sign-out-btn" onClick={signOut}>Sign Out</button>
           </div>
         </div>
@@ -601,7 +558,7 @@ function App() {
                           <h4 className="message-subject">{evt.messages.subject}</h4>
                           <div className="event-message-meta-row">
                             <span className="message-sender">{evt.messages.sender_name || evt.messages.sender_email}</span>
-                            <span className="message-time">{new Date(evt.messages.received_at).toLocaleString('en-GB')}</span>
+                            <span className="message-time">{new Date(evt.messages.received_at).toLocaleString()}</span>
                             <span className={`source-badge source-${evt.messages.source}`}>
                               {(evt.messages.source || 'arbor').toUpperCase()}
                             </span>
@@ -672,11 +629,6 @@ function App() {
         {activeTab === 'settings' && <SettingsPanel />}
 
         {activeTab === 'messages' && <>
-        <MobileFilters
-          isOpen={filtersOpen}
-          onToggle={() => setFiltersOpen(!filtersOpen)}
-          onFilterChange={handleFilterChange}
-        />
         <div className="filters">
           <div className="filter-group">
             <label>Status</label>
@@ -722,9 +674,14 @@ function App() {
                     <div className="actioned-info">
                       <span className="actioned-subject">{msg.subject}</span>
                       <span className="actioned-meta">
-                        {profiles[msg.actioned_by]?.display_name || msg.actioned_by} &middot; {new Date(msg.actioned_at).toLocaleString('en-GB')}
-                        {msg.action_note && <><br/>{msg.action_note}</>}
+                        {profiles[msg.actioned_by]?.display_name || msg.actioned_by} &middot; {new Date(msg.actioned_at).toLocaleString()}
                       </span>
+                      {msg.action_note && (
+                        <div className="actioned-note">
+                          <span className="actioned-note-label">NOTES</span>
+                          <span className="actioned-note-text">{msg.action_note}</span>
+                        </div>
+                      )}
                     </div>
                     <span className={`source-badge source-${msg.source}`} style={{ fontSize: '10px', padding: '2px 6px' }}>
                       {(msg.source || 'arbor').toUpperCase()}
@@ -756,7 +713,7 @@ function App() {
                     <h3 className="message-subject">{msg.subject}</h3>
                     <p className="message-sender">{msg.sender_name || msg.sender_email}</p>
                     <p className="message-time">
-                      {new Date(msg.received_at).toLocaleString('en-GB')}
+                      {new Date(msg.received_at).toLocaleString()}
                     </p>
                   </div>
                   <div className="message-meta">
@@ -881,13 +838,7 @@ function App() {
         />
       )}
 
-      <MobileNav
-        isOpen={mobileNavOpen}
-        onClose={() => setMobileNavOpen(false)}
-        activeTab={activeTab}
-        onTabChange={setActiveTab}
-        unreadCount={messages.filter(m => !m.is_read).length}
-      />
+      {import.meta.env.DEV && <Agentation />}
     </div>
   )
 }
