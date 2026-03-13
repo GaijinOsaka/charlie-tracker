@@ -1222,6 +1222,8 @@ header .subtitle {
   display: flex;
   flex-direction: column;
   transition: all 0.2s;
+  overflow: hidden;
+  max-width: 100%;
 }
 
 .event-item:hover {
@@ -1316,6 +1318,7 @@ header .subtitle {
   margin-bottom: 4px;
   word-break: break-word;
   overflow-wrap: break-word;
+  max-width: 100%;
 }
 
 .event-desc {
@@ -1325,6 +1328,7 @@ header .subtitle {
   margin-bottom: 6px;
   word-break: break-word;
   overflow-wrap: break-word;
+  max-width: 100%;
 }
 
 .event-meta {
@@ -1977,14 +1981,21 @@ header .subtitle {
 
   .event-item {
     padding: 12px;
+    max-width: 100%;
+    overflow: hidden;
+    word-break: break-word;
   }
 
   .event-title {
     font-size: 0.95rem;
+    max-width: 100%;
+    word-break: break-word;
   }
 
   .event-desc {
     font-size: 0.85rem;
+    max-width: 100%;
+    word-break: break-word;
   }
 
   .event-meta {
