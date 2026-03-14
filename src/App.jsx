@@ -8,6 +8,7 @@ import CalendarView from "./components/CalendarView";
 import ChatDrawer from "./components/ChatDrawer";
 import ActionModal from "./components/ActionModal";
 import NotificationBell from "./components/NotificationBell";
+import { AttachmentViewer } from "./components/AttachmentViewer";
 import { Agentation } from "agentation";
 import "./App.css";
 
@@ -51,6 +52,8 @@ function App() {
   const [indexingMessages, setIndexingMessages] = useState(new Set());
   const [actionModalMessage, setActionModalMessage] = useState(null);
   const [profiles, setProfiles] = useState({});
+  const [viewerAttachment, setViewerAttachment] = useState(null);
+  const [viewerOpen, setViewerOpen] = useState(false);
 
   async function loadProfiles() {
     try {
@@ -242,27 +245,28 @@ function App() {
   }
 
   async function deleteMessage(msgId) {
-    if (!window.confirm("Delete this message and its attachments/events?"))
+    if (!window.confirm("Delete this message from your view? (Attachments and events will be preserved)"))
       return;
     try {
-      // Delete event_tags for any events linked to this message
-      const linkedEvents = events.filter((e) => e.message_id === msgId);
-      for (const evt of linkedEvents) {
-        await supabase.from("event_tags").delete().eq("event_id", evt.id);
-      }
-      // Events and attachments cascade on message delete
+      // Insert soft delete record - message hidden from this user only
       const { error } = await supabase
-        .from("messages")
-        .delete()
-        .eq("id", msgId);
+        .from("message_deletions")
+        .insert({ user_id: user.id, message_id: msgId });
+
       if (error) throw error;
+
+      // Update local state
       setMessages((prev) => prev.filter((m) => m.id !== msgId));
-      setEvents((prev) => prev.filter((e) => e.message_id !== msgId));
-      addToast("Message deleted", "success");
+      addToast("Message deleted from your view", "success");
     } catch (err) {
       console.error("Error deleting message:", err);
       addToast("Failed to delete message", "error");
     }
+  }
+
+  function openAttachmentViewer(attachment) {
+    setViewerAttachment(attachment);
+    setViewerOpen(true);
   }
 
   function openActionModal(msg) {
@@ -694,10 +698,7 @@ function App() {
                                     className="attachment-link"
                                     onClick={(e) => {
                                       e.stopPropagation();
-                                      downloadAttachment(
-                                        att.file_path,
-                                        att.filename,
-                                      );
+                                      openAttachmentViewer(att);
                                     }}
                                     title={att.filename}
                                   >
@@ -950,9 +951,7 @@ function App() {
                           <button
                             key={att.id}
                             className="attachment-link"
-                            onClick={() =>
-                              downloadAttachment(att.file_path, att.filename)
-                            }
+                            onClick={() => openAttachmentViewer(att)}
                             title={att.filename}
                           >
                             <span className="attachment-icon">
@@ -1039,6 +1038,12 @@ function App() {
           onCancel={() => setActionModalMessage(null)}
         />
       )}
+
+      <AttachmentViewer
+        attachment={viewerAttachment}
+        isOpen={viewerOpen}
+        onClose={() => setViewerOpen(false)}
+      />
 
       {import.meta.env.DEV && <Agentation />}
     </div>
