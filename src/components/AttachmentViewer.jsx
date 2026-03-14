@@ -19,9 +19,25 @@ export function AttachmentViewer({ attachment, isOpen, onClose }) {
   const [pdfPages, setPdfPages] = useState(0);
   const [currentPage, setCurrentPage] = useState(1);
   const [error, setError] = useState(null);
+  const [containerWidth, setContainerWidth] = useState(window.innerWidth);
+  const pdfContainerRef = React.useRef(null);
 
   const isImage = attachment?.mime_type?.includes('image');
   const isPdf = attachment?.mime_type?.includes('pdf');
+
+  // Measure actual container width when modal opens
+  useEffect(() => {
+    if (!isOpen || !pdfContainerRef.current) return;
+    const updateWidth = () => {
+      if (pdfContainerRef.current) {
+        setContainerWidth(pdfContainerRef.current.clientWidth);
+      }
+    };
+    // Measure after render
+    setTimeout(updateWidth, 0);
+    window.addEventListener('resize', updateWidth);
+    return () => window.removeEventListener('resize', updateWidth);
+  }, [isOpen]);
 
   // Fetch file from storage
   useEffect(() => {
@@ -100,8 +116,8 @@ export function AttachmentViewer({ attachment, isOpen, onClose }) {
         )}
 
         {isPdf && fileData && (
-          <div className="viewer-pdf">
-            <PDFPage pdf={fileData} pageNum={currentPage} />
+          <div className="viewer-pdf" ref={pdfContainerRef}>
+            <PDFPage pdf={fileData} pageNum={currentPage} containerWidth={containerWidth} />
             <div className="pdf-controls">
               <button
                 disabled={currentPage === 1}
@@ -127,7 +143,7 @@ export function AttachmentViewer({ attachment, isOpen, onClose }) {
 }
 
 // PDF page renderer component
-function PDFPage({ pdf, pageNum }) {
+function PDFPage({ pdf, pageNum, containerWidth }) {
   const [imageUrl, setImageUrl] = useState(null);
   const [error, setError] = useState(null);
 
@@ -135,12 +151,14 @@ function PDFPage({ pdf, pageNum }) {
     const renderPage = async () => {
       try {
         const page = await pdf.getPage(pageNum);
-        // Use adaptive scale based on device to save memory
-        const width = window.innerWidth;
-        let scale = 2; // Desktop
-        if (width < 480) scale = 1.2; // Small phone
-        else if (width < 768) scale = 1.5; // Tablet/large phone
-        const viewport = page.getViewport({ scale });
+        // Get page viewport at scale 1 to know its natural width
+        const baseViewport = page.getViewport({ scale: 1 });
+        // Calculate scale to fit container width (account for padding: 8px on mobile, 20px on desktop)
+        const padding = window.innerWidth < 480 ? 16 : 40; // 8px * 2 or 20px * 2
+        const availableWidth = (containerWidth || window.innerWidth) - padding;
+        const scale = availableWidth / baseViewport.width;
+
+        const viewport = page.getViewport({ scale: Math.min(scale, 3) }); // Cap at 3x to prevent excessive memory use
         const canvas = document.createElement('canvas');
         canvas.width = viewport.width;
         canvas.height = viewport.height;
@@ -159,7 +177,7 @@ function PDFPage({ pdf, pageNum }) {
     };
 
     renderPage();
-  }, [pdf, pageNum]);
+  }, [pdf, pageNum, containerWidth]);
 
   if (error) return <div style={{ color: 'var(--danger)', padding: '20px' }}>{error}</div>;
   return imageUrl ? <img src={imageUrl} alt="PDF page" className="pdf-page" /> : <div>Rendering...</div>;
