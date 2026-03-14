@@ -89,61 +89,86 @@ function App() {
   // Subscribe to realtime updates
   useEffect(() => {
     if (!user) return;
-    const channel = supabase
-      .channel("public:messages")
-      .on(
-        "postgres_changes",
-        {
-          event: "INSERT",
-          schema: "public",
-          table: "messages",
-        },
-        (payload) => {
-          const newMsg = {
-            ...payload.new,
-            is_read: false,
-            message_read_status: [],
-            attachments: [],
-          };
-          setMessages((prev) => [newMsg, ...prev]);
-          addToast(`New message from ${payload.new.sender_name}`, "info");
-        },
-      )
-      .on(
-        "postgres_changes",
-        {
-          event: "UPDATE",
-          schema: "public",
-          table: "messages",
-        },
-        (payload) => {
-          setMessages((prev) =>
-            prev.map((m) => (m.id === payload.new.id ? payload.new : m)),
-          );
-        },
-      )
-      .on(
-        "postgres_changes",
-        {
-          event: "INSERT",
-          schema: "public",
-          table: "message_deletions",
-        },
-        (payload) => {
-          // Remove messages from UI when user deletes them
-          if (payload.new.user_id === user.id) {
+
+    let channel;
+    let isSubscribed = true;
+
+    async function setupSubscription() {
+      channel = supabase
+        .channel("public:messages")
+        .on(
+          "postgres_changes",
+          {
+            event: "INSERT",
+            schema: "public",
+            table: "messages",
+          },
+          (payload) => {
+            const newMsg = {
+              ...payload.new,
+              is_read: false,
+              message_read_status: [],
+              attachments: [],
+            };
+            setMessages((prev) => [newMsg, ...prev]);
+            addToast(`New message from ${payload.new.sender_name}`, "info");
+          },
+        )
+        .on(
+          "postgres_changes",
+          {
+            event: "UPDATE",
+            schema: "public",
+            table: "messages",
+          },
+          (payload) => {
             setMessages((prev) =>
-              prev.filter((m) => m.id !== payload.new.message_id),
+              prev.map((m) => (m.id === payload.new.id ? payload.new : m)),
             );
-          }
-        },
-      )
-      .subscribe((status) => {
-        console.log("Realtime status:", status);
-      });
+          },
+        )
+        .on(
+          "postgres_changes",
+          {
+            event: "INSERT",
+            schema: "public",
+            table: "message_deletions",
+          },
+          (payload) => {
+            // Remove messages from UI when user deletes them
+            if (payload.new.user_id === user.id) {
+              setMessages((prev) =>
+                prev.filter((m) => m.id !== payload.new.message_id),
+              );
+            }
+          },
+        )
+        .subscribe((status) => {
+          console.log("Realtime status:", status);
+        });
+    }
+
+    // Handle app backgrounding/foregrounding on mobile
+    function handleVisibilityChange() {
+      if (document.hidden) {
+        console.log("[Realtime] App backgrounded - unsubscribing");
+        isSubscribed = false;
+        channel?.unsubscribe();
+      } else {
+        console.log("[Realtime] App foregrounded - re-subscribing");
+        isSubscribed = true;
+        setupSubscription();
+      }
+    }
+
+    setupSubscription();
+    document.addEventListener("visibilitychange", handleVisibilityChange);
 
     return () => {
-      channel.unsubscribe();
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+      if (isSubscribed && channel) {
+        channel.unsubscribe();
+      }
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);

@@ -42,6 +42,10 @@ export default defineConfig({
             handler: 'NetworkOnly',
           },
           {
+            urlPattern: /^https:\/\/.*\.supabase\.co\/realtime\/.*/i,
+            handler: 'NetworkOnly',
+          },
+          {
             urlPattern: /^https:\/\/.*\.supabase\.co\/.*/i,
             handler: 'NetworkFirst',
             options: {
