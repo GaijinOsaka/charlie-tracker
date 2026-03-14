@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import * as pdfjsLib from 'pdfjs-dist';
+import pdfjsWorker from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
 import './AttachmentViewer.css';
 
-// Set up PDF.js worker
-pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
+// Set up PDF.js worker with local bundled worker
+pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjsWorker;
 
 export function AttachmentViewer({ attachment, isOpen, onClose }) {
   const [fileData, setFileData] = useState(null);
@@ -106,22 +107,36 @@ export function AttachmentViewer({ attachment, isOpen, onClose }) {
 // PDF page renderer component
 function PDFPage({ pdf, pageNum }) {
   const [imageUrl, setImageUrl] = useState(null);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
-    pdf.getPage(pageNum).then((page) => {
-      const viewport = page.getViewport({ scale: 2 });
-      const canvas = document.createElement('canvas');
-      canvas.width = viewport.width;
-      canvas.height = viewport.height;
+    const renderPage = async () => {
+      try {
+        const page = await pdf.getPage(pageNum);
+        // Use lower scale on mobile to save memory
+        const isMobile = window.innerWidth < 768;
+        const scale = isMobile ? 1.5 : 2;
+        const viewport = page.getViewport({ scale });
+        const canvas = document.createElement('canvas');
+        canvas.width = viewport.width;
+        canvas.height = viewport.height;
 
-      page.render({
-        canvasContext: canvas.getContext('2d'),
-        viewport: viewport,
-      }).promise.then(() => {
+        await page.render({
+          canvasContext: canvas.getContext('2d'),
+          viewport: viewport,
+        }).promise;
+
         setImageUrl(canvas.toDataURL());
-      });
-    });
+        setError(null);
+      } catch (err) {
+        console.error('Error rendering PDF page:', err);
+        setError('Failed to render page');
+      }
+    };
+
+    renderPage();
   }, [pdf, pageNum]);
 
+  if (error) return <div style={{ color: 'var(--danger)', padding: '20px' }}>{error}</div>;
   return imageUrl ? <img src={imageUrl} alt="PDF page" className="pdf-page" /> : <div>Rendering...</div>;
 }

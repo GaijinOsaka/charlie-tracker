@@ -33,6 +33,15 @@ function linkify(text) {
   );
 }
 
+function renderMarkdown(text) {
+  if (!text) return text;
+  const boldRegex = /\*\*([^*]+)\*\*/g;
+  const parts = text.split(boldRegex);
+  return parts.map((part, i) =>
+    i % 2 === 1 ? <strong key={i}>{part}</strong> : part,
+  );
+}
+
 function App() {
   const { user, profile, loading: authLoading, signOut } = useAuth();
   const [activeTab, setActiveTab] = useState("messages");
@@ -113,6 +122,22 @@ function App() {
           );
         },
       )
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "message_deletions",
+        },
+        (payload) => {
+          // Remove messages from UI when user deletes them
+          if (payload.new.user_id === user.id) {
+            setMessages((prev) =>
+              prev.filter((m) => m.id !== payload.new.message_id),
+            );
+          }
+        },
+      )
       .subscribe((status) => {
         console.log("Realtime status:", status);
       });
@@ -140,12 +165,23 @@ function App() {
 
       if (error) throw error;
 
-      const annotated = (data || []).map((msg) => ({
-        ...msg,
-        is_read: (msg.message_read_status || []).some(
-          (rs) => rs.user_id === user.id,
-        ),
-      }));
+      // Filter out soft-deleted messages (messages deleted by this user)
+      const { data: deletedIds, error: deleteError } = await supabase
+        .from("message_deletions")
+        .select("message_id")
+        .eq("user_id", user.id);
+
+      if (deleteError) throw deleteError;
+      const deletedMessageIds = new Set((deletedIds || []).map(d => d.message_id));
+
+      const annotated = (data || [])
+        .filter(msg => !deletedMessageIds.has(msg.id))
+        .map((msg) => ({
+          ...msg,
+          is_read: (msg.message_read_status || []).some(
+            (rs) => rs.user_id === user.id,
+          ),
+        }));
 
       setMessages(annotated);
     } catch (error) {
@@ -281,10 +317,15 @@ function App() {
     const msg = actionModalMessage;
     setActionModalMessage(null);
     try {
+      // Append user name in bold if note exists
+      const noteWithUser = note?.trim()
+        ? `${note.trim()} — **${profile?.full_name || user.email}**`
+        : null;
+
       const updates = {
         actioned_at: new Date().toISOString(),
         actioned_by: user.id,
-        action_note: note || null,
+        action_note: noteWithUser,
       };
       const { error } = await supabase
         .from("messages")
@@ -850,7 +891,7 @@ function App() {
                             <div className="actioned-note">
                               <span className="actioned-note-label">NOTES</span>
                               <span className="actioned-note-text">
-                                {msg.action_note}
+                                {renderMarkdown(msg.action_note)}
                               </span>
                             </div>
                           )}
@@ -909,7 +950,12 @@ function App() {
                               by{" "}
                               {profiles[msg.actioned_by]?.display_name ||
                                 "Unknown"}
-                              {msg.action_note && ` — ${msg.action_note}`}
+                              {msg.action_note && (
+                                <>
+                                  {" — "}
+                                  {renderMarkdown(msg.action_note)}
+                                </>
+                              )}
                             </span>
                           </div>
                         )}
