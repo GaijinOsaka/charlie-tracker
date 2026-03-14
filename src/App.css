@@ -1655,12 +1655,19 @@ header h1 {
     top: 50% !important;
     right: auto !important;
     bottom: auto !important;
-    transform: translate(-50%, -50%);
+    transform: translate(-50%, -50%) scale(0) !important;
     width: 90vw !important;
     max-width: 340px !important;
     max-height: 80vh !important;
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3) !important;
     border-radius: 12px !important;
+    opacity: 0 !important;
+    transition: opacity 0.3s ease, transform 0.3s ease !important;
+  }
+
+  .chat-drawer.chat-drawer-open {
+    transform: translate(-50%, -50%) scale(1) !important;
+    opacity: 1 !important;
   }
 
   .chat-fab-label {
