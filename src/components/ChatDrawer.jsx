@@ -69,6 +69,7 @@ export default function ChatDrawer() {
     const fab = fabRef.current
     if (fab) fab.classList.remove('dragging')
     if (!ds.moved) {
+      e.stopPropagation()
       setIsOpen(prev => !prev)
     }
   }, [])
