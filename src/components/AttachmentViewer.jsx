@@ -5,7 +5,13 @@ import pdfjsWorker from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
 import './AttachmentViewer.css';
 
 // Set up PDF.js worker with local bundled worker
-pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjsWorker;
+// Fallback to CDN if worker URL is invalid
+try {
+  pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjsWorker;
+} catch (e) {
+  // Fallback to CDN worker
+  pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+}
 
 export function AttachmentViewer({ attachment, isOpen, onClose }) {
   const [fileData, setFileData] = useState(null);
@@ -25,9 +31,20 @@ export function AttachmentViewer({ attachment, isOpen, onClose }) {
       try {
         setLoading(true);
         setError(null);
-        const { data, error: fetchError } = await supabase.storage
+
+        // Add timeout for slow mobile connections (30 seconds)
+        const downloadPromise = supabase.storage
           .from('charlie-documents')
           .download(attachment.file_path);
+
+        const timeoutPromise = new Promise((_, reject) =>
+          setTimeout(() => reject(new Error('Download timeout - slow connection')), 30000)
+        );
+
+        const { data, error: fetchError } = await Promise.race([
+          downloadPromise,
+          timeoutPromise
+        ]);
 
         if (fetchError) throw fetchError;
 
@@ -35,15 +52,20 @@ export function AttachmentViewer({ attachment, isOpen, onClose }) {
           const url = URL.createObjectURL(data);
           setFileData(url);
         } else if (isPdf) {
-          const arrayBuffer = await data.arrayBuffer();
-          const pdf = await pdfjsLib.getDocument(arrayBuffer).promise;
-          setFileData(pdf);
-          setPdfPages(pdf.numPages);
-          setCurrentPage(1);
+          try {
+            const arrayBuffer = await data.arrayBuffer();
+            const pdf = await pdfjsLib.getDocument(arrayBuffer).promise;
+            setFileData(pdf);
+            setPdfPages(pdf.numPages);
+            setCurrentPage(1);
+          } catch (pdfErr) {
+            console.error('PDF processing error:', pdfErr);
+            throw new Error('Failed to process PDF. Try refreshing or use desktop view.');
+          }
         }
       } catch (err) {
         console.error('Error loading attachment:', err);
-        setError('Failed to load file');
+        setError(err.message || 'Failed to load file');
       } finally {
         setLoading(false);
       }
@@ -113,9 +135,11 @@ function PDFPage({ pdf, pageNum }) {
     const renderPage = async () => {
       try {
         const page = await pdf.getPage(pageNum);
-        // Use lower scale on mobile to save memory
-        const isMobile = window.innerWidth < 768;
-        const scale = isMobile ? 1.5 : 2;
+        // Use adaptive scale based on device to save memory
+        const width = window.innerWidth;
+        let scale = 2; // Desktop
+        if (width < 480) scale = 1.2; // Small phone
+        else if (width < 768) scale = 1.5; // Tablet/large phone
         const viewport = page.getViewport({ scale });
         const canvas = document.createElement('canvas');
         canvas.width = viewport.width;
