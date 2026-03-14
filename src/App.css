@@ -1721,7 +1721,7 @@ header h1 {
   position: fixed;
   inset: 0;
   background: rgba(0, 0, 0, 0.2);
-  z-index: 1001;
+  z-index: 9998;
 }
 
 .chat-drawer {
@@ -1733,7 +1733,7 @@ header h1 {
   max-width: 100vw;
   background: var(--bg-surface);
   box-shadow: -4px 0 24px rgba(0, 0, 0, 0.12);
-  z-index: 1002;
+  z-index: 9999;
   display: flex;
   flex-direction: column;
   transform: translateX(100%);
