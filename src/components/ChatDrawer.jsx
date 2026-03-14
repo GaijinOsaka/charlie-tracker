@@ -6,6 +6,7 @@ export default function ChatDrawer() {
   const [messages, setMessages] = useState([])
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
+  const [backdropActive, setBackdropActive] = useState(false)
   const messagesEndRef = useRef(null)
   const inputRef = useRef(null)
 
@@ -15,8 +16,15 @@ export default function ChatDrawer() {
   const dragState = useRef({ dragging: false, startX: 0, startY: 0, startTop: 0, startLeft: 0, moved: false })
 
   useEffect(() => {
-    if (isOpen && inputRef.current) {
-      inputRef.current.focus()
+    if (isOpen) {
+      // Delay backdrop activation to prevent immediate close on tap
+      const timer = setTimeout(() => setBackdropActive(true), 150)
+      if (inputRef.current) {
+        inputRef.current.focus()
+      }
+      return () => clearTimeout(timer)
+    } else {
+      setBackdropActive(false)
     }
   }, [isOpen])
 
@@ -153,7 +161,11 @@ export default function ChatDrawer() {
 
       {/* Backdrop */}
       {isOpen && (
-        <div className="chat-backdrop" onClick={() => setIsOpen(false)} />
+        <div
+          className="chat-backdrop"
+          onClick={() => backdropActive && setIsOpen(false)}
+          style={{ pointerEvents: backdropActive ? 'auto' : 'none' }}
+        />
       )}
 
       {/* Drawer */}
