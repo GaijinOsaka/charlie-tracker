@@ -139,6 +139,12 @@ export default function ChatDrawer() {
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
         onPointerUp={onPointerUp}
+        onClick={(e) => {
+          e.stopPropagation()
+          if (!dragState.current.moved) {
+            setIsOpen(prev => !prev)
+          }
+        }}
         title="Ask Charlie"
       >
         {isOpen ? '\u2715' : '\u{1F4AC}'}
