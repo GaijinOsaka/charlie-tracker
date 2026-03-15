@@ -12,8 +12,13 @@ async function indexMessage(
   messageId: string,
   openaiKey: string,
   supabaseUrl: string,
-  supabaseKey: string
-): Promise<{ success: boolean; chunks_created: number; attachments_dispatched: number; error?: string }> {
+  supabaseKey: string,
+): Promise<{
+  success: boolean;
+  chunks_created: number;
+  attachments_dispatched: number;
+  error?: string;
+}> {
   // 1. Fetch message
   const { data: msg, error: msgErr } = await supabase
     .from("messages")
@@ -22,11 +27,21 @@ async function indexMessage(
     .single();
 
   if (msgErr || !msg) {
-    return { success: false, chunks_created: 0, attachments_dispatched: 0, error: "Message not found" };
+    return {
+      success: false,
+      chunks_created: 0,
+      attachments_dispatched: 0,
+      error: "Message not found",
+    };
   }
 
   if (!msg.content || msg.content.trim().length < 20) {
-    return { success: false, chunks_created: 0, attachments_dispatched: 0, error: "Message has no content to index" };
+    return {
+      success: false,
+      chunks_created: 0,
+      attachments_dispatched: 0,
+      error: "Message has no content to index",
+    };
   }
 
   // 2. Upsert a documents row for the message content
@@ -54,7 +69,12 @@ async function indexMessage(
       .eq("id", existingDoc.id);
 
     if (updateErr) {
-      return { success: false, chunks_created: 0, attachments_dispatched: 0, error: `Failed to update document: ${updateErr.message}` };
+      return {
+        success: false,
+        chunks_created: 0,
+        attachments_dispatched: 0,
+        error: `Failed to update document: ${updateErr.message}`,
+      };
     }
     docId = existingDoc.id;
   } else {
@@ -73,16 +93,18 @@ async function indexMessage(
       .single();
 
     if (insertDocErr || !newDoc) {
-      return { success: false, chunks_created: 0, attachments_dispatched: 0, error: `Failed to create document: ${insertDocErr?.message}` };
+      return {
+        success: false,
+        chunks_created: 0,
+        attachments_dispatched: 0,
+        error: `Failed to create document: ${insertDocErr?.message}`,
+      };
     }
     docId = newDoc.id;
   }
 
   // 3. Delete existing chunks for re-index, then chunk and embed
-  await supabase
-    .from("document_chunks")
-    .delete()
-    .eq("document_id", docId);
+  await supabase.from("document_chunks").delete().eq("document_id", docId);
 
   const chunks = chunkText(msg.content);
 
@@ -181,12 +203,16 @@ async function indexMessage(
     body: JSON.stringify({ document_id: docId }),
   }).catch(() => {});
 
-  return { success: true, chunks_created: totalCreated, attachments_dispatched: attachmentsDispatched };
+  return {
+    success: true,
+    chunks_created: totalCreated,
+    attachments_dispatched: attachmentsDispatched,
+  };
 }
 
 async function removeMessage(
   supabase: ReturnType<typeof createClient>,
-  messageId: string
+  messageId: string,
 ): Promise<{ success: boolean; error?: string }> {
   // 1. Find the synthetic document
   const syntheticPath = `email_message/${messageId}`;
@@ -198,10 +224,7 @@ async function removeMessage(
 
   if (doc) {
     // Delete chunks and reset flag on the message document
-    await supabase
-      .from("document_chunks")
-      .delete()
-      .eq("document_id", doc.id);
+    await supabase.from("document_chunks").delete().eq("document_id", doc.id);
 
     await supabase
       .from("documents")
@@ -258,10 +281,10 @@ Deno.serve(async (req) => {
     // Verify authentication (accepts user tokens and service role key)
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) {
-      return new Response(
-        JSON.stringify({ error: "Not authenticated" }),
-        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      return new Response(JSON.stringify({ error: "Not authenticated" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
@@ -272,14 +295,17 @@ Deno.serve(async (req) => {
       const supabaseAuth = createClient(
         supabaseUrl,
         Deno.env.get("SUPABASE_ANON_KEY")!,
-        { global: { headers: { Authorization: authHeader } } }
+        { global: { headers: { Authorization: authHeader } } },
       );
-      const { data: { user }, error: authError } = await supabaseAuth.auth.getUser();
+      const {
+        data: { user },
+        error: authError,
+      } = await supabaseAuth.auth.getUser();
       if (authError || !user) {
-        return new Response(
-          JSON.stringify({ error: "Not authenticated" }),
-          { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
+        return new Response(JSON.stringify({ error: "Not authenticated" }), {
+          status: 401,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
       }
     }
 
@@ -288,7 +314,10 @@ Deno.serve(async (req) => {
     if (!message_id || !action) {
       return new Response(
         JSON.stringify({ error: "message_id and action required" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
       );
     }
     const openaiKey = Deno.env.get("OPENAI_API_KEY");
@@ -306,11 +335,20 @@ Deno.serve(async (req) => {
       if (!openaiKey) {
         return new Response(
           JSON.stringify({ error: "OPENAI_API_KEY not configured" }),
-          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          {
+            status: 500,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          },
         );
       }
 
-      const result = await indexMessage(supabase, message_id, openaiKey, supabaseUrl, supabaseKey);
+      const result = await indexMessage(
+        supabase,
+        message_id,
+        openaiKey,
+        supabaseUrl,
+        supabaseKey,
+      );
       return new Response(JSON.stringify(result), {
         status: result.success ? 200 : 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -319,12 +357,15 @@ Deno.serve(async (req) => {
 
     return new Response(
       JSON.stringify({ error: "Invalid action. Use 'index' or 'remove'" }),
-      { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      },
     );
   } catch (err) {
-    return new Response(
-      JSON.stringify({ error: err.message }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
+    return new Response(JSON.stringify({ error: err.message }), {
+      status: 500,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
   }
 });

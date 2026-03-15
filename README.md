@@ -9,16 +9,19 @@ A centralized system for tracking all communication related to Charlie Oakes, co
 ## Quick Links
 
 ### 📐 Architecture & Design
+
 - [**System Architecture** (ARCHITECTURE.md)](ARCHITECTURE.md) - High-level component overview
 - [**Design Document** (design.md)](docs/design.md) - Complete architecture with data flows & diagrams
 - [**Tech Stack** (tech-stack.md)](docs/tech-stack.md) - Technology choices and rationale
 
 ### 🛠️ Implementation Guides
+
 - [**n8n Setup** (n8n-setup.md)](docs/n8n-setup.md) - Configure Arbor + Gmail workflows
 - [**Gmail Integration** (gmail-setup.md)](docs/gmail-setup.md) - Gmail OAuth2 setup & deduplication
 - [**Database Schema** (schema.sql)](supabase/schema.sql) - Supabase setup
 
 ### 📊 Progress & Documentation
+
 - [**Progress Log** (PROGRESS.md)](PROGRESS.md) - Session-by-session progress
 - [**Brainstorming Notes** (brainstorming-notes.md)](docs/brainstorming-notes.md) - Requirements & decisions
 
@@ -60,6 +63,7 @@ charlie-tracker/
 ## Key Features (MVP)
 
 ✅ **Phase 1 (Current):** Arbor message scraping + React dashboard
+
 - [ ] Deploy n8n Arbor scraper workflow
 - [ ] Build React dashboard UI
 - [ ] Configure in-app notifications
@@ -71,6 +75,7 @@ charlie-tracker/
 ## Recent Decisions
 
 **Brainstorming Session (2026-02-21):**
+
 - MVP: Arbor scraping → Supabase → React dashboard
 - Notifications: In-app dashboard alerts (start simple)
 - Access: Centralized repository for all Charlie-related communication

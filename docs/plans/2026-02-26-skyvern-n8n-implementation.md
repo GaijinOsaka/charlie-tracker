@@ -46,6 +46,7 @@ free -m
 ```
 
 Expected:
+
 - `bfc-docling-serve` container running
 - At least 2GB RAM free
 - At least 10GB disk free
@@ -59,6 +60,7 @@ docker compose version
 Expected: `Docker Compose version v2.x.x`
 
 If not installed:
+
 ```bash
 apt-get update && apt-get install -y docker-compose-plugin
 ```
@@ -70,6 +72,7 @@ ip addr show eth1
 ```
 
 Note the `10.x.x.x` address — this is the VPC private IP. If `eth1` doesn't exist, check:
+
 ```bash
 ip addr show | grep "10\."
 ```
@@ -138,6 +141,7 @@ services:
 ```
 
 Key differences from the local config:
+
 - `BROWSER_TYPE=chromium-headless` (not `cdp-connect` — no external Chrome on server)
 - No `skyvern-ui` service (not needed — n8n calls the API directly)
 - Port binds to `SKYVERN_BIND_IP` (will be set to private IP later)
@@ -230,11 +234,13 @@ Both droplets must be in the **same region (LON1)** and the **same VPC**.
 **Step 2: Find private IPs**
 
 On the **4GB droplet** (Skyvern/Docling):
+
 ```bash
 ip addr show eth1 | grep "inet " | awk '{print $2}' | cut -d/ -f1
 ```
 
 On the **1GB droplet** (n8n):
+
 ```bash
 ip addr show eth1 | grep "inet " | awk '{print $2}' | cut -d/ -f1
 ```
@@ -242,6 +248,7 @@ ip addr show eth1 | grep "inet " | awk '{print $2}' | cut -d/ -f1
 Note both IPs. Example: `10.114.0.2` (4GB) and `10.114.0.3` (1GB).
 
 If `eth1` doesn't exist on either droplet, the VPC private network interface hasn't been attached. You may need to:
+
 1. Power off the droplet in DO console
 2. Go to Networking > VPC > assign droplet
 3. Power it back on
@@ -302,6 +309,7 @@ docker compose logs skyvern --tail 50
 ```
 
 Look for:
+
 - `Application startup complete` or similar success message
 - No `ERROR` lines related to database connection or LLM keys
 
@@ -380,6 +388,7 @@ curl -X POST http://10.114.x.x:8000/api/v1/run/tasks \
 ```
 
 Expected response includes:
+
 ```json
 {
   "run_id": "tsk_v2_xxxxx",
@@ -432,10 +441,10 @@ Note: Use `RESIDENTIAL_GB` proxy since Arbor is a UK school system.
 
 **Step 2: Configure inbound rules**
 
-| Type | Protocol | Port Range | Sources |
-|------|----------|------------|---------|
-| SSH | TCP | 22 | Your home IP |
-| Custom | TCP | 8000 | n8n droplet private IP (10.114.x.x) |
+| Type   | Protocol | Port Range | Sources                             |
+| ------ | -------- | ---------- | ----------------------------------- |
+| SSH    | TCP      | 22         | Your home IP                        |
+| Custom | TCP      | 8000       | n8n droplet private IP (10.114.x.x) |
 
 **Step 3: Configure outbound rules**
 
@@ -448,6 +457,7 @@ Select the 4GB droplet (Docling/Skyvern) and apply.
 **Step 5: Verify**
 
 From n8n droplet:
+
 ```bash
 curl -s -H "x-api-key: <SKYVERN_API_KEY>" http://10.114.x.x:8000/api/v1/runs/test_nonexistent
 ```
@@ -455,6 +465,7 @@ curl -s -H "x-api-key: <SKYVERN_API_KEY>" http://10.114.x.x:8000/api/v1/runs/tes
 Expected: a 404 response (API reachable).
 
 From your local machine:
+
 ```bash
 curl -s http://<4GB-PUBLIC-IP>:8000/
 ```
@@ -473,14 +484,14 @@ Go to your n8n instance UI → Settings → Variables (or Environment Variables 
 
 **Step 2: Add the following variables**
 
-| Variable | Value | Notes |
-|----------|-------|-------|
-| `SKYVERN_HOST` | `http://10.114.x.x:8000` | 4GB droplet private IP |
-| `SKYVERN_API_KEY` | `<key from Task 4 Step 6>` | Skyvern API key |
-| `ARBOR_EMAIL` | `<your-arbor-email>` | Arbor login email |
-| `ARBOR_PASSWORD` | `<your-new-arbor-password>` | After you rotate the old one |
-| `SUPABASE_URL` | `https://knqhcipfgypzfszrwrsu.supabase.co` | From existing config |
-| `SUPABASE_SERVICE_KEY` | `<your-service-role-key>` | From existing config |
+| Variable               | Value                                      | Notes                        |
+| ---------------------- | ------------------------------------------ | ---------------------------- |
+| `SKYVERN_HOST`         | `http://10.114.x.x:8000`                   | 4GB droplet private IP       |
+| `SKYVERN_API_KEY`      | `<key from Task 4 Step 6>`                 | Skyvern API key              |
+| `ARBOR_EMAIL`          | `<your-arbor-email>`                       | Arbor login email            |
+| `ARBOR_PASSWORD`       | `<your-new-arbor-password>`                | After you rotate the old one |
+| `SUPABASE_URL`         | `https://knqhcipfgypzfszrwrsu.supabase.co` | From existing config         |
+| `SUPABASE_SERVICE_KEY` | `<your-service-role-key>`                  | From existing config         |
 
 If n8n uses `.env` file instead of UI settings, SSH into the n8n droplet and add these to n8n's environment file, then restart n8n.
 
@@ -489,11 +500,15 @@ If n8n uses `.env` file instead of UI settings, SSH into the n8n droplet and add
 In n8n, create a temporary workflow with a Code node:
 
 ```javascript
-return [{ json: {
-  host: $env.SKYVERN_HOST,
-  hasKey: !!$env.SKYVERN_API_KEY,
-  hasArbor: !!$env.ARBOR_EMAIL
-}}];
+return [
+  {
+    json: {
+      host: $env.SKYVERN_HOST,
+      hasKey: !!$env.SKYVERN_API_KEY,
+      hasArbor: !!$env.ARBOR_EMAIL,
+    },
+  },
+];
 ```
 
 Execute — verify all values are present (don't log the actual secrets).
@@ -524,11 +539,13 @@ Schedule Trigger (15 min)
 ### Node-by-Node Setup
 
 **Node 1: Schedule Trigger**
+
 - Type: Schedule Trigger
 - Rule: Every 15 minutes
 - Cron: `*/15 * * * *`
 
 **Node 2: Create Skyvern Task (HTTP Request)**
+
 - Method: `POST`
 - URL: `{{ $env.SKYVERN_HOST }}/api/v1/run/tasks`
 - Authentication: None (we use header)
@@ -561,10 +578,12 @@ Schedule Trigger (15 min)
 ```
 
 **Node 3: Wait**
+
 - Type: Wait
 - Duration: 15 seconds (give Skyvern time to start)
 
 **Node 4: Poll Skyvern Status (HTTP Request in Loop)**
+
 - Method: `GET`
 - URL: `{{ $env.SKYVERN_HOST }}/api/v1/runs/{{ $node["Create Skyvern Task"].json.run_id }}`
 - Headers:
@@ -573,12 +592,14 @@ Schedule Trigger (15 min)
 Connect to a **Loop/Retry** pattern:
 
 **Node 5: Check Status (IF)**
+
 - Condition: `{{ $json.status }}` equals `completed` OR `{{ $json.status }}` equals `failed`
 - TRUE → continue to processing
 - FALSE → Wait 10 seconds → loop back to Node 4
 - Max iterations: 30 (5 minutes total timeout)
 
 **Node 6: Check Success (IF)**
+
 - Condition: `{{ $json.status }}` equals `completed`
 - TRUE → parse messages
 - FALSE → log failure
@@ -593,10 +614,10 @@ const skyvernOutput = $input.first().json.output;
 let messages = [];
 if (Array.isArray(skyvernOutput)) {
   messages = skyvernOutput;
-} else if (skyvernOutput && typeof skyvernOutput === 'object') {
+} else if (skyvernOutput && typeof skyvernOutput === "object") {
   // Might be wrapped in a key like "messages" or "data"
   messages = skyvernOutput.messages || skyvernOutput.data || [skyvernOutput];
-} else if (typeof skyvernOutput === 'string') {
+} else if (typeof skyvernOutput === "string") {
   try {
     const parsed = JSON.parse(skyvernOutput);
     messages = Array.isArray(parsed) ? parsed : [parsed];
@@ -605,20 +626,25 @@ if (Array.isArray(skyvernOutput)) {
   }
 }
 
-return messages.map(msg => ({
+return messages.map((msg) => ({
   json: {
-    subject: msg.subject || '',
-    sender_name: msg.sender_name || msg.sender || '',
-    sender_email: msg.sender_email || '',
+    subject: msg.subject || "",
+    sender_name: msg.sender_name || msg.sender || "",
+    sender_email: msg.sender_email || "",
     received_at: msg.received_at || msg.date || new Date().toISOString(),
-    content: msg.body || msg.content || msg.message || '',
-    source: 'arbor',
-    source_id: `arbor_${Buffer.from((msg.subject || '') + (msg.received_at || msg.date || '')).toString('base64').substring(0, 32)}`
-  }
+    content: msg.body || msg.content || msg.message || "",
+    source: "arbor",
+    source_id: `arbor_${Buffer.from(
+      (msg.subject || "") + (msg.received_at || msg.date || ""),
+    )
+      .toString("base64")
+      .substring(0, 32)}`,
+  },
 }));
 ```
 
 **Node 8: Check Existing in Supabase (HTTP Request)**
+
 - Method: `GET`
 - URL: `{{ $env.SUPABASE_URL }}/rest/v1/messages?source=eq.arbor&select=source_id`
 - Headers:
@@ -629,25 +655,26 @@ return messages.map(msg => ({
 
 ```javascript
 const existingIds = $node["Check Existing in Supabase"].json.map
-  ? $node["Check Existing in Supabase"].json.map(m => m.source_id)
+  ? $node["Check Existing in Supabase"].json.map((m) => m.source_id)
   : [];
 
 const allMessages = $node["Parse Messages"].json
   ? [$node["Parse Messages"].json]
-  : $items("Parse Messages").map(item => item.json);
+  : $items("Parse Messages").map((item) => item.json);
 
 const newMessages = allMessages.filter(
-  msg => !existingIds.includes(msg.source_id)
+  (msg) => !existingIds.includes(msg.source_id),
 );
 
 if (newMessages.length === 0) {
   return [{ json: { newMessages: [], count: 0 } }];
 }
 
-return newMessages.map(msg => ({ json: msg }));
+return newMessages.map((msg) => ({ json: msg }));
 ```
 
 **Node 10: Insert Message (HTTP Request — in loop)**
+
 - Method: `POST`
 - URL: `{{ $env.SUPABASE_URL }}/rest/v1/messages`
 - Headers:
@@ -671,6 +698,7 @@ return newMessages.map(msg => ({ json: msg }));
 ```
 
 **Node 11: Log Sync Success (HTTP Request)**
+
 - Method: `POST`
 - URL: `{{ $env.SUPABASE_URL }}/rest/v1/sync_log`
 - Headers:
@@ -690,6 +718,7 @@ return newMessages.map(msg => ({ json: msg }));
 ```
 
 **Node 12: Log Sync Failure (HTTP Request)** — connected from Node 6 FALSE branch
+
 - Same as Node 11 but with:
 
 ```json
@@ -716,6 +745,7 @@ In n8n: Workflow menu → Download as file → save as `arbor-skyvern-scraper.js
 **Step 2: Save to project**
 
 Copy the exported JSON to:
+
 ```
 charlie-tracker/workflows/arbor-skyvern-scraper.json
 ```
@@ -744,6 +774,7 @@ In n8n, click "Test Workflow" on the Arbor Skyvern scraper.
 **Step 2: Monitor Skyvern**
 
 On the 4GB droplet, watch logs:
+
 ```bash
 cd /opt/skyvern && docker compose logs -f skyvern
 ```
@@ -753,6 +784,7 @@ Expected: see Skyvern receive the task, launch browser, navigate Arbor, extract 
 **Step 3: Verify n8n receives data**
 
 In n8n execution view, check:
+
 - "Create Skyvern Task" node: returns `run_id` and `status: "created"`
 - "Poll Skyvern Status" node: eventually returns `status: "completed"` with `output`
 - "Parse Messages" node: outputs structured message array
@@ -761,6 +793,7 @@ In n8n execution view, check:
 **Step 4: Verify Supabase**
 
 Check the Supabase dashboard or run:
+
 ```bash
 curl -s -H "Authorization: Bearer <SERVICE_KEY>" \
   -H "apikey: <SERVICE_KEY>" \
@@ -782,6 +815,7 @@ Expected: `status: "success"` with correct message counts.
 **Step 6: Run a second time to test deduplication**
 
 Trigger the workflow again. Expected:
+
 - Skyvern extracts the same messages
 - "Filter Duplicates" node filters them all out
 - No new inserts to Supabase
@@ -817,13 +851,13 @@ If a sync fails 3 times in a row, you'll see it in sync_log. For now, check manu
 
 ## Summary of Endpoints
 
-| What | Method | URL |
-|------|--------|-----|
-| Create task | POST | `{SKYVERN_HOST}/api/v1/run/tasks` |
-| Check status | GET | `{SKYVERN_HOST}/api/v1/runs/{run_id}` |
-| Cancel task | POST | `{SKYVERN_HOST}/api/v1/runs/{run_id}/cancel` |
-| Auth header | — | `x-api-key: {SKYVERN_API_KEY}` |
-| API port | — | `8000` (not 8080) |
+| What         | Method | URL                                          |
+| ------------ | ------ | -------------------------------------------- |
+| Create task  | POST   | `{SKYVERN_HOST}/api/v1/run/tasks`            |
+| Check status | GET    | `{SKYVERN_HOST}/api/v1/runs/{run_id}`        |
+| Cancel task  | POST   | `{SKYVERN_HOST}/api/v1/runs/{run_id}/cancel` |
+| Auth header  | —      | `x-api-key: {SKYVERN_API_KEY}`               |
+| API port     | —      | `8000` (not 8080)                            |
 
 ## Key Response Fields
 

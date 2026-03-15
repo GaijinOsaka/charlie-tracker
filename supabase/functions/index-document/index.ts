@@ -10,7 +10,7 @@ const corsHeaders = {
 async function indexDocument(
   supabase: ReturnType<typeof createClient>,
   docId: string,
-  openaiKey: string
+  openaiKey: string,
 ): Promise<{ success: boolean; chunks_created: number; error?: string }> {
   // Fetch document
   const { data: doc, error: fetchErr } = await supabase
@@ -32,10 +32,7 @@ async function indexDocument(
   }
 
   // Delete existing chunks (in case of re-index)
-  await supabase
-    .from("document_chunks")
-    .delete()
-    .eq("document_id", docId);
+  await supabase.from("document_chunks").delete().eq("document_id", docId);
 
   // Chunk the text
   const chunks = chunkText(doc.content_text);
@@ -89,13 +86,10 @@ async function indexDocument(
 
 async function removeDocument(
   supabase: ReturnType<typeof createClient>,
-  docId: string
+  docId: string,
 ): Promise<{ success: boolean; error?: string }> {
   // Delete chunks
-  await supabase
-    .from("document_chunks")
-    .delete()
-    .eq("document_id", docId);
+  await supabase.from("document_chunks").delete().eq("document_id", docId);
 
   // Reset flag
   await supabase
@@ -116,10 +110,10 @@ Deno.serve(async (req) => {
     // Verify authentication (accepts user tokens and service role key)
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) {
-      return new Response(
-        JSON.stringify({ error: "Not authenticated" }),
-        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      return new Response(JSON.stringify({ error: "Not authenticated" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
@@ -130,14 +124,17 @@ Deno.serve(async (req) => {
       const supabaseAuth = createClient(
         supabaseUrl,
         Deno.env.get("SUPABASE_ANON_KEY")!,
-        { global: { headers: { Authorization: authHeader } } }
+        { global: { headers: { Authorization: authHeader } } },
       );
-      const { data: { user }, error: authError } = await supabaseAuth.auth.getUser();
+      const {
+        data: { user },
+        error: authError,
+      } = await supabaseAuth.auth.getUser();
       if (authError || !user) {
-        return new Response(
-          JSON.stringify({ error: "Not authenticated" }),
-          { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
+        return new Response(JSON.stringify({ error: "Not authenticated" }), {
+          status: 401,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
       }
     }
 
@@ -146,7 +143,10 @@ Deno.serve(async (req) => {
     if (!doc_id || !action) {
       return new Response(
         JSON.stringify({ error: "doc_id and action required" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
       );
     }
     const openaiKey = Deno.env.get("OPENAI_API_KEY");
@@ -164,7 +164,10 @@ Deno.serve(async (req) => {
       if (!openaiKey) {
         return new Response(
           JSON.stringify({ error: "OPENAI_API_KEY not configured" }),
-          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          {
+            status: 500,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          },
         );
       }
 
@@ -181,7 +184,10 @@ Deno.serve(async (req) => {
         if (!n8nWebhookUrl) {
           return new Response(
             JSON.stringify({ error: "N8N_RAG_WEBHOOK_URL not configured" }),
-            { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+            {
+              status: 500,
+              headers: { ...corsHeaders, "Content-Type": "application/json" },
+            },
           );
         }
 
@@ -197,9 +203,10 @@ Deno.serve(async (req) => {
           JSON.stringify({
             success: true,
             status: "extracting",
-            message: "PDF text extraction started. This takes 2-3 minutes. The document will be indexed automatically.",
+            message:
+              "PDF text extraction started. This takes 2-3 minutes. The document will be indexed automatically.",
           }),
-          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } },
         );
       }
 
@@ -226,12 +233,15 @@ Deno.serve(async (req) => {
 
     return new Response(
       JSON.stringify({ error: "Invalid action. Use 'index' or 'remove'" }),
-      { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      },
     );
   } catch (err) {
-    return new Response(
-      JSON.stringify({ error: err.message }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
+    return new Response(JSON.stringify({ error: err.message }), {
+      status: 500,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
   }
 });

@@ -220,7 +220,10 @@ Add INSERT/UPDATE/DELETE policies for messages (actioning), message_read_status,
 <link rel="manifest" href="/manifest.json" />
 <meta name="theme-color" content="#1a1a2e" />
 <meta name="apple-mobile-web-app-capable" content="yes" />
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta
+  name="apple-mobile-web-app-status-bar-style"
+  content="black-translucent"
+/>
 <link rel="apple-touch-icon" href="/icons/icon-192.png" />
 ```
 

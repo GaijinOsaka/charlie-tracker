@@ -15,6 +15,7 @@
 ### Task 1: Update CSS Variables and Base Styles
 
 **Files:**
+
 - Modify: `src/App.css:1-60` (CSS variables section)
 
 **Step 1: Replace CSS color variables**
@@ -23,25 +24,25 @@ Current variables in `:root` starting at line 1. Replace entire color variable b
 
 ```css
 :root {
-  --primary: #06B6D4;
-  --primary-dark: #0891B2;
-  --primary-light: #22D3EE;
-  --accent: #EC4899;
-  --accent-dark: #DB2777;
-  --success: #10B981;
-  --danger: #EF4444;
-  --warning: #F59E0B;
+  --primary: #06b6d4;
+  --primary-dark: #0891b2;
+  --primary-light: #22d3ee;
+  --accent: #ec4899;
+  --accent-dark: #db2777;
+  --success: #10b981;
+  --danger: #ef4444;
+  --warning: #f59e0b;
 
-  --bg: #0F172A;
-  --bg-secondary: #1E293B;
+  --bg: #0f172a;
+  --bg-secondary: #1e293b;
   --bg-tertiary: #334155;
 
   --border: #334155;
   --border-light: #475569;
 
-  --text: #F1F5F9;
-  --text-secondary: #CBD5E1;
-  --text-tertiary: #94A3B8;
+  --text: #f1f5f9;
+  --text-secondary: #cbd5e1;
+  --text-tertiary: #94a3b8;
 
   --shadow-sm: 0 4px 12px rgba(0, 0, 0, 0.3);
   --shadow-md: 0 8px 16px rgba(0, 0, 0, 0.4);
@@ -55,8 +56,8 @@ Replace lines 51-64 (body and .app styles):
 
 ```css
 body {
-  font-family: 'Inter', 'Raleway', sans-serif;
-  background: linear-gradient(135deg, #0F172A 0%, #1A1F2E 100%);
+  font-family: "Inter", "Raleway", sans-serif;
+  background: linear-gradient(135deg, #0f172a 0%, #1a1f2e 100%);
   color: var(--text);
   line-height: 1.7;
   letter-spacing: 0.5px;
@@ -117,6 +118,7 @@ git commit -m "feat: update CSS variables for modern dark theme"
 ### Task 2: Update Header Styling
 
 **Files:**
+
 - Modify: `src/App.css` (header section, approximately lines 66-100)
 
 **Step 1: Rewrite header styles**
@@ -132,7 +134,7 @@ header {
 }
 
 header h1 {
-  font-family: 'Inter', sans-serif;
+  font-family: "Inter", sans-serif;
   font-size: 2.5rem;
   font-weight: 700;
   color: var(--text);
@@ -184,6 +186,7 @@ header .subtitle {
 **Step 2: Verify header appearance**
 
 Run: `npm run dev` and check:
+
 - Title is large, bold, white
 - Subtitle is subtle gray
 - Sign out button has cyan border on hover
@@ -201,6 +204,7 @@ git commit -m "feat: modernize header styling with dark theme"
 ### Task 3: Update Navigation Tabs
 
 **Files:**
+
 - Modify: `src/App.css` (tab-nav and tab-btn sections)
 
 **Step 1: Rewrite tab navigation styles**
@@ -255,6 +259,7 @@ Find `.tab-nav` and `.tab-btn` rules. Replace with:
 **Step 2: Verify tab styling**
 
 Check in browser:
+
 - Inactive tabs are gray
 - Active tab has cyan background with dark text
 - Hover effect shows subtle cyan background
@@ -274,6 +279,7 @@ git commit -m "feat: modernize tab navigation with pill-style active state"
 ### Task 4: Update Button Styles
 
 **Files:**
+
 - Modify: `src/App.css` (button section)
 
 **Step 1: Create comprehensive button styles**
@@ -440,6 +446,7 @@ button {
 **Step 2: Verify button styling**
 
 Check in browser:
+
 - Primary buttons are cyan
 - Action buttons are pink
 - RAG buttons show green or red outline depending on state
@@ -458,6 +465,7 @@ git commit -m "feat: modernize button styling with color strategy and hover effe
 ### Task 5: Update Form Controls (Input, Select)
 
 **Files:**
+
 - Modify: `src/App.css` (input and select styles)
 
 **Step 1: Write input and select styles**
@@ -544,6 +552,7 @@ select option {
 **Step 2: Test input focus states**
 
 In browser, click on search input:
+
 - Border should turn cyan
 - Glow effect visible
 - Background slightly lighter
@@ -560,6 +569,7 @@ git commit -m "feat: modernize form controls with dark theme styling"
 ### Task 6: Update Card and Container Styles
 
 **Files:**
+
 - Modify: `src/App.css` (message-list, event-list, card styles)
 
 **Step 1: Write message list item styles**
@@ -611,7 +621,7 @@ git commit -m "feat: modernize form controls with dark theme styling"
 }
 
 .message-subject {
-  font-family: 'Inter', sans-serif;
+  font-family: "Inter", sans-serif;
   font-size: 1.05rem;
   font-weight: 600;
   color: var(--text);
@@ -652,7 +662,7 @@ git commit -m "feat: modernize form controls with dark theme styling"
 }
 
 .source-gmail {
-  background: #4285F4;
+  background: #4285f4;
   color: white;
 }
 
@@ -753,6 +763,7 @@ git commit -m "feat: modernize form controls with dark theme styling"
 **Step 2: Verify message cards**
 
 Check:
+
 - Cards have subtle border and gray background
 - Unread messages have left cyan border
 - Hover effect lifts card and brightens border
@@ -771,6 +782,7 @@ git commit -m "feat: modernize message card styling with dark theme"
 ### Task 7: Update Event Card Styles
 
 **Files:**
+
 - Modify: `src/App.css` (event-list and event-item styles)
 
 **Step 1: Write event card styles**
@@ -846,7 +858,7 @@ git commit -m "feat: modernize message card styling with dark theme"
 }
 
 .event-title {
-  font-family: 'Inter', sans-serif;
+  font-family: "Inter", sans-serif;
   font-size: 1.05rem;
   font-weight: 600;
   color: var(--text);
@@ -987,6 +999,7 @@ git commit -m "feat: modernize message card styling with dark theme"
 **Step 2: Verify event cards**
 
 Check:
+
 - Events show date in nice box on left
 - Title and description readable
 - Today events have green left border
@@ -1006,6 +1019,7 @@ git commit -m "feat: modernize event card styling"
 ### Task 8: Update Recently Actioned Section
 
 **Files:**
+
 - Modify: `src/App.css` (actioned-box styles)
 
 **Step 1: Write actioned box styles**
@@ -1020,7 +1034,7 @@ git commit -m "feat: modernize event card styling"
 }
 
 .actioned-box-title {
-  font-family: 'Inter', sans-serif;
+  font-family: "Inter", sans-serif;
   font-size: 1rem;
   font-weight: 600;
   color: var(--primary);
@@ -1080,6 +1094,7 @@ git commit -m "feat: style recently actioned section"
 ### Task 9: Add Transition and Hover Effects
 
 **Files:**
+
 - Modify: `src/App.css` (add transitions throughout)
 
 **Step 1: Add global transitions**
@@ -1088,7 +1103,10 @@ Add after `:root` definition:
 
 ```css
 * {
-  transition: color 0.2s ease, background-color 0.2s ease, border-color 0.2s ease;
+  transition:
+    color 0.2s ease,
+    background-color 0.2s ease,
+    border-color 0.2s ease;
 }
 
 button {
@@ -1135,6 +1153,7 @@ git commit -m "feat: add smooth transitions and hover effects"
 ### Task 10: Add Loading and Toast Styling
 
 **Files:**
+
 - Modify: `src/App.css` (loading, error, toast styles)
 
 **Step 1: Update loading and error styles**
@@ -1148,7 +1167,7 @@ git commit -m "feat: add smooth transitions and hover effects"
   background: linear-gradient(135deg, var(--bg) 0%, var(--bg-secondary) 100%);
   color: var(--text);
   font-size: 1.2rem;
-  font-family: 'Inter', sans-serif;
+  font-family: "Inter", sans-serif;
   font-weight: 500;
 }
 
@@ -1162,7 +1181,7 @@ git commit -m "feat: add smooth transitions and hover effects"
 .error {
   background: rgba(239, 68, 68, 0.1);
   border: 1px solid var(--danger);
-  color: #FCA5A5;
+  color: #fca5a5;
   padding: 16px;
   border-radius: 8px;
   margin-bottom: 16px;
@@ -1263,6 +1282,7 @@ git commit -m "feat: add modern toast and loading styles"
 ### Task 11: Update Inline Links and Special Elements
 
 **Files:**
+
 - Modify: `src/App.css` (inline-link and other special styles)
 
 **Step 1: Style inline links and special elements**
@@ -1324,6 +1344,7 @@ git commit -m "feat: style inline links and special elements"
 ### Task 12: Cross-Component Testing and Contrast Verification
 
 **Files:**
+
 - Test: Visual inspection in browser, all tabs and components
 
 **Step 1: Test all tabs in browser**
@@ -1331,6 +1352,7 @@ git commit -m "feat: style inline links and special elements"
 Run: `npm run dev`
 
 Visit each tab and verify:
+
 - **Messages tab:** Cards readable, buttons distinct, hover effects work
 - **Events tab:** Events display correctly, dates visible, tags clear
 - **Calendar tab:** If visible, check styling is consistent
@@ -1340,6 +1362,7 @@ Visit each tab and verify:
 **Step 2: Test contrast ratios**
 
 For critical text:
+
 - Check primary text (`#F1F5F9`) on dark bg (`#0F172A`) = 18.5:1 ✓ (WCAG AAA)
 - Check secondary text (`#CBD5E1`) on dark bg = 12:1+ ✓ (WCAG AA)
 - Check cyan accent (`#06B6D4`) on dark = 8.5:1 ✓ (WCAG AA)
@@ -1371,17 +1394,20 @@ git commit -m "test: verify dark theme styling across all components"
 ### Task 13: Refinement and Fine-Tuning
 
 **Files:**
+
 - Modify: `src/App.css` (any adjustments needed)
 
 **Step 1: Address any visual issues**
 
 Based on testing in Task 12, adjust:
+
 - Color brightness if any text is hard to read
 - Spacing if elements feel cramped
 - Border colors if contrast insufficient
 - Shadow intensity if too harsh or too subtle
 
 **Common adjustments:**
+
 - If text too dim: Increase text lightness slightly
 - If buttons too bright: Reduce saturation
 - If spacing feels off: Adjust padding/gap values
@@ -1390,6 +1416,7 @@ Based on testing in Task 12, adjust:
 **Step 2: Optimize animations**
 
 Ensure:
+
 - Transitions are smooth (0.2s-0.3s)
 - No janky movements
 - Loading states clear
@@ -1397,6 +1424,7 @@ Ensure:
 **Step 3: Verify mobile responsiveness**
 
 Check:
+
 - Tabs stack on mobile
 - Buttons remain clickable
 - Text doesn't overflow
@@ -1405,6 +1433,7 @@ Check:
 **Step 4: Final visual check**
 
 Screenshot key components and verify:
+
 - Professional appearance
 - Good contrast
 - Modern feel
@@ -1422,6 +1451,7 @@ git commit -m "refine: adjust colors and spacing for optimal appearance"
 ### Task 14: Final Verification and Build
 
 **Files:**
+
 - Build and test: Full production build
 
 **Step 1: Build project**

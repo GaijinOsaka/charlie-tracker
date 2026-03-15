@@ -15,15 +15,15 @@
 
 ## File Locations
 
-| What | Path |
-|------|------|
-| Skyvern docker-compose | `/opt/skyvern/docker-compose.yml` |
-| Skyvern .env | `/opt/skyvern/.env` |
-| Skyvern API key | `/opt/skyvern/.streamlit/secrets.toml` |
-| Artifacts/screenshots | `/opt/skyvern/artifacts/` |
-| Videos | `/opt/skyvern/videos/` |
-| Logs | `/opt/skyvern/log/` |
-| Docling | Standalone container (`bfc-docling-serve`) |
+| What                   | Path                                       |
+| ---------------------- | ------------------------------------------ |
+| Skyvern docker-compose | `/opt/skyvern/docker-compose.yml`          |
+| Skyvern .env           | `/opt/skyvern/.env`                        |
+| Skyvern API key        | `/opt/skyvern/.streamlit/secrets.toml`     |
+| Artifacts/screenshots  | `/opt/skyvern/artifacts/`                  |
+| Videos                 | `/opt/skyvern/videos/`                     |
+| Logs                   | `/opt/skyvern/log/`                        |
+| Docling                | Standalone container (`bfc-docling-serve`) |
 
 ## Docker Services
 
@@ -51,15 +51,16 @@ The UI is bound to `127.0.0.1` only (not publicly accessible). Access it via VS 
 2. Open the **Ports** panel (bottom bar)
 3. Forward these ports:
 
-| Port | Service |
-|------|---------|
-| 8000 | Skyvern API |
-| 8081 | Skyvern UI |
+| Port | Service         |
+| ---- | --------------- |
+| 8000 | Skyvern API     |
+| 8081 | Skyvern UI      |
 | 9090 | Artifact server |
 
 4. Open `http://localhost:8081` in your browser
 
 Alternative: SSH tunnel from PowerShell:
+
 ```bash
 ssh -L 8000:localhost:8000 -L 8081:localhost:8081 -L 9090:localhost:9090 root@139.59.165.79
 ```
@@ -98,9 +99,11 @@ curl http://10.106.0.5:8000/api/v1/runs/{run_id} \
 ## Troubleshooting
 
 ### Browser crashes ("Page crashed" / "Target crashed")
+
 This means Chrome needs more shared memory. Ensure `shm_size: '2gb'` is in the `skyvern` service in docker-compose.yml.
 
 ### Skyvern not responding
+
 ```bash
 docker compose ps                    # Check if healthy
 docker compose logs skyvern          # Check for errors
@@ -108,6 +111,7 @@ docker compose restart skyvern       # Restart
 ```
 
 ### UI not loading
+
 ```bash
 docker compose ps skyvern-ui         # Check status
 docker compose logs skyvern-ui       # Check errors
@@ -115,6 +119,7 @@ docker compose logs skyvern-ui       # Check errors
 ```
 
 ### Can't reach Skyvern from n8n
+
 ```bash
 # From n8n droplet (ssh root@144.126.200.83):
 curl -s http://10.106.0.5:8000/api/v1/runs/test
@@ -122,6 +127,7 @@ curl -s http://10.106.0.5:8000/api/v1/runs/test
 ```
 
 ### Rebuild from scratch
+
 ```bash
 cd /opt/skyvern
 docker compose down
@@ -131,9 +137,9 @@ docker compose up -d
 
 ## Related Droplets
 
-| Name | IP (public) | IP (private) | SSH alias | Purpose |
-|------|-------------|--------------|-----------|---------|
-| n8n-DigOcean | 144.126.200.83 | 10.106.0.3 | do-n8n | n8n workflows |
-| bfc-docling-serve | 139.59.165.79 | 10.106.0.5 | do-skyvern-docling | Skyvern + Docling |
+| Name              | IP (public)    | IP (private) | SSH alias          | Purpose           |
+| ----------------- | -------------- | ------------ | ------------------ | ----------------- |
+| n8n-DigOcean      | 144.126.200.83 | 10.106.0.3   | do-n8n             | n8n workflows     |
+| bfc-docling-serve | 139.59.165.79  | 10.106.0.5   | do-skyvern-docling | Skyvern + Docling |
 
 Both on VPC: `c14a4976-32cc-4bef-8da0-07dc74dcd1ab`

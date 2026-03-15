@@ -11,30 +11,34 @@ Need a centralized system to track all communication related to Charlie Oakes ac
 ## Requirements Clarifications
 
 ### Primary Goals
+
 - **Goal 1:** Centralized repository - one place for all Charlie-related communication
 - **Goal 2:** Alerts & notifications - particularly important
 - **Access Pattern:** Dashboard (not just email/SMS)
 
 ### Data Sources to Consolidate
+
 1. **Arbor** (school messaging app) - PRIMARY for MVP
 2. **Email** - Phase 2
 3. **WhatsApp** - Phase 3
 
 ### Notification System
+
 - **Channel:** In-app dashboard alerts (web-based)
 - **Trigger:** All new messages across sources
 - **Future:** Could add filtering (by category, sender, priority)
 
 ### Technology Decisions
 
-| Layer | Choice | Rationale |
-|-------|--------|-----------|
-| **Automation** | n8n | Browser automation for Arbor scraping, extensible for other sources |
-| **Database** | Supabase | PostgreSQL with RLS, REST API, built-in auth |
-| **Frontend** | React | SPA for real-time dashboard, notification system |
-| **Notifications** | In-app (dashboard) | Start simple, can extend to email/SMS later |
+| Layer             | Choice             | Rationale                                                           |
+| ----------------- | ------------------ | ------------------------------------------------------------------- |
+| **Automation**    | n8n                | Browser automation for Arbor scraping, extensible for other sources |
+| **Database**      | Supabase           | PostgreSQL with RLS, REST API, built-in auth                        |
+| **Frontend**      | React              | SPA for real-time dashboard, notification system                    |
+| **Notifications** | In-app (dashboard) | Start simple, can extend to email/SMS later                         |
 
 ### MVP Scope (Highest Value First)
+
 1. **Phase 1 - Arbor Dashboard:** Deploy existing n8n workflow → build React UI
 2. **Phase 2 - Email Integration:** Add email scraping → extend dashboard
 3. **Phase 3 - WhatsApp Integration:** Add WhatsApp source → unified view
@@ -42,21 +46,27 @@ Need a centralized system to track all communication related to Charlie Oakes ac
 ## Design Questions (Answered)
 
 ### Q1: Primary Goal?
+
 **A:** Centralized repository + alerts/notifications (YES to both)
 
 ### Q2: Communication Sources?
+
 **A:** Arbor + Email + WhatsApp (MVP: Arbor first)
 
 ### Q3: Notification Triggers?
+
 **A:** In-app dashboard alerts
 
 ### Q4: Tech Stack?
+
 **A:** n8n + Supabase + React
 
 ### Q5: MVP Approach?
+
 **A:** Arbor scraping → Supabase → React dashboard (skip email/WhatsApp for Phase 1)
 
 ### Q6: Workflow Status?
+
 **A:** JSON exists but not deployed yet
 
 ## Open Questions for Design Phase

@@ -9,9 +9,11 @@
 ## Data Changes
 
 ### `messages` table
+
 - Add column: `indexed_for_rag BOOLEAN DEFAULT FALSE`
 
 ### Synthetic `documents` row (per indexed message)
+
 - `source_type: 'email_message'`
 - `filename: '{subject}'`
 - `file_path: 'email_message/{message_id}'` (synthetic, no actual file)
@@ -29,6 +31,7 @@ No changes to `document_chunks`, `search_knowledge_base()`, or `rag-chat`.
 - Input: `{ message_id, action: 'index' | 'remove' }`
 
 ### Index flow
+
 1. Fetch message (subject, content, id) + attachments
 2. Upsert `documents` row for message content (keyed by `file_path = 'email_message/{message_id}'`)
 3. Chunk message content text, generate embeddings, insert into `document_chunks`
@@ -38,6 +41,7 @@ No changes to `document_chunks`, `search_knowledge_base()`, or `rag-chat`.
 7. Fire `extract-dates` for the message document (fire-and-forget)
 
 ### Remove flow
+
 1. Find message's synthetic document by `file_path = 'email_message/{message_id}'`
 2. Delete its chunks, set `indexed_for_rag: false`
 3. For each attachment document: delete chunks, set `indexed_for_rag: false`
@@ -48,12 +52,14 @@ No changes to `document_chunks`, `search_knowledge_base()`, or `rag-chat`.
 ## UI Changes
 
 ### Message actions bar (App.jsx)
+
 - New "Add to RAG" / "Remove from RAG" button alongside existing Mark Read, Mark Actioned, Delete
 - Shows "Indexing..." while in progress
 - Same toggle pattern as DocumentCard's RAG button
 - Message needs `indexed_for_rag` field in the query select
 
 ### Documents tab
+
 - Message-content documents appear normally (source_type `email_message`, tagged `email`, `message`)
 - No filtering — consistent with other documents
 

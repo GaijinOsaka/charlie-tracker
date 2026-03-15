@@ -1,47 +1,50 @@
-import React, { useState, useEffect } from 'react'
-import { supabase } from '../lib/supabase'
-import { useAuth } from '../lib/AuthContext'
+import React, { useState, useEffect } from "react";
+import { supabase } from "../lib/supabase";
+import { useAuth } from "../lib/AuthContext";
 
 export default function SettingsPanel() {
-  const { user, profile } = useAuth()
-  const [profiles, setProfiles] = useState([])
-  const [inviteEmail, setInviteEmail] = useState('')
-  const [inviteName, setInviteName] = useState('')
-  const [inviting, setInviting] = useState(false)
-  const [message, setMessage] = useState(null)
+  const { user, profile } = useAuth();
+  const [profiles, setProfiles] = useState([]);
+  const [inviteEmail, setInviteEmail] = useState("");
+  const [inviteName, setInviteName] = useState("");
+  const [inviting, setInviting] = useState(false);
+  const [message, setMessage] = useState(null);
 
   useEffect(() => {
-    loadProfiles()
-  }, [])
+    loadProfiles();
+  }, []);
 
   async function loadProfiles() {
-    const { data } = await supabase.from('profiles').select('*').order('created_at')
-    setProfiles(data || [])
+    const { data } = await supabase
+      .from("profiles")
+      .select("*")
+      .order("created_at");
+    setProfiles(data || []);
   }
 
   async function handleInvite(e) {
-    e.preventDefault()
-    setInviting(true)
-    setMessage(null)
+    e.preventDefault();
+    setInviting(true);
+    setMessage(null);
 
     try {
-      const { data, error } = await supabase.functions.invoke('invite-user', {
+      const { data, error } = await supabase.functions.invoke("invite-user", {
         body: { email: inviteEmail, display_name: inviteName },
-      })
-      if (error) throw error
-      if (data.error) throw new Error(data.error)
-      setMessage({ type: 'success', text: `Invite sent to ${inviteEmail}` })
-      setInviteEmail('')
-      setInviteName('')
-      loadProfiles()
+      });
+      if (error) throw error;
+      if (data.error) throw new Error(data.error);
+      setMessage({ type: "success", text: `Invite sent to ${inviteEmail}` });
+      setInviteEmail("");
+      setInviteName("");
+      loadProfiles();
     } catch (err) {
-      setMessage({ type: 'error', text: err.message })
+      setMessage({ type: "error", text: err.message });
     } finally {
-      setInviting(false)
+      setInviting(false);
     }
   }
 
-  const canInvite = profiles.length < 2
+  const canInvite = profiles.length < 2;
 
   return (
     <div className="settings-panel">
@@ -50,7 +53,7 @@ export default function SettingsPanel() {
       <section className="settings-section">
         <h3>Users</h3>
         <ul className="user-list">
-          {profiles.map(p => (
+          {profiles.map((p) => (
             <li key={p.id} className="user-item">
               <span className="user-item-name">{p.display_name}</span>
               <span className="user-item-email">{p.email}</span>
@@ -70,7 +73,7 @@ export default function SettingsPanel() {
                 id="invite-name"
                 type="text"
                 value={inviteName}
-                onChange={e => setInviteName(e.target.value)}
+                onChange={(e) => setInviteName(e.target.value)}
                 placeholder="e.g. Sarah"
                 required
               />
@@ -81,7 +84,7 @@ export default function SettingsPanel() {
                 id="invite-email"
                 type="email"
                 value={inviteEmail}
-                onChange={e => setInviteEmail(e.target.value)}
+                onChange={(e) => setInviteEmail(e.target.value)}
                 placeholder="partner@email.com"
                 required
               />
@@ -90,11 +93,11 @@ export default function SettingsPanel() {
               <p className={`settings-msg ${message.type}`}>{message.text}</p>
             )}
             <button type="submit" className="invite-btn" disabled={inviting}>
-              {inviting ? 'Sending...' : 'Send Invite'}
+              {inviting ? "Sending..." : "Send Invite"}
             </button>
           </form>
         </section>
       )}
     </div>
-  )
+  );
 }

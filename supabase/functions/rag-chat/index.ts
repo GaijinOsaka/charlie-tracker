@@ -39,32 +39,35 @@ Deno.serve(async (req) => {
     // Verify user JWT
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) {
-      return new Response(
-        JSON.stringify({ error: "Not authenticated" }),
-        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      return new Response(JSON.stringify({ error: "Not authenticated" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
     const supabaseAuth = createClient(
       supabaseUrl,
       Deno.env.get("SUPABASE_ANON_KEY")!,
-      { global: { headers: { Authorization: authHeader } } }
+      { global: { headers: { Authorization: authHeader } } },
     );
-    const { data: { user }, error: authError } = await supabaseAuth.auth.getUser();
+    const {
+      data: { user },
+      error: authError,
+    } = await supabaseAuth.auth.getUser();
     if (authError || !user) {
-      return new Response(
-        JSON.stringify({ error: "Not authenticated" }),
-        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      return new Response(JSON.stringify({ error: "Not authenticated" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
     const { question, history } = await req.json();
 
     if (!question || typeof question !== "string") {
-      return new Response(
-        JSON.stringify({ error: "question is required" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      return new Response(JSON.stringify({ error: "question is required" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -74,14 +77,20 @@ Deno.serve(async (req) => {
     if (!openaiKey) {
       return new Response(
         JSON.stringify({ error: "OPENAI_API_KEY not configured" }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
       );
     }
 
     if (!anthropicKey) {
       return new Response(
         JSON.stringify({ error: "ANTHROPIC_API_KEY not configured" }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
       );
     }
 
@@ -105,7 +114,7 @@ Deno.serve(async (req) => {
           match_threshold: 0.2,
           match_count: 5,
         }),
-      }
+      },
     );
 
     if (!rpcResp.ok) {
@@ -189,12 +198,12 @@ ${context ? `## Document Excerpts\n${context}` : "No documents have been indexed
         sources,
         chunks_found: chunks?.length || 0,
       }),
-      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      { headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
   } catch (err) {
-    return new Response(
-      JSON.stringify({ error: err.message }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
+    return new Response(JSON.stringify({ error: err.message }), {
+      status: 500,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
   }
 });

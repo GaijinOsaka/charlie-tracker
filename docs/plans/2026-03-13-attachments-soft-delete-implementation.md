@@ -13,6 +13,7 @@
 ## Task 1: Create message_deletions Table in Supabase
 
 **Files:**
+
 - Modify: Supabase SQL Editor (via dashboard)
 
 **Step 1: Create the table via SQL**
@@ -66,6 +67,7 @@ git commit -m "database: create message_deletions table with RLS policy"
 ## Task 2: Update RLS Policy on messages Table
 
 **Files:**
+
 - Modify: Supabase SQL Editor (existing messages table RLS)
 
 **Step 1: Add policy to filter soft-deleted messages**
@@ -109,6 +111,7 @@ git commit -m "database: add RLS policy to filter soft-deleted messages"
 ## Task 3: Create AttachmentViewer Component
 
 **Files:**
+
 - Create: `src/components/AttachmentViewer.jsx`
 - Create: `src/components/AttachmentViewer.css`
 
@@ -116,10 +119,10 @@ git commit -m "database: add RLS policy to filter soft-deleted messages"
 
 ```javascript
 // src/components/AttachmentViewer.jsx
-import React, { useState, useEffect } from 'react';
-import { supabase } from '../lib/supabase';
-import * as pdfjsLib from 'pdfjs-dist';
-import './AttachmentViewer.css';
+import React, { useState, useEffect } from "react";
+import { supabase } from "../lib/supabase";
+import * as pdfjsLib from "pdfjs-dist";
+import "./AttachmentViewer.css";
 
 // Set up PDF.js worker
 pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
@@ -131,8 +134,8 @@ export function AttachmentViewer({ attachment, isOpen, onClose }) {
   const [currentPage, setCurrentPage] = useState(1);
   const [error, setError] = useState(null);
 
-  const isImage = attachment?.mime_type?.includes('image');
-  const isPdf = attachment?.mime_type?.includes('pdf');
+  const isImage = attachment?.mime_type?.includes("image");
+  const isPdf = attachment?.mime_type?.includes("pdf");
 
   // Fetch file from storage
   useEffect(() => {
@@ -143,7 +146,7 @@ export function AttachmentViewer({ attachment, isOpen, onClose }) {
         setLoading(true);
         setError(null);
         const { data, error: fetchError } = await supabase.storage
-          .from('charlie-documents')
+          .from("charlie-documents")
           .download(attachment.file_path);
 
         if (fetchError) throw fetchError;
@@ -159,8 +162,8 @@ export function AttachmentViewer({ attachment, isOpen, onClose }) {
           setCurrentPage(1);
         }
       } catch (err) {
-        console.error('Error loading attachment:', err);
-        setError('Failed to load file');
+        console.error("Error loading attachment:", err);
+        setError("Failed to load file");
       } finally {
         setLoading(false);
       }
@@ -172,18 +175,23 @@ export function AttachmentViewer({ attachment, isOpen, onClose }) {
   // Handle keyboard close
   useEffect(() => {
     const handleEsc = (e) => {
-      if (e.key === 'Escape' && isOpen) onClose();
+      if (e.key === "Escape" && isOpen) onClose();
     };
-    window.addEventListener('keydown', handleEsc);
-    return () => window.removeEventListener('keydown', handleEsc);
+    window.addEventListener("keydown", handleEsc);
+    return () => window.removeEventListener("keydown", handleEsc);
   }, [isOpen, onClose]);
 
   if (!isOpen) return null;
 
   return (
     <div className="attachment-viewer-overlay" onClick={onClose}>
-      <div className="attachment-viewer-modal" onClick={(e) => e.stopPropagation()}>
-        <button className="viewer-close-btn" onClick={onClose}>✕</button>
+      <div
+        className="attachment-viewer-modal"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <button className="viewer-close-btn" onClick={onClose}>
+          ✕
+        </button>
 
         {loading && <div className="viewer-loading">Loading...</div>}
         {error && <div className="viewer-error">{error}</div>}
@@ -204,10 +212,14 @@ export function AttachmentViewer({ attachment, isOpen, onClose }) {
               >
                 ← Previous
               </button>
-              <span>{currentPage} / {pdfPages}</span>
+              <span>
+                {currentPage} / {pdfPages}
+              </span>
               <button
                 disabled={currentPage === pdfPages}
-                onClick={() => setCurrentPage(Math.min(pdfPages, currentPage + 1))}
+                onClick={() =>
+                  setCurrentPage(Math.min(pdfPages, currentPage + 1))
+                }
               >
                 Next →
               </button>
@@ -228,20 +240,26 @@ function PDFPage({ pdf, pageNum }) {
   useEffect(() => {
     pdf.getPage(pageNum).then((page) => {
       const viewport = page.getViewport({ scale: 2 });
-      const canvas = document.createElement('canvas');
+      const canvas = document.createElement("canvas");
       canvas.width = viewport.width;
       canvas.height = viewport.height;
 
-      page.render({
-        canvasContext: canvas.getContext('2d'),
-        viewport: viewport,
-      }).promise.then(() => {
-        setImageUrl(canvas.toDataURL());
-      });
+      page
+        .render({
+          canvasContext: canvas.getContext("2d"),
+          viewport: viewport,
+        })
+        .promise.then(() => {
+          setImageUrl(canvas.toDataURL());
+        });
     });
   }, [pdf, pageNum]);
 
-  return imageUrl ? <img src={imageUrl} alt="PDF page" className="pdf-page" /> : <div>Rendering...</div>;
+  return imageUrl ? (
+    <img src={imageUrl} alt="PDF page" className="pdf-page" />
+  ) : (
+    <div>Rendering...</div>
+  );
 }
 ```
 
@@ -404,6 +422,7 @@ git commit -m "feat: add AttachmentViewer component for PDFs and images"
 ## Task 4: Update App.jsx - Add openAttachmentViewer Function
 
 **Files:**
+
 - Modify: `src/App.jsx:10-15` (add import)
 - Modify: `src/App.jsx:50-60` (add state)
 - Modify: `src/App.jsx:402-420` (add function)
@@ -413,7 +432,7 @@ git commit -m "feat: add AttachmentViewer component for PDFs and images"
 At the top of `src/App.jsx`, add:
 
 ```javascript
-import { AttachmentViewer } from './components/AttachmentViewer';
+import { AttachmentViewer } from "./components/AttachmentViewer";
 ```
 
 **Step 2: Add state for attachment viewer**
@@ -468,6 +487,7 @@ git commit -m "feat: add attachment viewer state and function to App.jsx"
 ## Task 5: Update Attachment Click Handlers in App.jsx
 
 **Files:**
+
 - Modify: `src/App.jsx` (two locations with attachment.map)
 
 **Step 1: Update first attachment click handler (messages)**
@@ -541,6 +561,7 @@ git commit -m "feat: wire up openAttachmentViewer to attachment buttons"
 ## Task 6: Update deleteMessage Function for Soft Delete
 
 **Files:**
+
 - Modify: `src/App.jsx:244-266` (deleteMessage function)
 
 **Step 1: Replace deleteMessage implementation**
@@ -549,8 +570,7 @@ Find the `deleteMessage()` function and replace it with:
 
 ```javascript
 async function deleteMessage(msgId) {
-  if (!window.confirm("Delete this message from your view?"))
-    return;
+  if (!window.confirm("Delete this message from your view?")) return;
   try {
     // Insert soft delete record
     const { error } = await supabase
@@ -595,6 +615,7 @@ git commit -m "feat: convert hard delete to soft delete for messages"
 ## Task 7: Update loadMessages Query (Optional Verification)
 
 **Files:**
+
 - Read: `src/App.jsx` (check loadMessages function)
 
 **Step 1: Verify RLS policy handles filtering**
@@ -623,6 +644,7 @@ git commit -m "docs: verified RLS policy handles message deletion filtering"
 ## Task 8: Manual Testing - Multi-User Soft Delete
 
 **Files:**
+
 - No code changes
 
 **Step 1: Test scenario**
@@ -672,6 +694,7 @@ Record any issues found. If tests fail, document what failed and why.
 ## Task 9: Final Integration Test
 
 **Files:**
+
 - No code changes
 
 **Step 1: Full user flow test**

@@ -33,6 +33,7 @@ Schedule (every 15 min)
 ## Sender Whitelist
 
 Configurable as n8n environment variable `GMAIL_WHITELIST_DOMAINS`:
+
 - `archbishopcranmer.notts.sch.uk` — school
 - Additional sports club domains added as needed
 
@@ -41,6 +42,7 @@ Gmail query format: `from:(@domain1 OR @domain2) newer_than:1h`
 ## Deduplication
 
 Uses `source_message_id` column with prefix: `gmail_{gmail_message_id}`.
+
 - Plain emails: `source='gmail'`, `source_message_id='gmail_{id}'`
 - Arbor-linked emails: `source='arbor'`, `source_message_id='gmail_{id}'`
 
@@ -49,9 +51,11 @@ The Gmail ID prefix prevents the standalone Arbor scraper from re-capturing the 
 ## n8n Workflow Nodes
 
 ### Node 1 — Schedule Trigger
+
 - Every 15 minutes
 
 ### Node 2 — Gmail: Fetch Emails
+
 - OAuth2 credential
 - Query: `from:(@archbishopcranmer.notts.sch.uk OR @sportsclub.com) newer_than:1h`
 - `newer_than:1h` keeps the window tight (dedup handles overlap)
@@ -59,22 +63,26 @@ The Gmail ID prefix prevents the standalone Arbor scraper from re-capturing the 
 ### Node 3 — Loop: For Each Email
 
 ### Node 4 — Supabase: Dedup Check
+
 - Query `messages` where `source_message_id = 'gmail_{email.id}'`
 - If exists → skip
 
 ### Node 5 — Code: Extract Attachments
+
 - For each email part where `disposition = 'attachment'`:
   - Get attachment via Gmail API
   - Store to Supabase Storage bucket (`charlie-attachments`)
   - Insert row into `attachments` table (filename, file_path, file_size, mime_type, message_id)
 
 ### Node 6 — Code: Check for Arbor Link
+
 - Regex scan email body for `https://login.arbor.sc/` links
 - Output: `hasArborLink` (boolean) + `arborUrl` (extracted URL)
 
 ### Node 7 — IF Branch
 
 ### Node 7a (Arbor link) — HTTP: Call Skyvern API
+
 - POST to `http://10.106.0.5:8000/api/v1/run/tasks`
 - Task: navigate `arborUrl`, login with credentials, extract message content
 - Poll run status every 10 seconds (max 120s timeout)
@@ -82,18 +90,22 @@ The Gmail ID prefix prevents the standalone Arbor scraper from re-capturing the 
 - On failure: fall back to email body content
 
 ### Node 7b (Plain email) — Code: Format for Insert
+
 - Map Gmail fields → Supabase columns
 - `source = 'gmail'`, `source_message_id = 'gmail_{id}'`
 
 ### Node 7a-cont — Code: Format Skyvern Result
+
 - `source = 'arbor'`, `source_message_id = 'gmail_{id}'`
 - Content from Skyvern extraction
 
 ### Node 8 — Supabase: Insert Message
+
 - Both branches merge here
 - Insert into `messages` table
 
 ### Node 9 — Code: Extract Key Dates
+
 - Regex pass over message content to find dates
 - Patterns: "15th March", "22/03/2026", "next Friday", "Monday 3rd April"
 - Insert into `events` table linked to the message

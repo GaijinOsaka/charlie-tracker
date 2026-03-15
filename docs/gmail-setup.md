@@ -53,6 +53,7 @@ The Gmail scraper workflow will connect to your Gmail account via OAuth2 to fetc
 **Operation:** `Get Messages`
 
 **Configuration:**
+
 ```
 Credentials: Gmail OAuth2
 Return all: true
@@ -63,6 +64,7 @@ Filters:
 ```
 
 **Output Format:**
+
 ```json
 {
   "id": "gmail_message_id",
@@ -93,9 +95,7 @@ const senderEmail = email.from.match(/<(.+?)>/)?.[1] || email.from;
 const senderName = email.from.match(/^(.+?)</)?.[1]?.trim() || email.from;
 
 // Normalize subject (remove "Re:", "Fwd:", etc.)
-const normalizedSubject = email.subject
-  .replace(/^(Re|Fwd):\s*/i, '')
-  .trim();
+const normalizedSubject = email.subject.replace(/^(Re|Fwd):\s*/i, "").trim();
 
 return {
   email_id: email.id,
@@ -104,7 +104,7 @@ return {
   subject: normalizedSubject,
   snippet: email.snippet,
   received_at: receivedAt,
-  gmail_timestamp: email.internalDate
+  gmail_timestamp: email.internalDate,
 };
 ```
 
@@ -120,21 +120,21 @@ const email = $input.first().json;
 
 // Check Supabase for existing Arbor message
 const response = await fetch(`${supabaseUrl}/rest/v1/messages`, {
-  method: 'GET',
+  method: "GET",
   headers: {
-    'apikey': supabaseKey,
-    'Authorization': `Bearer ${supabaseKey}`,
-    'Content-Type': 'application/json'
+    apikey: supabaseKey,
+    Authorization: `Bearer ${supabaseKey}`,
+    "Content-Type": "application/json",
   },
   body: JSON.stringify({
-    select: 'id',
+    select: "id",
     eq: {
-      source: 'arbor',
+      source: "arbor",
       sender_email: email.from,
-      subject: email.subject
+      subject: email.subject,
     },
-    limit: 1
-  })
+    limit: 1,
+  }),
 });
 
 const result = await response.json();
@@ -143,14 +143,14 @@ if (result.length > 0) {
   // Arbor message exists, skip this email
   return {
     skip: true,
-    reason: 'Arbor message already exists'
+    reason: "Arbor message already exists",
   };
 }
 
 // Email is unique, proceed with insert
 return {
   skip: false,
-  email: email
+  email: email,
 };
 ```
 
@@ -159,6 +159,7 @@ return {
 **Purpose:** Only insert if email is unique
 
 **Configuration:**
+
 ```
 Operation: Insert
 Table: messages
@@ -183,20 +184,24 @@ Data:
 ## Troubleshooting
 
 ### "Gmail: Invalid Credentials"
+
 - Check Client ID & Secret are correct
 - Verify OAuth2 flow completed
 - Check Google Cloud Console APIs are enabled
 
 ### "Permission Denied"
+
 - Verify scopes include `gmail.readonly` + `gmail.modify`
 - Re-authorize by creating new credential
 
 ### "No emails found"
+
 - Check email filter is correct (domain name)
 - Try searching all emails first (remove filters)
 - Check Gmail account actually has emails from that sender
 
 ### Email shows twice (not deduplicated)
+
 - Check Arbor message has exact same subject
 - Check email arrived within 5 minutes of Arbor message
 - Verify deduplication code is running before INSERT
@@ -206,18 +211,20 @@ Data:
 ## Testing
 
 ### Test 1: Fetch Emails
+
 1. Run Gmail node in isolation
 2. Verify emails are returned
 3. Check email format matches expected structure
 
 ### Test 2: Deduplication
+
 1. Manually create a Supabase message with source='arbor'
 2. Run Gmail workflow
 3. Verify the duplicate email was skipped (check sync_log)
 
 ### Test 3: End-to-End
+
 1. Send test email to your Gmail from school account
 2. Run full workflow
 3. Check Supabase messages table for new email
 4. Verify React dashboard shows it within 1 second
-

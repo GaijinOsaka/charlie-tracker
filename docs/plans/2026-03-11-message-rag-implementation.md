@@ -15,6 +15,7 @@
 ### Task 1: Add `indexed_for_rag` column to messages table
 
 **Files:**
+
 - Modify: `supabase/schema.sql` (add column to messages CREATE TABLE)
 
 **Step 1: Run migration SQL on live database**
@@ -52,6 +53,7 @@ git commit -m "feat: add indexed_for_rag column to messages table"
 ### Task 2: Create `index-message` Edge Function
 
 **Files:**
+
 - Create: `supabase/functions/index-message/index.ts`
 
 **Step 1: Create the Edge Function file**
@@ -73,9 +75,10 @@ const corsHeaders = {
 function chunkText(
   text: string,
   chunkSize = CHUNK_SIZE,
-  overlap = CHUNK_OVERLAP
+  overlap = CHUNK_OVERLAP,
 ): { content: string; char_start: number; char_end: number }[] {
-  const chunks: { content: string; char_start: number; char_end: number }[] = [];
+  const chunks: { content: string; char_start: number; char_end: number }[] =
+    [];
   let start = 0;
 
   while (start < text.length) {
@@ -108,7 +111,7 @@ function chunkText(
 
 async function generateEmbeddings(
   texts: string[],
-  openaiKey: string
+  openaiKey: string,
 ): Promise<number[][]> {
   const resp = await fetch("https://api.openai.com/v1/embeddings", {
     method: "POST",
@@ -142,7 +145,10 @@ Deno.serve(async (req) => {
     if (!message_id || !action) {
       return new Response(
         JSON.stringify({ error: "message_id and action required" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
       );
     }
 
@@ -162,7 +168,10 @@ Deno.serve(async (req) => {
         .single();
 
       if (doc) {
-        await supabase.from("document_chunks").delete().eq("document_id", doc.id);
+        await supabase
+          .from("document_chunks")
+          .delete()
+          .eq("document_id", doc.id);
         await supabase
           .from("documents")
           .update({ indexed_for_rag: false, last_indexed_at: null })
@@ -184,7 +193,10 @@ Deno.serve(async (req) => {
             .single();
 
           if (attDoc) {
-            await supabase.from("document_chunks").delete().eq("document_id", attDoc.id);
+            await supabase
+              .from("document_chunks")
+              .delete()
+              .eq("document_id", attDoc.id);
             await supabase
               .from("documents")
               .update({ indexed_for_rag: false, last_indexed_at: null })
@@ -199,17 +211,19 @@ Deno.serve(async (req) => {
         .update({ indexed_for_rag: false })
         .eq("id", message_id);
 
-      return new Response(
-        JSON.stringify({ success: true }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      return new Response(JSON.stringify({ success: true }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
     if (action === "index") {
       if (!openaiKey) {
         return new Response(
           JSON.stringify({ error: "OPENAI_API_KEY not configured" }),
-          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          {
+            status: 500,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          },
         );
       }
 
@@ -221,16 +235,19 @@ Deno.serve(async (req) => {
         .single();
 
       if (msgErr || !msg) {
-        return new Response(
-          JSON.stringify({ error: "Message not found" }),
-          { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
+        return new Response(JSON.stringify({ error: "Message not found" }), {
+          status: 404,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
       }
 
       if (!msg.content || msg.content.trim().length < 20) {
         return new Response(
           JSON.stringify({ error: "Message content too short to index" }),
-          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          {
+            status: 400,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          },
         );
       }
 
@@ -272,8 +289,13 @@ Deno.serve(async (req) => {
 
         if (insertErr || !newDoc) {
           return new Response(
-            JSON.stringify({ error: `Failed to create document: ${insertErr?.message}` }),
-            { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+            JSON.stringify({
+              error: `Failed to create document: ${insertErr?.message}`,
+            }),
+            {
+              status: 500,
+              headers: { ...corsHeaders, "Content-Type": "application/json" },
+            },
           );
         }
         docId = newDoc.id;
@@ -307,8 +329,13 @@ Deno.serve(async (req) => {
 
         if (chunkErr) {
           return new Response(
-            JSON.stringify({ error: `Chunk insert failed: ${chunkErr.message}` }),
-            { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+            JSON.stringify({
+              error: `Chunk insert failed: ${chunkErr.message}`,
+            }),
+            {
+              status: 500,
+              headers: { ...corsHeaders, "Content-Type": "application/json" },
+            },
           );
         }
 
@@ -376,19 +403,22 @@ Deno.serve(async (req) => {
           chunks_created: totalCreated,
           attachments_triggered: attachments?.length || 0,
         }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }
 
     return new Response(
       JSON.stringify({ error: "Invalid action. Use 'index' or 'remove'" }),
-      { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      },
     );
   } catch (err) {
-    return new Response(
-      JSON.stringify({ error: err.message }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
+    return new Response(JSON.stringify({ error: err.message }), {
+      status: 500,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
   }
 });
 ```
@@ -424,6 +454,7 @@ git commit -m "feat: add index-message edge function for RAG indexing messages"
 ### Task 3: Add "Add to RAG" button to message UI
 
 **Files:**
+
 - Modify: `src/App.jsx:79-86` (add `indexed_for_rag` to messages select query)
 - Modify: `src/App.jsx:592-611` (add RAG button to message actions)
 - Modify: `src/App.css` (add button styles)
@@ -447,51 +478,53 @@ Note: `*` already includes all columns, but being explicit about `indexed_for_ra
 In `src/App.jsx`, add a state variable for tracking which message is currently indexing. Add near the other useState declarations (around line 32):
 
 ```javascript
-const [indexingMessages, setIndexingMessages] = useState(new Set())
+const [indexingMessages, setIndexingMessages] = useState(new Set());
 ```
 
 Add the handler function after `actionMessage` (around line 210):
 
 ```javascript
 async function toggleMessageRag(msg) {
-  const action = msg.indexed_for_rag ? 'remove' : 'index'
-  setIndexingMessages(prev => new Set(prev).add(msg.id))
+  const action = msg.indexed_for_rag ? "remove" : "index";
+  setIndexingMessages((prev) => new Set(prev).add(msg.id));
   try {
-    const { data, error } = await supabase.functions.invoke('index-message', {
+    const { data, error } = await supabase.functions.invoke("index-message", {
       body: { message_id: msg.id, action },
-    })
+    });
 
     if (error) {
-      let errMsg = error.message
+      let errMsg = error.message;
       try {
-        if (error.context && typeof error.context.json === 'function') {
-          const body = await error.context.json()
-          errMsg = body.error || errMsg
+        if (error.context && typeof error.context.json === "function") {
+          const body = await error.context.json();
+          errMsg = body.error || errMsg;
         }
       } catch (_) {}
-      throw new Error(errMsg)
+      throw new Error(errMsg);
     }
 
-    if (data?.error) throw new Error(data.error)
+    if (data?.error) throw new Error(data.error);
 
-    setMessages(prev => prev.map(m =>
-      m.id === msg.id ? { ...m, indexed_for_rag: action === 'index' } : m
-    ))
+    setMessages((prev) =>
+      prev.map((m) =>
+        m.id === msg.id ? { ...m, indexed_for_rag: action === "index" } : m,
+      ),
+    );
     addToast(
-      action === 'index'
-        ? `Indexed message${data?.attachments_triggered ? ` + ${data.attachments_triggered} attachment(s)` : ''}`
-        : 'Removed from RAG',
-      'success'
-    )
+      action === "index"
+        ? `Indexed message${data?.attachments_triggered ? ` + ${data.attachments_triggered} attachment(s)` : ""}`
+        : "Removed from RAG",
+      "success",
+    );
   } catch (err) {
-    console.error('RAG toggle error:', err)
-    addToast(`Failed to ${action} message: ${err.message}`, 'error')
+    console.error("RAG toggle error:", err);
+    addToast(`Failed to ${action} message: ${err.message}`, "error");
   } finally {
-    setIndexingMessages(prev => {
-      const next = new Set(prev)
-      next.delete(msg.id)
-      return next
-    })
+    setIndexingMessages((prev) => {
+      const next = new Set(prev);
+      next.delete(msg.id);
+      return next;
+    });
   }
 }
 ```
@@ -502,13 +535,17 @@ In `src/App.jsx`, find the message actions div (line ~592). Add the RAG button a
 
 ```jsx
 <button
-  className={`btn-rag-toggle ${msg.indexed_for_rag ? 'btn-rag-remove' : 'btn-rag-add'}`}
+  className={`btn-rag-toggle ${msg.indexed_for_rag ? "btn-rag-remove" : "btn-rag-add"}`}
   onClick={() => toggleMessageRag(msg)}
   disabled={indexingMessages.has(msg.id)}
 >
   {indexingMessages.has(msg.id)
-    ? (msg.indexed_for_rag ? 'Removing...' : 'Indexing...')
-    : (msg.indexed_for_rag ? 'Remove from RAG' : 'Add to RAG')}
+    ? msg.indexed_for_rag
+      ? "Removing..."
+      : "Indexing..."
+    : msg.indexed_for_rag
+      ? "Remove from RAG"
+      : "Add to RAG"}
 </button>
 ```
 
@@ -517,7 +554,9 @@ In `src/App.jsx`, find the message actions div (line ~592). Add the RAG button a
 In `src/App.jsx`, find the message-meta div (line ~541). Add after the actioned badge:
 
 ```jsx
-{msg.indexed_for_rag && <span className="indexed-badge">RAG Indexed</span>}
+{
+  msg.indexed_for_rag && <span className="indexed-badge">RAG Indexed</span>;
+}
 ```
 
 **Step 5: Add CSS styles**

@@ -16,10 +16,10 @@ Deno.serve(async (req) => {
     // Verify authentication (accepts user tokens and service role key)
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) {
-      return new Response(
-        JSON.stringify({ error: "Not authenticated" }),
-        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      return new Response(JSON.stringify({ error: "Not authenticated" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
@@ -30,14 +30,17 @@ Deno.serve(async (req) => {
       const supabaseAuth = createClient(
         supabaseUrl,
         Deno.env.get("SUPABASE_ANON_KEY")!,
-        { global: { headers: { Authorization: authHeader } } }
+        { global: { headers: { Authorization: authHeader } } },
       );
-      const { data: { user }, error: authError } = await supabaseAuth.auth.getUser();
+      const {
+        data: { user },
+        error: authError,
+      } = await supabaseAuth.auth.getUser();
       if (authError || !user) {
-        return new Response(
-          JSON.stringify({ error: "Not authenticated" }),
-          { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
+        return new Response(JSON.stringify({ error: "Not authenticated" }), {
+          status: 401,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
       }
     }
 
@@ -46,7 +49,10 @@ Deno.serve(async (req) => {
     if (!document_id) {
       return new Response(
         JSON.stringify({ error: "document_id is required" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
       );
     }
     const openaiKey = Deno.env.get("OPENAI_API_KEY");
@@ -54,7 +60,10 @@ Deno.serve(async (req) => {
     if (!openaiKey) {
       return new Response(
         JSON.stringify({ error: "OPENAI_API_KEY not configured" }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
       );
     }
 
@@ -68,16 +77,22 @@ Deno.serve(async (req) => {
       .single();
 
     if (fetchErr || !doc) {
-      return new Response(
-        JSON.stringify({ error: "Document not found" }),
-        { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      return new Response(JSON.stringify({ error: "Document not found" }), {
+        status: 404,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
     if (!doc.content_text || doc.content_text.trim().length < 20) {
       return new Response(
-        JSON.stringify({ error: "Document has no extracted text. Run Docling extraction first." }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        JSON.stringify({
+          error:
+            "Document has no extracted text. Run Docling extraction first.",
+        }),
+        {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
       );
     }
 
@@ -105,22 +120,29 @@ Return a JSON object with an "events" array. If no dates or events are found, re
 Document text:
 ${contentText}`;
 
-    const openaiResp = await fetch("https://api.openai.com/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${openaiKey}`,
-        "Content-Type": "application/json",
+    const openaiResp = await fetch(
+      "https://api.openai.com/v1/chat/completions",
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${openaiKey}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model: "gpt-4o-mini",
+          temperature: 0.1,
+          response_format: { type: "json_object" },
+          messages: [
+            {
+              role: "system",
+              content:
+                "You extract dates and events from documents. Always respond with valid JSON.",
+            },
+            { role: "user", content: prompt },
+          ],
+        }),
       },
-      body: JSON.stringify({
-        model: "gpt-4o-mini",
-        temperature: 0.1,
-        response_format: { type: "json_object" },
-        messages: [
-          { role: "system", content: "You extract dates and events from documents. Always respond with valid JSON." },
-          { role: "user", content: prompt },
-        ],
-      }),
-    });
+    );
 
     if (!openaiResp.ok) {
       const err = await openaiResp.text();
@@ -144,13 +166,10 @@ ${contentText}`;
       description?: string | null;
       action_required?: boolean;
       action_detail?: string | null;
-    }> = Array.isArray(parsed) ? parsed : (parsed.events || []);
+    }> = Array.isArray(parsed) ? parsed : parsed.events || [];
 
     // Delete existing events for this document (re-extraction support)
-    await supabase
-      .from("events")
-      .delete()
-      .eq("document_id", document_id);
+    await supabase.from("events").delete().eq("document_id", document_id);
 
     // Insert extracted events
     let eventsCreated = 0;
@@ -166,9 +185,7 @@ ${contentText}`;
         action_detail: evt.action_detail || null,
       }));
 
-      const { error: insertErr } = await supabase
-        .from("events")
-        .insert(rows);
+      const { error: insertErr } = await supabase.from("events").insert(rows);
 
       if (insertErr) {
         throw new Error(`Failed to insert events: ${insertErr.message}`);
@@ -192,12 +209,12 @@ ${contentText}`;
         events_created: eventsCreated,
         document_id: document_id,
       }),
-      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      { headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
   } catch (err) {
-    return new Response(
-      JSON.stringify({ error: err.message }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
+    return new Response(JSON.stringify({ error: err.message }), {
+      status: 500,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
   }
 });

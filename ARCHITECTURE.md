@@ -28,39 +28,42 @@ WhatsApp       →  n8n Webhook    │                 ├→ REST API   → Mes
 ## Component Ownership & Responsibilities
 
 ### n8n (Data Collection)
+
 **Responsibility:** Extract messages from sources, normalize, deliver to Supabase
 
-| Component | What It Does | Runs Every |
-|-----------|--------------|-----------|
-| **Arbor Scraper** | Browser automation → extract messages | 15 min |
-| **Gmail Scraper** | Query Gmail API → extract emails | 15 min |
-| **WhatsApp Receiver** | Listen for webhooks → parse messages | Real-time |
-| **Deduplication** | Compare against Arbor to avoid duplicates | Per message |
-| **Error Handler** | Retry logic, log failures to sync_log | Per error |
+| Component             | What It Does                              | Runs Every  |
+| --------------------- | ----------------------------------------- | ----------- |
+| **Arbor Scraper**     | Browser automation → extract messages     | 15 min      |
+| **Gmail Scraper**     | Query Gmail API → extract emails          | 15 min      |
+| **WhatsApp Receiver** | Listen for webhooks → parse messages      | Real-time   |
+| **Deduplication**     | Compare against Arbor to avoid duplicates | Per message |
+| **Error Handler**     | Retry logic, log failures to sync_log     | Per error   |
 
 ### Supabase (Data Storage & Distribution)
+
 **Responsibility:** Store normalized messages, provide APIs, broadcast changes
 
-| Component | What It Does | Access |
-|-----------|--------------|--------|
-| **messages** | Core message table (all sources) | n8n (write), React (read) |
-| **categories** | Academic, Events, Health, etc. | n8n (read), React (read) |
-| **attachments** | File metadata for email/Arbor files | n8n (write), React (read) |
-| **sync_log** | History of scraping runs | n8n (write), React (read) |
-| **REST API** | CRUD operations (HTTP) | n8n & React |
-| **Realtime** | WebSocket for instant updates | React subscribers |
-| **RLS Policies** | Row-level security (auth checks) | All queries |
+| Component        | What It Does                        | Access                    |
+| ---------------- | ----------------------------------- | ------------------------- |
+| **messages**     | Core message table (all sources)    | n8n (write), React (read) |
+| **categories**   | Academic, Events, Health, etc.      | n8n (read), React (read)  |
+| **attachments**  | File metadata for email/Arbor files | n8n (write), React (read) |
+| **sync_log**     | History of scraping runs            | n8n (write), React (read) |
+| **REST API**     | CRUD operations (HTTP)              | n8n & React               |
+| **Realtime**     | WebSocket for instant updates       | React subscribers         |
+| **RLS Policies** | Row-level security (auth checks)    | All queries               |
 
 ### React (Dashboard Frontend)
+
 **Responsibility:** Display messages, receive alerts, allow user interactions
 
-| Component | What It Does | Syncs With |
-|-----------|--------------|-----------|
-| **MessageList** | Display all messages | Supabase (REST) |
-| **Realtime Subscriber** | Listen for new messages | Supabase (WebSocket) |
-| **Toast Notifier** | Show alerts on new messages | Realtime Subscriber |
-| **Filter/Search** | Client-side filtering | MessageList |
-| **Mark as Read** | Update is_read field | Supabase (REST) |
+| Component               | What It Does                | Syncs With           |
+| ----------------------- | --------------------------- | -------------------- |
+| **MessageList**         | Display all messages        | Supabase (REST)      |
+| **Realtime Subscriber** | Listen for new messages     | Supabase (WebSocket) |
+| **Toast Notifier**      | Show alerts on new messages | Realtime Subscriber  |
+| **Filter/Search**       | Client-side filtering       | MessageList          |
+| **Mark as Read**        | Update is_read field        | Supabase (REST)      |
 
 ---
 
@@ -220,6 +223,7 @@ sync_log {
 ### n8n → Supabase
 
 **Insert New Message (n8n does this)**
+
 ```bash
 POST /rest/v1/messages
 Authorization: Bearer SERVICE_ROLE_KEY
@@ -237,6 +241,7 @@ Authorization: Bearer SERVICE_ROLE_KEY
 ```
 
 **Query Messages (n8n reads for deduplication)**
+
 ```bash
 GET /rest/v1/messages?source=eq.arbor&sender_email=eq.smith@school.co.uk&subject=ilike.School%20Trip
 Authorization: Bearer SERVICE_ROLE_KEY
@@ -245,12 +250,14 @@ Authorization: Bearer SERVICE_ROLE_KEY
 ### React → Supabase
 
 **Fetch Messages (on page load)**
+
 ```bash
 GET /rest/v1/messages?order=received_at.desc&limit=50
 Authorization: Bearer ANON_KEY
 ```
 
 **Mark as Read (user clicks)**
+
 ```bash
 PATCH /rest/v1/messages?id=eq.UUID
 Authorization: Bearer ANON_KEY
@@ -259,10 +266,11 @@ Authorization: Bearer ANON_KEY
 ```
 
 **Realtime Subscription (in React)**
+
 ```javascript
 const subscription = supabase
-  .from('messages')
-  .on('INSERT', callback)
+  .from("messages")
+  .on("INSERT", callback)
   .subscribe();
 ```
 
@@ -272,11 +280,11 @@ const subscription = supabase
 
 ### Authentication Levels
 
-| Level | Uses | Access | Scope |
-|-------|------|--------|-------|
-| **Service Role** | n8n | Full read/write | All data |
-| **Anon Key** | React | Read-only, RLS | Authenticated users |
-| **User Auth** | React login | Read-only, RLS | User's data |
+| Level            | Uses        | Access          | Scope               |
+| ---------------- | ----------- | --------------- | ------------------- |
+| **Service Role** | n8n         | Full read/write | All data            |
+| **Anon Key**     | React       | Read-only, RLS  | Authenticated users |
+| **User Auth**    | React login | Read-only, RLS  | User's data         |
 
 ### Row-Level Security (RLS)
 
@@ -360,16 +368,19 @@ User sees all messages, back in sync
 ## Monitoring Checklist
 
 **Daily:**
+
 - [ ] Check sync_log: are both workflows running successfully?
 - [ ] Verify React dashboard loads
 - [ ] Test realtime (send test message, see alert within 1s)
 
 **Weekly:**
+
 - [ ] Check for patterns in errors
 - [ ] Verify message count is growing normally
 - [ ] Test Gmail deduplication (send email, check it's skipped)
 
 **Monthly:**
+
 - [ ] Review Supabase storage usage
 - [ ] Check n8n execution history for trends
 - [ ] Verify no orphaned/duplicate messages
@@ -388,4 +399,3 @@ User sees all messages, back in sync
 - [ ] End-to-end test (message through full pipeline)
 - [ ] Monitor for 24 hours (no errors)
 - [ ] Go live ✅
-

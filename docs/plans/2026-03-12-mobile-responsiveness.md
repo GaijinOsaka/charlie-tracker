@@ -5,6 +5,7 @@
 **Goal:** Transform Charlie Tracker into a fully responsive mobile-first app with proper text constraints, mobile navigation (hamburger menu), collapsible filters, and touch-friendly UI.
 
 **Architecture:**
+
 - Mobile-first CSS with breakpoints at 320px, 480px, 768px, 1024px
 - Hamburger menu for navigation on screens <768px (drawer component)
 - Collapsible/scrollable filter sections on mobile
@@ -19,6 +20,7 @@
 ## Task 1: Add Mobile Breakpoint Variables & Utilities to CSS
 
 **Files:**
+
 - Modify: `src/App.css:1-100` (CSS variables section)
 
 **Step 1: Add responsive design utilities**
@@ -100,6 +102,7 @@ git commit -m "feat: add mobile breakpoint variables and text overflow utilities
 ## Task 2: Create Mobile Navigation Drawer Component
 
 **Files:**
+
 - Create: `src/components/MobileNav.jsx`
 - Modify: `src/App.jsx:1-30` (imports and state)
 - Modify: `src/App.css` (append drawer styles)
@@ -109,41 +112,49 @@ git commit -m "feat: add mobile breakpoint variables and text overflow utilities
 Create `src/components/MobileNav.jsx`:
 
 ```jsx
-import React from 'react'
-import '../styles/MobileNav.css'
+import React from "react";
+import "../styles/MobileNav.css";
 
-export default function MobileNav({ isOpen, onClose, activeTab, onTabChange, unreadCount }) {
+export default function MobileNav({
+  isOpen,
+  onClose,
+  activeTab,
+  onTabChange,
+  unreadCount,
+}) {
   const tabs = [
-    { id: 'messages', label: 'Messages', icon: '💬' },
-    { id: 'events', label: 'Events', icon: '📅' },
-    { id: 'calendar', label: 'Calendar', icon: '🗓️' },
-    { id: 'documents', label: 'Documents', icon: '📄' },
-    { id: 'settings', label: 'Settings', icon: '⚙️' }
-  ]
+    { id: "messages", label: "Messages", icon: "💬" },
+    { id: "events", label: "Events", icon: "📅" },
+    { id: "calendar", label: "Calendar", icon: "🗓️" },
+    { id: "documents", label: "Documents", icon: "📄" },
+    { id: "settings", label: "Settings", icon: "⚙️" },
+  ];
 
   const handleTabClick = (tabId) => {
-    onTabChange(tabId)
-    onClose()
-  }
+    onTabChange(tabId);
+    onClose();
+  };
 
   return (
     <>
       {isOpen && <div className="mobile-nav-overlay" onClick={onClose} />}
-      <nav className={`mobile-nav ${isOpen ? 'open' : ''}`}>
+      <nav className={`mobile-nav ${isOpen ? "open" : ""}`}>
         <div className="mobile-nav-header">
           <h2>Menu</h2>
-          <button className="mobile-nav-close" onClick={onClose}>✕</button>
+          <button className="mobile-nav-close" onClick={onClose}>
+            ✕
+          </button>
         </div>
         <ul className="mobile-nav-list">
-          {tabs.map(tab => (
+          {tabs.map((tab) => (
             <li key={tab.id}>
               <button
-                className={`mobile-nav-item ${activeTab === tab.id ? 'active' : ''}`}
+                className={`mobile-nav-item ${activeTab === tab.id ? "active" : ""}`}
                 onClick={() => handleTabClick(tab.id)}
               >
                 <span className="mobile-nav-icon">{tab.icon}</span>
                 <span className="mobile-nav-label">{tab.label}</span>
-                {tab.id === 'messages' && unreadCount > 0 && (
+                {tab.id === "messages" && unreadCount > 0 && (
                   <span className="mobile-nav-badge">{unreadCount}</span>
                 )}
               </button>
@@ -152,7 +163,7 @@ export default function MobileNav({ isOpen, onClose, activeTab, onTabChange, unr
         </ul>
       </nav>
     </>
-  )
+  );
 }
 ```
 
@@ -270,16 +281,19 @@ Create `src/styles/MobileNav.css`:
 **Step 3: Update App.jsx to use MobileNav**
 
 Add to imports (after line 10):
+
 ```jsx
-import MobileNav from './components/MobileNav'
+import MobileNav from "./components/MobileNav";
 ```
 
 Add to state (after line 43):
+
 ```jsx
-const [mobileNavOpen, setMobileNavOpen] = useState(false)
+const [mobileNavOpen, setMobileNavOpen] = useState(false);
 ```
 
 Update header-right section (around line 430):
+
 ```jsx
 <div className="header-right">
   <button
@@ -291,21 +305,28 @@ Update header-right section (around line 430):
   </button>
   <NotificationBell onNavigateToMessage={navigateToMessage} />
   <span className="user-name">{profile?.display_name}</span>
-  <button className="theme-toggle-btn" onClick={toggleTheme} title="Toggle light/dark mode">
-    {theme === 'light' ? '🌙' : '☀️'}
+  <button
+    className="theme-toggle-btn"
+    onClick={toggleTheme}
+    title="Toggle light/dark mode"
+  >
+    {theme === "light" ? "🌙" : "☀️"}
   </button>
-  <button className="sign-out-btn" onClick={signOut}>Sign Out</button>
+  <button className="sign-out-btn" onClick={signOut}>
+    Sign Out
+  </button>
 </div>
 ```
 
 Add before `</div>` closing tag of return statement (before ChatDrawer, around line 840):
+
 ```jsx
 <MobileNav
   isOpen={mobileNavOpen}
   onClose={() => setMobileNavOpen(false)}
   activeTab={activeTab}
   onTabChange={setActiveTab}
-  unreadCount={messages.filter(m => !m.is_read).length}
+  unreadCount={messages.filter((m) => !m.is_read).length}
 />
 ```
 
@@ -355,6 +376,7 @@ git commit -m "feat: add mobile navigation drawer with hamburger menu"
 ## Task 3: Add Comprehensive Media Query Breakpoints for App Layout
 
 **Files:**
+
 - Modify: `src/App.css:1635-1700` (existing media queries)
 
 **Step 1: Replace and expand media queries**
@@ -653,6 +675,7 @@ Replace the entire mobile media query block starting at line 1635 with comprehen
 **Step 2: Update .app max-width for all screens**
 
 Find and update:
+
 ```css
 .app {
   min-height: 100vh;
@@ -663,6 +686,7 @@ Find and update:
 ```
 
 To:
+
 ```css
 .app {
   min-height: 100vh;
@@ -697,6 +721,7 @@ git commit -m "feat: add comprehensive mobile-first responsive design with multi
 ## Task 4: Fix Text Overflow in Message/Event Cards
 
 **Files:**
+
 - Modify: `src/App.css` (find message-item and event-item sections)
 
 **Step 1: Add word-break and truncate classes to message styling**
@@ -795,6 +820,7 @@ git commit -m "fix: add word-break and overflow handling to message/event cards"
 ## Task 5: Optimize Header for Mobile
 
 **Files:**
+
 - Modify: `src/App.css` (header section)
 
 **Step 1: Make header responsive**
@@ -864,7 +890,7 @@ Find `header h1` and add:
 
 ```css
 header h1 {
-  font-family: 'Inter', sans-serif;
+  font-family: "Inter", sans-serif;
   font-size: 2.5rem;
   font-weight: 700;
   color: var(--text);
@@ -902,6 +928,7 @@ git commit -m "feat: optimize header layout for mobile screens"
 ## Task 6: Make Tab Navigation Mobile-Friendly
 
 **Files:**
+
 - Modify: `src/App.css` (tab-nav section)
 
 **Step 1: Add horizontal scrolling to tabs on mobile**
@@ -979,6 +1006,7 @@ git commit -m "feat: add horizontal scrolling for tab navigation on mobile"
 ## Task 7: Create Collapsible Filter Section Component
 
 **Files:**
+
 - Create: `src/components/MobileFilters.jsx`
 - Modify: `src/App.jsx` (conditional rendering)
 - Modify: `src/App.css` (append styles)
@@ -988,10 +1016,17 @@ git commit -m "feat: add horizontal scrolling for tab navigation on mobile"
 Create `src/components/MobileFilters.jsx`:
 
 ```jsx
-import React, { useState } from 'react'
+import React, { useState } from "react";
 
-export default function MobileFilters({ statusFilter, setStatusFilter, sourceFilter, setSourceFilter, searchQuery, setSearchQuery }) {
-  const [isOpen, setIsOpen] = useState(false)
+export default function MobileFilters({
+  statusFilter,
+  setStatusFilter,
+  sourceFilter,
+  setSourceFilter,
+  searchQuery,
+  setSearchQuery,
+}) {
+  const [isOpen, setIsOpen] = useState(false);
 
   return (
     <div className="mobile-filters hide-desktop">
@@ -999,14 +1034,17 @@ export default function MobileFilters({ statusFilter, setStatusFilter, sourceFil
         className="mobile-filters-toggle"
         onClick={() => setIsOpen(!isOpen)}
       >
-        🔍 Filters {isOpen ? '▲' : '▼'}
+        🔍 Filters {isOpen ? "▲" : "▼"}
       </button>
 
       {isOpen && (
         <div className="mobile-filters-panel">
           <div className="filter-group">
             <label>Status</label>
-            <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+            >
               <option value="all">All Messages</option>
               <option value="unread">Unread</option>
               <option value="read">Read</option>
@@ -1015,7 +1053,10 @@ export default function MobileFilters({ statusFilter, setStatusFilter, sourceFil
 
           <div className="filter-group">
             <label>Source</label>
-            <select value={sourceFilter} onChange={(e) => setSourceFilter(e.target.value)}>
+            <select
+              value={sourceFilter}
+              onChange={(e) => setSourceFilter(e.target.value)}
+            >
               <option value="all">All Sources</option>
               <option value="arbor">Arbor</option>
               <option value="gmail">Gmail</option>
@@ -1034,60 +1075,71 @@ export default function MobileFilters({ statusFilter, setStatusFilter, sourceFil
         </div>
       )}
     </div>
-  )
+  );
 }
 ```
 
 **Step 2: Update App.jsx to use MobileFilters**
 
 Add import after other component imports:
+
 ```jsx
-import MobileFilters from './components/MobileFilters'
+import MobileFilters from "./components/MobileFilters";
 ```
 
 In the messages tab rendering section, replace the existing `.filters` div with:
 
 ```jsx
-{activeTab === 'messages' && <>
-  <MobileFilters
-    statusFilter={statusFilter}
-    setStatusFilter={setStatusFilter}
-    sourceFilter={sourceFilter}
-    setSourceFilter={setSourceFilter}
-    searchQuery={searchQuery}
-    setSearchQuery={setSearchQuery}
-  />
-
-  <div className="filters hide-mobile">
-    <div className="filter-group">
-      <label>Status</label>
-      <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
-        <option value="all">All Messages</option>
-        <option value="unread">Unread</option>
-        <option value="read">Read</option>
-      </select>
-    </div>
-
-    <div className="filter-group">
-      <label>Source</label>
-      <select value={sourceFilter} onChange={(e) => setSourceFilter(e.target.value)}>
-        <option value="all">All Sources</option>
-        <option value="arbor">Arbor</option>
-        <option value="gmail">Gmail</option>
-      </select>
-    </div>
-
-    <div className="filter-group search">
-      <label>Search</label>
-      <input
-        type="text"
-        placeholder="Search messages..."
-        value={searchQuery}
-        onChange={(e) => setSearchQuery(e.target.value)}
+{
+  activeTab === "messages" && (
+    <>
+      <MobileFilters
+        statusFilter={statusFilter}
+        setStatusFilter={setStatusFilter}
+        sourceFilter={sourceFilter}
+        setSourceFilter={setSourceFilter}
+        searchQuery={searchQuery}
+        setSearchQuery={setSearchQuery}
       />
-    </div>
-  </div>
-</>}
+
+      <div className="filters hide-mobile">
+        <div className="filter-group">
+          <label>Status</label>
+          <select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+          >
+            <option value="all">All Messages</option>
+            <option value="unread">Unread</option>
+            <option value="read">Read</option>
+          </select>
+        </div>
+
+        <div className="filter-group">
+          <label>Source</label>
+          <select
+            value={sourceFilter}
+            onChange={(e) => setSourceFilter(e.target.value)}
+          >
+            <option value="all">All Sources</option>
+            <option value="arbor">Arbor</option>
+            <option value="gmail">Gmail</option>
+          </select>
+        </div>
+
+        <div className="filter-group search">
+          <label>Search</label>
+          <input
+            type="text"
+            placeholder="Search messages..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
+        </div>
+      </div>
+    </>
+  );
+}
 ```
 
 **Step 3: Add MobileFilters styles to App.css**
@@ -1160,6 +1212,7 @@ git commit -m "feat: add collapsible mobile filters component"
 ## Task 8: Ensure Touch-Friendly Button Sizes
 
 **Files:**
+
 - Modify: `src/App.css` (find all button styles)
 
 **Step 1: Update button sizing for touch**
@@ -1240,6 +1293,7 @@ git commit -m "feat: ensure all buttons meet 44px minimum touch-friendly sizing"
 ## Task 9: Add Viewport Meta Tag & PWA Updates
 
 **Files:**
+
 - Modify: `index.html`
 
 **Step 1: Ensure proper viewport meta tag**
@@ -1247,15 +1301,29 @@ git commit -m "feat: ensure all buttons meet 44px minimum touch-friendly sizing"
 In `index.html`, verify the viewport meta tag exists (in `<head>`):
 
 ```html
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes, viewport-fit=cover">
+<meta
+  name="viewport"
+  content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes, viewport-fit=cover"
+/>
 ```
 
 Update to include safe area insets for notched devices:
 
 ```html
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes, viewport-fit=cover">
-<meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
-<meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
+<meta
+  name="viewport"
+  content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes, viewport-fit=cover"
+/>
+<meta
+  name="theme-color"
+  content="#ffffff"
+  media="(prefers-color-scheme: light)"
+/>
+<meta
+  name="theme-color"
+  content="#000000"
+  media="(prefers-color-scheme: dark)"
+/>
 ```
 
 **Step 2: Verify manifest.json**
@@ -1294,17 +1362,20 @@ git commit -m "feat: add proper viewport and PWA meta tags for mobile"
 ## Task 10: Test Responsive Design at Key Breakpoints
 
 **Files:**
+
 - No files modified (testing/verification task)
 
 **Step 1: Test at 320px (iPhone SE)**
 
 Using browser DevTools:
+
 1. Open Chrome DevTools (F12)
 2. Click Device Toggle (Ctrl+Shift+M)
 3. Select iPhone SE (375px width, but test at 320px)
 4. Resize manually to 320px
 
 Verify:
+
 - [ ] Navigation hamburger menu appears and works
 - [ ] Header stacks properly (no text overflow)
 - [ ] Filters collapse into collapsible component
@@ -1316,6 +1387,7 @@ Verify:
 **Step 2: Test at 480px (small tablet)**
 
 Resize to 480px:
+
 - [ ] Filters still collapsed or partially visible
 - [ ] All cards readable
 - [ ] No text overflow
@@ -1324,6 +1396,7 @@ Resize to 480px:
 **Step 3: Test at 768px (iPad)**
 
 Resize to 768px:
+
 - [ ] Hamburger menu disappears, tab nav shows
 - [ ] Desktop filters appear inline
 - [ ] Layout transitions smoothly
@@ -1332,6 +1405,7 @@ Resize to 768px:
 **Step 4: Test at 1024px+ (desktop)**
 
 Resize to 1200px:
+
 - [ ] Full desktop layout visible
 - [ ] Hamburger menu hidden
 - [ ] All filters visible
@@ -1340,6 +1414,7 @@ Resize to 1200px:
 **Step 5: Test on actual devices**
 
 If available:
+
 - [ ] Test on iPhone 12 (390px)
 - [ ] Test on Android phone (360-412px)
 - [ ] Test on iPad (768px)
@@ -1353,6 +1428,7 @@ Create a mobile testing checklist file: `docs/MOBILE_TESTING.md`
 # Mobile Responsiveness Testing Checklist
 
 ## Devices Tested
+
 - [ ] iPhone SE (375px)
 - [ ] iPhone 12 (390px)
 - [ ] Android Phone (360px)
@@ -1360,6 +1436,7 @@ Create a mobile testing checklist file: `docs/MOBILE_TESTING.md`
 - [ ] Desktop (1200px)
 
 ## Features Tested
+
 - [ ] Hamburger menu opens/closes
 - [ ] Filters collapse on mobile
 - [ ] Text does not overflow boxes
@@ -1371,9 +1448,11 @@ Create a mobile testing checklist file: `docs/MOBILE_TESTING.md`
 - [ ] Forms accessible on mobile
 
 ## Issues Found
+
 [Document any issues found during testing]
 
 ## Date Tested
+
 [Date]
 ```
 
@@ -1391,6 +1470,7 @@ git commit -m "docs: add mobile responsiveness testing checklist"
 **Total Tasks:** 10
 **Estimated Time:** 4-6 hours
 **Key Features Implemented:**
+
 - ✅ Mobile-first responsive design (320px, 480px, 768px, 1024px breakpoints)
 - ✅ Hamburger menu drawer navigation
 - ✅ Collapsible mobile filters
@@ -1401,6 +1481,7 @@ git commit -m "docs: add mobile responsiveness testing checklist"
 - ✅ Smooth theme transitions on all screen sizes
 
 **Testing Required:**
+
 - Manual testing at key breakpoints
 - Device testing (if available)
 - Browser DevTools responsive mode testing

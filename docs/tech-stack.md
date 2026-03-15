@@ -3,6 +3,7 @@
 ## Overview
 
 This project uses a three-tier architecture:
+
 - **Automation:** n8n (data collection)
 - **Data:** Supabase (storage & APIs)
 - **Frontend:** React (user interface)
@@ -12,9 +13,11 @@ This project uses a three-tier architecture:
 ## n8n (Automation & Data Collection)
 
 ### Role
+
 Scrape messages from Arbor, Email, and WhatsApp; normalize data; push to Supabase.
 
 ### Why n8n?
+
 - ✅ **Browser Automation:** Playwright integration for scraping Arbor
 - ✅ **Multi-Protocol:** HTTP/REST, Email (IMAP), WhatsApp APIs
 - ✅ **Scheduling:** Built-in cron triggers for periodic scraping
@@ -23,11 +26,13 @@ Scrape messages from Arbor, Email, and WhatsApp; normalize data; push to Supabas
 - ✅ **Integrations:** 400+ pre-built nodes
 
 ### Current Status
+
 - ✅ Arbor workflow JSON exists (`arbor-message-scraper-workflow.json`)
 - ⏳ Needs deployment setup
 - 🔄 Email & WhatsApp workflows to be created
 
 ### Key Nodes We'll Use
+
 - `Playwright` - Browser automation for Arbor
 - `HTTP Request` - REST API calls
 - `Email` (IMAP) - Fetch emails
@@ -40,9 +45,11 @@ Scrape messages from Arbor, Email, and WhatsApp; normalize data; push to Supabas
 ## Supabase (Database & API)
 
 ### Role
+
 Store messages, attachments, metadata; provide REST API for React frontend.
 
 ### Why Supabase?
+
 - ✅ **PostgreSQL:** Robust relational database
 - ✅ **REST API:** Auto-generated from tables (easy CRUD)
 - ✅ **RLS (Row-Level Security):** Fine-grained access control
@@ -51,6 +58,7 @@ Store messages, attachments, metadata; provide REST API for React frontend.
 - ✅ **Free Tier:** Generous limits for prototyping
 
 ### Current Status
+
 - ✅ Schema ready (`charlie-oakes-tracker-schema.sql`)
 - ✅ Tables: messages, categories, attachments, sync_log
 - ✅ Indexes optimized
@@ -92,6 +100,7 @@ sync_log
 ```
 
 ### Realtime Features
+
 - WebSocket subscriptions for new messages
 - Dashboard updates instantly when Arbor/Email/WhatsApp message arrives
 - Notification badge counts update in real-time
@@ -101,9 +110,11 @@ sync_log
 ## React (Frontend)
 
 ### Role
+
 Display messages, manage notifications, provide search/filter UI.
 
 ### Why React?
+
 - ✅ **Component Reusability:** Build UI with composable parts
 - ✅ **State Management:** Handle notifications, read/unread status
 - ✅ **Real-time UI:** Subscribe to Supabase changes
@@ -111,6 +122,7 @@ Display messages, manage notifications, provide search/filter UI.
 - ✅ **Ecosystem:** Rich library ecosystem (routing, forms, etc.)
 
 ### Key Libraries (To Add)
+
 - `react-router-dom` - Page navigation
 - `@supabase/supabase-js` - Supabase client + realtime
 - `tailwindcss` - Styling (optional, can use plain CSS)
@@ -118,6 +130,7 @@ Display messages, manage notifications, provide search/filter UI.
 - `react-toastify` - In-app notifications/alerts
 
 ### Dashboard Components (Sketch)
+
 ```
 ┌─────────────────────────────────────┐
 │  Charlie Oakes Tracker              │
@@ -158,6 +171,7 @@ User Sees Alert & Message
 ```
 
 ### Data Flow for Email/WhatsApp
+
 ```
 Email (IMAP) ──┐
 WhatsApp (API)─┼→ n8n (Normalize) → Supabase → React Dashboard
@@ -168,22 +182,22 @@ Arbor (Scrape)─┘
 
 ## Deployment Strategy
 
-| Component | Environment | Tool |
-|-----------|-------------|------|
-| **n8n** | n8n Cloud or Self-hosted | TBD |
-| **Supabase** | Cloud (supabase.com) | Existing project |
-| **React** | Vercel / Netlify / AWS | TBD |
+| Component    | Environment              | Tool             |
+| ------------ | ------------------------ | ---------------- |
+| **n8n**      | n8n Cloud or Self-hosted | TBD              |
+| **Supabase** | Cloud (supabase.com)     | Existing project |
+| **React**    | Vercel / Netlify / AWS   | TBD              |
 
 ---
 
 ## Cost Estimate (Monthly)
 
-| Service | Tier | Cost |
-|---------|------|------|
-| n8n | Cloud Pro | ~$20 |
-| Supabase | Pro | ~$25 |
-| React Hosting | Vercel Free | $0 |
-| **Total** | | ~$45 |
+| Service       | Tier        | Cost |
+| ------------- | ----------- | ---- |
+| n8n           | Cloud Pro   | ~$20 |
+| Supabase      | Pro         | ~$25 |
+| React Hosting | Vercel Free | $0   |
+| **Total**     |             | ~$45 |
 
 ---
 

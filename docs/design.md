@@ -11,6 +11,7 @@
 Charlie Oakes Communication Tracker consolidates messages from **Arbor (school app)** and **Gmail (school emails)** into a single dashboard with real-time alerts. Data flows through n8n automation → Supabase database → React frontend using WebSocket subscriptions for instant updates.
 
 **MVP Scope:**
+
 - ✅ Arbor scraping (browser automation via Playwright)
 - ✅ Gmail integration (OAuth2 + label-based filtering)
 - ✅ React dashboard with real-time notifications
@@ -66,13 +67,13 @@ Charlie Oakes Communication Tracker consolidates messages from **Arbor (school a
 
 ### Why Realtime-First?
 
-| Criterion | Realtime-First | Polling | Hybrid |
-|-----------|---|---|---|
-| Alert Speed | <1s | 30s+ | <1s |
-| Complexity | Medium | Low | High |
-| UX Quality | Excellent | Poor | Excellent |
-| Cost | Low | Moderate | High |
-| This Project | ✅ BEST | ❌ | ✓ |
+| Criterion    | Realtime-First | Polling  | Hybrid    |
+| ------------ | -------------- | -------- | --------- |
+| Alert Speed  | <1s            | 30s+     | <1s       |
+| Complexity   | Medium         | Low      | High      |
+| UX Quality   | Excellent      | Poor     | Excellent |
+| Cost         | Low            | Moderate | High      |
+| This Project | ✅ BEST        | ❌       | ✓         |
 
 ---
 
@@ -131,6 +132,7 @@ Implementation:
 
 **Trigger:** Every 15 minutes (cron schedule)
 **Steps:**
+
 1. Navigate to Arbor login page
 2. Fill email (from env: ARBOR_EMAIL)
 3. Fill password (from env: ARBOR_PASSWORD)
@@ -147,6 +149,7 @@ Implementation:
 **File:** `workflows/arbor-scraper.json` (already exists, needs deployment)
 
 **Error Handling:**
+
 - Retry on timeout (3 attempts)
 - Log errors to sync_log
 - Alert user if sync fails 2x in a row
@@ -157,6 +160,7 @@ Implementation:
 
 **Trigger:** Every 15 minutes (cron schedule)
 **Steps:**
+
 1. Authenticate with Gmail (OAuth2)
 2. Search Gmail: `from:(@archbishop-cranmer.co.uk OR @school.co.uk) is:unread`
 3. For each email:
@@ -173,6 +177,7 @@ Implementation:
 **File:** `workflows/email-scraper.json` (to be created)
 
 **Deduplication Logic (in n8n Code Node):**
+
 ```javascript
 // Check if Arbor message already exists
 const existingArborMessage = await supabase
@@ -195,6 +200,7 @@ return { skipped: false };
 ```
 
 **n8n Credentials Needed:**
+
 - `gmail_oauth2` - Gmail API with `Gmail.readonly` + `Gmail.modify` scopes
 - `supabase_api_key` - Supabase REST API key
 
@@ -265,8 +271,8 @@ function MessageList() {
 useEffect(() => {
   // Subscribe to new messages
   const subscription = supabase
-    .from('messages')
-    .on('INSERT', (payload) => {
+    .from("messages")
+    .on("INSERT", (payload) => {
       setMessages([payload.new, ...messages]);
       setUnreadCount(unreadCount + 1);
       showToast(`New message from ${payload.new.sender_name}`);
@@ -279,14 +285,14 @@ useEffect(() => {
 
 ### Key Components
 
-| Component | Purpose | Features |
-|-----------|---------|----------|
-| **MessageList** | Display all messages | Filter, sort, search |
-| **MessageCard** | Individual message preview | Click to expand, mark read |
-| **MessageDetail** | Full message view | Full content, attachments, actions |
-| **Filter Sidebar** | Category/status filtering | "All", "Unread", category tags |
-| **Header** | Navigation & unread badge | Unread count, refresh button |
-| **Toast** | In-app notifications | Auto-dismiss, different colors |
+| Component          | Purpose                    | Features                           |
+| ------------------ | -------------------------- | ---------------------------------- |
+| **MessageList**    | Display all messages       | Filter, sort, search               |
+| **MessageCard**    | Individual message preview | Click to expand, mark read         |
+| **MessageDetail**  | Full message view          | Full content, attachments, actions |
+| **Filter Sidebar** | Category/status filtering  | "All", "Unread", category tags     |
+| **Header**         | Navigation & unread badge  | Unread count, refresh button       |
+| **Toast**          | In-app notifications       | Auto-dismiss, different colors     |
 
 ---
 
@@ -334,20 +340,20 @@ useEffect(() => {
 
 ### n8n Workflow Errors
 
-| Error | Handling | Result |
-|-------|----------|--------|
-| Arbor login fails | Retry 3x, exponential backoff | Alert user if fails 2x+ |
-| Gmail API 429 (rate limit) | Wait 60s, retry once | Log and skip, continue next run |
-| Supabase connection error | Retry 5x with backoff | Alert user, try again in 15min |
-| Parsing error (malformed HTML) | Log error, skip message | Log to sync_log for manual review |
+| Error                          | Handling                      | Result                            |
+| ------------------------------ | ----------------------------- | --------------------------------- |
+| Arbor login fails              | Retry 3x, exponential backoff | Alert user if fails 2x+           |
+| Gmail API 429 (rate limit)     | Wait 60s, retry once          | Log and skip, continue next run   |
+| Supabase connection error      | Retry 5x with backoff         | Alert user, try again in 15min    |
+| Parsing error (malformed HTML) | Log error, skip message       | Log to sync_log for manual review |
 
 ### React/Dashboard Errors
 
-| Error | Handling | Result |
-|-------|----------|--------|
-| Realtime disconnect | Auto-reconnect with backoff | Show "Connecting..." banner |
-| Supabase query fails | Retry on next refresh | Show error toast |
-| Attachment load fails | Show "Failed to load" | Allow user to try again |
+| Error                 | Handling                    | Result                      |
+| --------------------- | --------------------------- | --------------------------- |
+| Realtime disconnect   | Auto-reconnect with backoff | Show "Connecting..." banner |
+| Supabase query fails  | Retry on next refresh       | Show error toast            |
+| Attachment load fails | Show "Failed to load"       | Allow user to try again     |
 
 ### Monitoring
 
@@ -369,6 +375,7 @@ ORDER BY day DESC;
 ## Implementation Phases
 
 ### Phase 1: MVP (Arbor + Gmail Dashboard)
+
 - ✅ Deploy Supabase schema
 - ✅ Set up n8n Arbor scraper
 - ✅ Create n8n Gmail scraper
@@ -380,6 +387,7 @@ ORDER BY day DESC;
 **Effort:** Medium
 
 ### Phase 2: Polish & Features
+
 - [ ] Advanced filtering (by date range, category, sender)
 - [ ] Message search functionality
 - [ ] Attachment preview/download
@@ -389,6 +397,7 @@ ORDER BY day DESC;
 **Timeline:** 1 week
 
 ### Phase 3: WhatsApp Integration
+
 - [ ] Webhook setup for WhatsApp Business API
 - [ ] n8n webhook receiver
 - [ ] Similar deduplication logic
@@ -463,11 +472,10 @@ CREATE POLICY "Users can read messages"
 
 ## Appendix: Tools & Services
 
-| Tool | Version | Purpose |
-|------|---------|---------|
-| n8n | Cloud/Self-hosted | Automation engine |
-| Supabase | v4 | PostgreSQL + REST API + Realtime |
-| React | 18+ | Frontend framework |
-| Supabase JS Client | v2 | Realtime subscriptions |
-| Tailwind CSS | v3 | Styling (optional) |
-
+| Tool               | Version           | Purpose                          |
+| ------------------ | ----------------- | -------------------------------- |
+| n8n                | Cloud/Self-hosted | Automation engine                |
+| Supabase           | v4                | PostgreSQL + REST API + Realtime |
+| React              | 18+               | Frontend framework               |
+| Supabase JS Client | v2                | Realtime subscriptions           |
+| Tailwind CSS       | v3                | Styling (optional)               |

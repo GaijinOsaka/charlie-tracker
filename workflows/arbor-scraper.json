@@ -367,7 +367,9 @@
       "main": [[{ "node": "Parse Messages", "type": "main", "index": 0 }]]
     },
     "Parse Messages": {
-      "main": [[{ "node": "Check Existing Messages", "type": "main", "index": 0 }]]
+      "main": [
+        [{ "node": "Check Existing Messages", "type": "main", "index": 0 }]
+      ]
     },
     "Check Existing Messages": {
       "main": [[{ "node": "Filter Duplicates", "type": "main", "index": 0 }]]
@@ -376,10 +378,14 @@
       "main": [[{ "node": "Loop Over Messages", "type": "main", "index": 0 }]]
     },
     "Loop Over Messages": {
-      "main": [[{ "node": "Navigate to Message Detail", "type": "main", "index": 0 }]]
+      "main": [
+        [{ "node": "Navigate to Message Detail", "type": "main", "index": 0 }]
+      ]
     },
     "Navigate to Message Detail": {
-      "main": [[{ "node": "Extract Message Detail", "type": "main", "index": 0 }]]
+      "main": [
+        [{ "node": "Extract Message Detail", "type": "main", "index": 0 }]
+      ]
     },
     "Extract Message Detail": {
       "main": [[{ "node": "Auto-Categorize", "type": "main", "index": 0 }]]
@@ -403,7 +409,9 @@
       "main": [[{ "node": "Upload to Storage", "type": "main", "index": 0 }]]
     },
     "Upload to Storage": {
-      "main": [[{ "node": "Insert Attachment Metadata", "type": "main", "index": 0 }]]
+      "main": [
+        [{ "node": "Insert Attachment Metadata", "type": "main", "index": 0 }]
+      ]
     },
     "Insert Attachment Metadata": {
       "main": [[{ "node": "Log Sync Success", "type": "main", "index": 0 }]]
