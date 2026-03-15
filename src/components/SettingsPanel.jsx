@@ -28,11 +28,26 @@ export default function SettingsPanel() {
     setMessage(null);
 
     try {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
       const { data, error } = await supabase.functions.invoke("invite-user", {
         body: { email: inviteEmail, display_name: inviteName },
+        headers: session?.access_token
+          ? { Authorization: `Bearer ${session.access_token}` }
+          : {},
       });
-      if (error) throw error;
-      if (data.error) throw new Error(data.error);
+      if (error) {
+        let msg = error.message;
+        try {
+          if (error.context && typeof error.context.json === "function") {
+            const body = await error.context.json();
+            msg = body.error || msg;
+          }
+        } catch (_) {}
+        throw new Error(msg);
+      }
+      if (data?.error) throw new Error(data.error);
       setMessage({ type: "success", text: `Invite sent to ${inviteEmail}` });
       setInviteEmail("");
       setInviteName("");
