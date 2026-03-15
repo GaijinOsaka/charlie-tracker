@@ -9,6 +9,9 @@ export default function SettingsPanel() {
   const [inviteName, setInviteName] = useState("");
   const [inviting, setInviting] = useState(false);
   const [message, setMessage] = useState(null);
+  const [passwordUserId, setPasswordUserId] = useState(null);
+  const [newPassword, setNewPassword] = useState("");
+  const [settingPassword, setSettingPassword] = useState(false);
 
   useEffect(() => {
     loadProfiles();
@@ -59,6 +62,45 @@ export default function SettingsPanel() {
     }
   }
 
+  async function handleSetPassword(e) {
+    e.preventDefault();
+    setSettingPassword(true);
+    setMessage(null);
+
+    try {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      const { data, error } = await supabase.functions.invoke(
+        "set-user-password",
+        {
+          body: { target_user_id: passwordUserId, password: newPassword },
+          headers: session?.access_token
+            ? { Authorization: `Bearer ${session.access_token}` }
+            : {},
+        },
+      );
+      if (error) {
+        let msg = error.message;
+        try {
+          if (error.context && typeof error.context.json === "function") {
+            const body = await error.context.json();
+            msg = body.error || msg;
+          }
+        } catch (_) {}
+        throw new Error(msg);
+      }
+      if (data?.error) throw new Error(data.error);
+      setMessage({ type: "success", text: "Password updated" });
+      setPasswordUserId(null);
+      setNewPassword("");
+    } catch (err) {
+      setMessage({ type: "error", text: err.message });
+    } finally {
+      setSettingPassword(false);
+    }
+  }
+
   const canInvite = profiles.length < 2;
 
   return (
@@ -70,9 +112,60 @@ export default function SettingsPanel() {
         <ul className="user-list">
           {profiles.map((p) => (
             <li key={p.id} className="user-item">
-              <span className="user-item-name">{p.display_name}</span>
-              <span className="user-item-email">{p.email}</span>
-              {p.id === user.id && <span className="user-item-you">(you)</span>}
+              <div className="user-item-info">
+                <span className="user-item-name">{p.display_name}</span>
+                <span className="user-item-email">{p.email}</span>
+                {p.id === user.id && (
+                  <span className="user-item-you">(you)</span>
+                )}
+              </div>
+              {p.id !== user.id && passwordUserId !== p.id && (
+                <button
+                  className="set-password-btn"
+                  onClick={() => {
+                    setPasswordUserId(p.id);
+                    setNewPassword("");
+                    setMessage(null);
+                  }}
+                >
+                  Set Password
+                </button>
+              )}
+              {passwordUserId === p.id && (
+                <form
+                  onSubmit={handleSetPassword}
+                  className="set-password-form"
+                >
+                  <input
+                    type="password"
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    placeholder="New password (min 6 chars)"
+                    minLength={6}
+                    required
+                    autoFocus
+                  />
+                  <div className="set-password-actions">
+                    <button
+                      type="submit"
+                      className="invite-btn"
+                      disabled={settingPassword}
+                    >
+                      {settingPassword ? "Saving..." : "Save"}
+                    </button>
+                    <button
+                      type="button"
+                      className="cancel-btn"
+                      onClick={() => {
+                        setPasswordUserId(null);
+                        setNewPassword("");
+                      }}
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </form>
+              )}
             </li>
           ))}
         </ul>
