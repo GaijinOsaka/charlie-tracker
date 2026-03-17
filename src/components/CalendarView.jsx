@@ -15,7 +15,6 @@ function CalendarView({ events, linkify, downloadAttachment, archiveEvent, onCre
   const [showEventModal, setShowEventModal] = useState(false)
   const [selectedDateForCreate, setSelectedDateForCreate] = useState(null)
   const [editingEvent, setEditingEvent] = useState(null)
-  const [pressTimer, setPressTimer] = useState(null)
 
   // Build a map of date string -> events
   const eventsByDate = {}
@@ -97,20 +96,10 @@ function CalendarView({ events, linkify, downloadAttachment, archiveEvent, onCre
     }
   }
 
-  function handleDatePressStart(day, ds) {
-    const timer = setTimeout(() => {
-      setSelectedDateForCreate(ds)
-      setEditingEvent(null)
-      setShowEventModal(true)
-    }, 1000)
-    setPressTimer(timer)
-  }
-
-  function handleDatePressEnd() {
-    if (pressTimer) {
-      clearTimeout(pressTimer)
-      setPressTimer(null)
-    }
+  function handleDateDoubleClick(day, ds) {
+    setSelectedDateForCreate(ds)
+    setEditingEvent(null)
+    setShowEventModal(true)
   }
 
   const selectedEvents = selectedDate ? (eventsByDate[selectedDate] || []) : []
@@ -288,16 +277,12 @@ function CalendarView({ events, linkify, downloadAttachment, archiveEvent, onCre
             <div
               key={ds}
               className={`cal-cell ${isToday ? 'cal-today' : ''} ${isSelected ? 'cal-selected' : ''} ${hasEvents ? 'cal-has-events' : ''} ${onCreateEvent ? 'cal-clickable' : ''}`}
-              onMouseDown={() => onCreateEvent && handleDatePressStart(day, ds)}
-              onMouseUp={handleDatePressEnd}
-              onMouseLeave={handleDatePressEnd}
-              onTouchStart={() => onCreateEvent && handleDatePressStart(day, ds)}
-              onTouchEnd={handleDatePressEnd}
               onClick={() => {
                 setSelectedDate(ds)
                 setExpandedCalEvent(null)
               }}
-              title={onCreateEvent ? 'Click to select or hold 1 second to create event' : ''}
+              onDoubleClick={() => onCreateEvent && handleDateDoubleClick(day, ds)}
+              title={onCreateEvent ? 'Click to select or double-click to create event' : ''}
             >
               <span className="cal-day-num">{day}</span>
               {hasEvents && (
