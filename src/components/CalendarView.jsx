@@ -1,16 +1,20 @@
 import { useState } from 'react'
+import EventModal from './EventModal'
 
 const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
 const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June',
   'July', 'August', 'September', 'October', 'November', 'December']
 
-function CalendarView({ events, linkify, downloadAttachment, archiveEvent }) {
+function CalendarView({ events, linkify, downloadAttachment, archiveEvent, onCreateEvent, onEditEvent, onDeleteEvent, currentUserId, profiles }) {
   const today = new Date()
   const todayStr = today.toISOString().split('T')[0]
   const [viewYear, setViewYear] = useState(today.getFullYear())
   const [viewMonth, setViewMonth] = useState(today.getMonth())
   const [selectedDate, setSelectedDate] = useState(null)
   const [expandedCalEvent, setExpandedCalEvent] = useState(null)
+  const [showEventModal, setShowEventModal] = useState(false)
+  const [selectedDateForCreate, setSelectedDateForCreate] = useState(null)
+  const [editingEvent, setEditingEvent] = useState(null)
 
   // Build a map of date string -> events
   const eventsByDate = {}
@@ -58,6 +62,40 @@ function CalendarView({ events, linkify, downloadAttachment, archiveEvent }) {
     return `${viewYear}-${String(viewMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`
   }
 
+  function handleCreateEventClick() {
+    setEditingEvent(null)
+    setSelectedDateForCreate(null)
+    setShowEventModal(true)
+  }
+
+  function handleDateClick(day) {
+    const ds = dateStr(day)
+    setSelectedDateForCreate(ds)
+    setEditingEvent(null)
+    setShowEventModal(true)
+  }
+
+  function handleEditEvent(evt) {
+    setEditingEvent(evt)
+    setSelectedDateForCreate(null)
+    setShowEventModal(true)
+  }
+
+  async function handleModalSubmit(formData) {
+    try {
+      if (editingEvent) {
+        await onEditEvent(editingEvent.id, formData)
+      } else {
+        await onCreateEvent(formData)
+      }
+      setShowEventModal(false)
+      setEditingEvent(null)
+      setSelectedDateForCreate(null)
+    } catch (err) {
+      console.error('Error saving event:', err)
+    }
+  }
+
   const selectedEvents = selectedDate ? (eventsByDate[selectedDate] || []) : []
 
   const upcomingEvents = events
@@ -96,6 +134,9 @@ function CalendarView({ events, linkify, downloadAttachment, archiveEvent }) {
               {evt.documents && !evt.messages && (
                 <span className="event-source event-document-source">From: {evt.documents.filename}</span>
               )}
+              {evt.source_type === 'manual' && (
+                <span className="event-creator">Created by: {profiles?.[evt.created_by]?.display_name || 'Unknown'}</span>
+              )}
             </div>
           </div>
           {(evt.messages || evt.documents) && (
@@ -105,15 +146,35 @@ function CalendarView({ events, linkify, downloadAttachment, archiveEvent }) {
                 : (evt.messages ? 'Show message \u25BC' : 'Show document \u25BC')}
             </span>
           )}
-          {archiveEvent && (
-            <button
-              className="btn-event-delete"
-              onClick={(e) => { e.stopPropagation(); archiveEvent(evt.id); }}
-              title="Archive event"
-            >
-              &times;
-            </button>
-          )}
+          <div className="event-actions-row">
+            {currentUserId && evt.created_by === currentUserId && evt.source_type === 'manual' && (
+              <div className="event-actions">
+                <button
+                  className="btn-event-edit"
+                  onClick={(e) => { e.stopPropagation(); handleEditEvent(evt); }}
+                  title="Edit event"
+                >
+                  Edit
+                </button>
+                <button
+                  className="btn-event-delete"
+                  onClick={(e) => { e.stopPropagation(); onDeleteEvent(evt.id); }}
+                  title="Delete event"
+                >
+                  Delete
+                </button>
+              </div>
+            )}
+            {archiveEvent && evt.source_type !== 'manual' && (
+              <button
+                className="btn-event-delete"
+                onClick={(e) => { e.stopPropagation(); archiveEvent(evt.id); }}
+                title="Archive event"
+              >
+                &times;
+              </button>
+            )}
+          </div>
         </div>
         {expandedCalEvent === evt.id && evt.messages && (
           <div className="event-message-panel">
@@ -187,6 +248,11 @@ function CalendarView({ events, linkify, downloadAttachment, archiveEvent }) {
         <h3 className="cal-title">{MONTHS[viewMonth]} {viewYear}</h3>
         <button className="cal-nav-btn" onClick={nextMonth}>&rsaquo;</button>
         <button className="cal-today-btn" onClick={goToday}>Today</button>
+        {onCreateEvent && (
+          <button className="btn-create-event" onClick={handleCreateEventClick}>
+            + Create Event
+          </button>
+        )}
       </div>
 
       <div className="cal-grid">
@@ -204,8 +270,16 @@ function CalendarView({ events, linkify, downloadAttachment, archiveEvent }) {
           return (
             <div
               key={ds}
-              className={`cal-cell ${isToday ? 'cal-today' : ''} ${isSelected ? 'cal-selected' : ''} ${hasEvents ? 'cal-has-events' : ''}`}
-              onClick={() => { setSelectedDate(ds); setExpandedCalEvent(null) }}
+              className={`cal-cell ${isToday ? 'cal-today' : ''} ${isSelected ? 'cal-selected' : ''} ${hasEvents ? 'cal-has-events' : ''} ${onCreateEvent ? 'cal-clickable' : ''}`}
+              onClick={() => {
+                if (onCreateEvent && !hasEvents) {
+                  handleDateClick(day)
+                } else {
+                  setSelectedDate(ds)
+                  setExpandedCalEvent(null)
+                }
+              }}
+              title={onCreateEvent && !hasEvents ? 'Click to create event' : ''}
             >
               <span className="cal-day-num">{day}</span>
               {hasEvents && (
@@ -247,6 +321,23 @@ function CalendarView({ events, linkify, downloadAttachment, archiveEvent }) {
           <h4 className="cal-upcoming-title">Upcoming Events</h4>
           {upcomingEvents.map(evt => renderEventCard(evt, true))}
         </div>
+      )}
+
+      {onCreateEvent && (
+        <EventModal
+          isOpen={showEventModal}
+          onClose={() => {
+            setShowEventModal(false)
+            setEditingEvent(null)
+            setSelectedDateForCreate(null)
+          }}
+          onSubmit={handleModalSubmit}
+          initialDate={selectedDateForCreate}
+          editingEvent={editingEvent}
+          creatorName={editingEvent && profiles?.[editingEvent.created_by]
+            ? profiles[editingEvent.created_by].display_name
+            : null}
+        />
       )}
     </div>
   )

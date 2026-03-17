@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { supabase } from "./lib/supabase";
+import { supabase, createManualEvent, updateManualEvent, deleteManualEvent } from "./lib/supabase";
 import { useAuth } from "./lib/AuthContext";
 import LoginPage from "./components/LoginPage";
 import DocumentBrowser from "./components/DocumentBrowser";
@@ -302,6 +302,40 @@ function App() {
     } catch (err) {
       console.error("Error archiving event:", err);
       addToast("Failed to archive event", "error");
+    }
+  }
+
+  async function handleCreateEvent(formData) {
+    try {
+      const newEvent = await createManualEvent(formData);
+      setEvents([...events, newEvent]);
+      addToast("Event created successfully", "success");
+    } catch (err) {
+      console.error("Error creating event:", err);
+      addToast("Failed to create event: " + err.message, "error");
+    }
+  }
+
+  async function handleUpdateEvent(eventId, formData) {
+    try {
+      const updatedEvent = await updateManualEvent(eventId, formData);
+      setEvents(events.map(e => e.id === eventId ? updatedEvent : e));
+      addToast("Event updated successfully", "success");
+    } catch (err) {
+      console.error("Error updating event:", err);
+      addToast("Failed to update event: " + err.message, "error");
+    }
+  }
+
+  async function handleDeleteEvent(eventId) {
+    if (!window.confirm("Delete this event?")) return;
+    try {
+      await deleteManualEvent(eventId);
+      setEvents(events.filter(e => e.id !== eventId));
+      addToast("Event deleted", "success");
+    } catch (err) {
+      console.error("Error deleting event:", err);
+      addToast("Failed to delete event: " + err.message, "error");
     }
   }
 
@@ -843,6 +877,11 @@ function App() {
             linkify={linkify}
             downloadAttachment={downloadAttachment}
             archiveEvent={archiveEvent}
+            onCreateEvent={handleCreateEvent}
+            onEditEvent={handleUpdateEvent}
+            onDeleteEvent={handleDeleteEvent}
+            currentUserId={user?.id}
+            profiles={profiles}
           />
         )}
 
