@@ -2439,20 +2439,19 @@ header h1 {
 }
 
 .btn-create-event {
-  margin-left: auto;
-  padding: 0.6rem 1.2rem;
-  background: var(--primary);
-  color: white;
-  border: none;
-  border-radius: 6px;
+  padding: 6px 14px;
+  border: 1px solid var(--primary);
+  background: var(--bg-surface);
+  color: var(--primary);
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 600;
   cursor: pointer;
-  font-weight: 500;
-  font-size: 0.9375rem;
-  transition: background-color 0.2s;
+  transition: all 0.15s;
 }
 
 .btn-create-event:hover {
-  background: #2563eb;
+  background: rgba(59, 130, 246, 0.1);
 }
 
 .cal-clickable {
