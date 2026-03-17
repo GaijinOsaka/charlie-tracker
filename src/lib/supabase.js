@@ -22,7 +22,7 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
 
 // Event CRUD functions for manual event creation
 export async function createManualEvent(eventData) {
-  // eventData: { title, event_date, event_time, event_end_time, description, action_required, action_detail }
+  // eventData: { title, event_date, event_end_date, event_time, event_end_time, description, action_required, action_detail }
   const { data: { user } } = await supabase.auth.getUser();
 
   if (!user) throw new Error('User not authenticated');
@@ -32,6 +32,7 @@ export async function createManualEvent(eventData) {
     .insert([{
       title: eventData.title,
       event_date: eventData.event_date,
+      event_end_date: eventData.event_end_date || null,
       event_time: eventData.event_time || null,
       event_end_time: eventData.event_end_time || null,
       description: eventData.description || null,
@@ -68,6 +69,7 @@ export async function updateManualEvent(eventId, eventData) {
     .update({
       title: eventData.title,
       event_date: eventData.event_date,
+      event_end_date: eventData.event_end_date || null,
       event_time: eventData.event_time || null,
       event_end_time: eventData.event_end_time || null,
       description: eventData.description || null,

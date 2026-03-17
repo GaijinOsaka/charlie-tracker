@@ -11,6 +11,7 @@ export default function EventModal({
 }) {
   const [title, setTitle] = useState('');
   const [eventDate, setEventDate] = useState(initialDate || '');
+  const [eventEndDate, setEventEndDate] = useState('');
   const [eventTime, setEventTime] = useState('');
   const [eventEndTime, setEventEndTime] = useState('');
   const [description, setDescription] = useState('');
@@ -23,6 +24,7 @@ export default function EventModal({
     if (editingEvent) {
       setTitle(editingEvent.title || '');
       setEventDate(editingEvent.event_date || '');
+      setEventEndDate(editingEvent.event_end_date || '');
       setEventTime(editingEvent.event_time || '');
       setEventEndTime(editingEvent.event_end_time || '');
       setDescription(editingEvent.description || '');
@@ -31,6 +33,7 @@ export default function EventModal({
     } else {
       setTitle('');
       setEventDate(initialDate || '');
+      setEventEndDate('');
       setEventTime('');
       setEventEndTime('');
       setDescription('');
@@ -57,6 +60,7 @@ export default function EventModal({
       await onSubmit({
         title: title.trim(),
         event_date: eventDate,
+        event_end_date: eventEndDate || null,
         event_time: eventTime || null,
         event_end_time: eventEndTime || null,
         description: description.trim() || null,
@@ -102,13 +106,23 @@ export default function EventModal({
 
           <div className="form-row">
             <div className="form-group">
-              <label htmlFor="date">Date *</label>
+              <label htmlFor="date">Start Date *</label>
               <input
                 id="date"
                 type="date"
                 value={eventDate}
                 onChange={(e) => setEventDate(e.target.value)}
                 required
+              />
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="endDate">End Date</label>
+              <input
+                id="endDate"
+                type="date"
+                value={eventEndDate}
+                onChange={(e) => setEventEndDate(e.target.value)}
               />
             </div>
 
@@ -121,7 +135,9 @@ export default function EventModal({
                 onChange={(e) => setEventTime(e.target.value)}
               />
             </div>
+          </div>
 
+          <div className="form-row">
             <div className="form-group">
               <label htmlFor="endTime">End Time</label>
               <input

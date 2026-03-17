@@ -18,11 +18,18 @@ function CalendarView({ events, linkify, downloadAttachment, archiveEvent, onCre
   const [lastTapTime, setLastTapTime] = useState({})
   const [lastTapDate, setLastTapDate] = useState(null)
 
-  // Build a map of date string -> events
+  // Build a map of date string -> events (handles multi-day events)
   const eventsByDate = {}
   events.forEach(evt => {
-    if (!eventsByDate[evt.event_date]) eventsByDate[evt.event_date] = []
-    eventsByDate[evt.event_date].push(evt)
+    const startDate = new Date(evt.event_date + 'T00:00:00')
+    const endDate = evt.event_end_date ? new Date(evt.event_end_date + 'T00:00:00') : startDate
+
+    // Add event to each day it spans
+    for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
+      const dateStr = d.toISOString().split('T')[0]
+      if (!eventsByDate[dateStr]) eventsByDate[dateStr] = []
+      eventsByDate[dateStr].push(evt)
+    }
   })
 
   // Calendar grid
@@ -331,13 +338,23 @@ function CalendarView({ events, linkify, downloadAttachment, archiveEvent, onCre
 
       {selectedDate && (
         <div className="cal-detail">
-          <h4 className="cal-detail-date">
-            {new Date(selectedDate + 'T00:00:00').toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
-          </h4>
           {selectedEvents.length === 0 && (
             <p className="cal-no-events">No events on this date.</p>
           )}
-          {selectedEvents.map(evt => renderEventCard(evt, false))}
+          {selectedEvents.map(evt => {
+            // For each unique event, show its date range in the detail section
+            return (
+              <div key={evt.id}>
+                <h4 className="cal-detail-date">
+                  {evt.event_end_date && evt.event_end_date !== evt.event_date
+                    ? `${new Date(evt.event_date + 'T00:00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })} – ${new Date(evt.event_end_date + 'T00:00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}`
+                    : new Date(selectedDate + 'T00:00:00').toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
+                  }
+                </h4>
+                {renderEventCard(evt, false)}
+              </div>
+            )
+          })}
         </div>
       )}
 
