@@ -15,6 +15,7 @@ function CalendarView({ events, linkify, downloadAttachment, archiveEvent, onCre
   const [showEventModal, setShowEventModal] = useState(false)
   const [selectedDateForCreate, setSelectedDateForCreate] = useState(null)
   const [editingEvent, setEditingEvent] = useState(null)
+  const [pressTimer, setPressTimer] = useState(null)
 
   // Build a map of date string -> events
   const eventsByDate = {}
@@ -93,6 +94,22 @@ function CalendarView({ events, linkify, downloadAttachment, archiveEvent, onCre
       setSelectedDateForCreate(null)
     } catch (err) {
       console.error('Error saving event:', err)
+    }
+  }
+
+  function handleDateMouseDown(day, ds) {
+    const timer = setTimeout(() => {
+      setSelectedDateForCreate(ds)
+      setEditingEvent(null)
+      setShowEventModal(true)
+    }, 1000)
+    setPressTimer(timer)
+  }
+
+  function handleDateMouseUp() {
+    if (pressTimer) {
+      clearTimeout(pressTimer)
+      setPressTimer(null)
     }
   }
 
@@ -270,11 +287,15 @@ function CalendarView({ events, linkify, downloadAttachment, archiveEvent, onCre
           return (
             <div
               key={ds}
-              className={`cal-cell ${isToday ? 'cal-today' : ''} ${isSelected ? 'cal-selected' : ''} ${hasEvents ? 'cal-has-events' : ''}`}
+              className={`cal-cell ${isToday ? 'cal-today' : ''} ${isSelected ? 'cal-selected' : ''} ${hasEvents ? 'cal-has-events' : ''} ${onCreateEvent ? 'cal-clickable' : ''}`}
+              onMouseDown={() => onCreateEvent && handleDateMouseDown(day, ds)}
+              onMouseUp={handleDateMouseUp}
+              onMouseLeave={handleDateMouseUp}
               onClick={() => {
                 setSelectedDate(ds)
                 setExpandedCalEvent(null)
               }}
+              title={onCreateEvent ? 'Click to select or hold 1 second to create event' : ''}
             >
               <span className="cal-day-num">{day}</span>
               {hasEvents && (
