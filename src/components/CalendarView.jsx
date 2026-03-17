@@ -97,7 +97,7 @@ function CalendarView({ events, linkify, downloadAttachment, archiveEvent, onCre
     }
   }
 
-  function handleDateMouseDown(day, ds) {
+  function handleDatePressStart(day, ds) {
     const timer = setTimeout(() => {
       setSelectedDateForCreate(ds)
       setEditingEvent(null)
@@ -106,7 +106,7 @@ function CalendarView({ events, linkify, downloadAttachment, archiveEvent, onCre
     setPressTimer(timer)
   }
 
-  function handleDateMouseUp() {
+  function handleDatePressEnd() {
     if (pressTimer) {
       clearTimeout(pressTimer)
       setPressTimer(null)
@@ -288,9 +288,11 @@ function CalendarView({ events, linkify, downloadAttachment, archiveEvent, onCre
             <div
               key={ds}
               className={`cal-cell ${isToday ? 'cal-today' : ''} ${isSelected ? 'cal-selected' : ''} ${hasEvents ? 'cal-has-events' : ''} ${onCreateEvent ? 'cal-clickable' : ''}`}
-              onMouseDown={() => onCreateEvent && handleDateMouseDown(day, ds)}
-              onMouseUp={handleDateMouseUp}
-              onMouseLeave={handleDateMouseUp}
+              onMouseDown={() => onCreateEvent && handleDatePressStart(day, ds)}
+              onMouseUp={handleDatePressEnd}
+              onMouseLeave={handleDatePressEnd}
+              onTouchStart={() => onCreateEvent && handleDatePressStart(day, ds)}
+              onTouchEnd={handleDatePressEnd}
               onClick={() => {
                 setSelectedDate(ds)
                 setExpandedCalEvent(null)
