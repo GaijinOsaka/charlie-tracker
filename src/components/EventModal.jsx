@@ -117,7 +117,7 @@ export default function EventModal({
             </div>
 
             <div className="form-group">
-              <label htmlFor="endDate">End Date</label>
+              <label htmlFor="endDate">End Date <span className="optional">(optional)</span></label>
               <input
                 id="endDate"
                 type="date"
