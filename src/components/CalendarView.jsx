@@ -15,8 +15,6 @@ function CalendarView({ events, linkify, downloadAttachment, archiveEvent, onCre
   const [showEventModal, setShowEventModal] = useState(false)
   const [selectedDateForCreate, setSelectedDateForCreate] = useState(null)
   const [editingEvent, setEditingEvent] = useState(null)
-  const [pressTimer, setPressTimer] = useState(null)
-  const [pressedDay, setPressedDay] = useState(null)
 
   // Build a map of date string -> events
   const eventsByDate = {}
@@ -95,24 +93,6 @@ function CalendarView({ events, linkify, downloadAttachment, archiveEvent, onCre
       setSelectedDateForCreate(null)
     } catch (err) {
       console.error('Error saving event:', err)
-    }
-  }
-
-  function handleDateMouseDown(day, hasEvents) {
-    if (onCreateEvent && !hasEvents) {
-      setPressedDay(day)
-      const timer = setTimeout(() => {
-        handleDateClick(day)
-      }, 1000)
-      setPressTimer(timer)
-    }
-  }
-
-  function handleDateMouseUp() {
-    if (pressTimer) {
-      clearTimeout(pressTimer)
-      setPressTimer(null)
-      setPressedDay(null)
     }
   }
 
@@ -269,8 +249,8 @@ function CalendarView({ events, linkify, downloadAttachment, archiveEvent, onCre
         <button className="cal-nav-btn" onClick={nextMonth}>&rsaquo;</button>
         <button className="cal-today-btn" onClick={goToday}>Today</button>
         {onCreateEvent && (
-          <button className="btn-create-event" onClick={handleCreateEventClick}>
-            + Create Event
+          <button className="btn-create-event" onClick={handleCreateEventClick} title="Create Event">
+            +
           </button>
         )}
       </div>
@@ -290,17 +270,11 @@ function CalendarView({ events, linkify, downloadAttachment, archiveEvent, onCre
           return (
             <div
               key={ds}
-              className={`cal-cell ${isToday ? 'cal-today' : ''} ${isSelected ? 'cal-selected' : ''} ${hasEvents ? 'cal-has-events' : ''} ${onCreateEvent ? 'cal-clickable' : ''}`}
-              onMouseDown={() => handleDateMouseDown(day, hasEvents)}
-              onMouseUp={handleDateMouseUp}
-              onMouseLeave={handleDateMouseUp}
+              className={`cal-cell ${isToday ? 'cal-today' : ''} ${isSelected ? 'cal-selected' : ''} ${hasEvents ? 'cal-has-events' : ''}`}
               onClick={() => {
-                if (!onCreateEvent || hasEvents) {
-                  setSelectedDate(ds)
-                  setExpandedCalEvent(null)
-                }
+                setSelectedDate(ds)
+                setExpandedCalEvent(null)
               }}
-              title={onCreateEvent && !hasEvents ? 'Hold 1 second to create event' : ''}
             >
               <span className="cal-day-num">{day}</span>
               {hasEvents && (
