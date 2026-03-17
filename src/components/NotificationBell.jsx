@@ -1,97 +1,106 @@
-import React, { useState, useEffect, useRef } from 'react'
-import { supabase } from '../lib/supabase'
-import { useAuth } from '../lib/AuthContext'
+import React, { useState, useEffect, useRef } from "react";
+import { supabase } from "../lib/supabase";
+import { useAuth } from "../lib/AuthContext";
 
 export default function NotificationBell({ onNavigateToMessage }) {
-  const { user } = useAuth()
-  const [notifications, setNotifications] = useState([])
-  const [open, setOpen] = useState(false)
-  const dropdownRef = useRef(null)
+  const { user } = useAuth();
+  const [notifications, setNotifications] = useState([]);
+  const [open, setOpen] = useState(false);
+  const dropdownRef = useRef(null);
 
   useEffect(() => {
-    if (!user) return
-    loadNotifications()
+    if (!user) return;
+    loadNotifications();
 
     const channel = supabase
-      .channel('user-notifications')
+      .channel("user-notifications")
       .on(
-        'postgres_changes',
+        "postgres_changes",
         {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'user_notifications',
+          event: "INSERT",
+          schema: "public",
+          table: "user_notifications",
           filter: `user_id=eq.${user.id}`,
         },
         (payload) => {
-          setNotifications(prev => [payload.new, ...prev])
-        }
+          setNotifications((prev) => [payload.new, ...prev]);
+        },
       )
-      .subscribe()
+      .subscribe();
 
-    return () => { supabase.removeChannel(channel) }
-  }, [user])
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user]);
 
   useEffect(() => {
     function handleClick(e) {
       if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
-        setOpen(false)
+        setOpen(false);
       }
     }
-    document.addEventListener('mousedown', handleClick)
-    return () => document.removeEventListener('mousedown', handleClick)
-  }, [])
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, []);
 
   async function loadNotifications() {
     try {
       const { data } = await supabase
-        .from('user_notifications')
-        .select('*')
-        .eq('user_id', user.id)
-        .is('dismissed_at', null)
-        .order('created_at', { ascending: false })
-        .limit(20)
-      setNotifications(data || [])
+        .from("user_notifications")
+        .select("*")
+        .eq("user_id", user.id)
+        .is("dismissed_at", null)
+        .order("created_at", { ascending: false })
+        .limit(20);
+      setNotifications(data || []);
     } catch (err) {
-      console.error('Error loading notifications:', err)
+      console.error("Error loading notifications:", err);
     }
   }
 
   async function dismiss(id) {
     try {
       await supabase
-        .from('user_notifications')
+        .from("user_notifications")
         .update({ dismissed_at: new Date().toISOString() })
-        .eq('id', id)
-      setNotifications(prev => prev.filter(n => n.id !== id))
+        .eq("id", id);
+      setNotifications((prev) => prev.filter((n) => n.id !== id));
     } catch (err) {
-      console.error('Error dismissing notification:', err)
+      console.error("Error dismissing notification:", err);
     }
   }
 
   async function dismissAll() {
-    const ids = notifications.map(n => n.id)
-    if (ids.length === 0) return
+    const ids = notifications.map((n) => n.id);
+    if (ids.length === 0) return;
     await supabase
-      .from('user_notifications')
+      .from("user_notifications")
       .update({ dismissed_at: new Date().toISOString() })
-      .in('id', ids)
-    setNotifications([])
+      .in("id", ids);
+    setNotifications([]);
   }
 
   function handleClick(notification) {
-    dismiss(notification.id)
+    dismiss(notification.id);
     if (onNavigateToMessage && notification.message_id) {
-      onNavigateToMessage(notification.message_id)
+      onNavigateToMessage(notification.message_id);
     }
-    setOpen(false)
+    setOpen(false);
   }
 
-  const count = notifications.length
+  const count = notifications.length;
 
   return (
     <div className="notification-bell" ref={dropdownRef}>
       <button className="bell-btn" onClick={() => setOpen(!open)}>
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+        <svg
+          width="20"
+          height="20"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+        >
           <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
           <path d="M13.73 21a2 2 0 0 1-3.46 0" />
         </svg>
@@ -112,11 +121,15 @@ export default function NotificationBell({ onNavigateToMessage }) {
             <p className="notification-empty">No new notifications</p>
           ) : (
             <ul className="notification-list">
-              {notifications.map(n => (
-                <li key={n.id} className="notification-item" onClick={() => handleClick(n)}>
+              {notifications.map((n) => (
+                <li
+                  key={n.id}
+                  className="notification-item"
+                  onClick={() => handleClick(n)}
+                >
                   <p className="notification-summary">{n.summary}</p>
                   <span className="notification-time">
-                    {new Date(n.created_at).toLocaleString('en-GB')}
+                    {new Date(n.created_at).toLocaleString("en-GB")}
                   </span>
                 </li>
               ))}
@@ -125,5 +138,5 @@ export default function NotificationBell({ onNavigateToMessage }) {
         </div>
       )}
     </div>
-  )
+  );
 }

@@ -68,11 +68,11 @@ A new Supabase Edge Function that:
 
 Three independent actions with state-dependent availability:
 
-| Document State | Extract Text | RAG Index | Extract Dates |
-|---|---|---|---|
-| No `content_text` | **Enabled** | Disabled | Disabled |
-| Has `content_text`, not processed | Done | **Enabled** | **Enabled** |
-| Fully processed | Done | Remove from RAG | Re-extract dates |
+| Document State                    | Extract Text | RAG Index       | Extract Dates    |
+| --------------------------------- | ------------ | --------------- | ---------------- |
+| No `content_text`                 | **Enabled**  | Disabled        | Disabled         |
+| Has `content_text`, not processed | Done         | **Enabled**     | **Enabled**      |
+| Fully processed                   | Done         | Remove from RAG | Re-extract dates |
 
 ### CalendarView — Document-Sourced Events
 

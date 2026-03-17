@@ -5,11 +5,13 @@
 **Goal:** Build a real-time dashboard that consolidates school messages from Arbor and Gmail, with instant alerts when new messages arrive.
 
 **Architecture:** Three independent layers working in concert:
+
 1. **n8n (Data Collection):** Two parallel workflows scrape Arbor (browser automation) and Gmail (API) every 15 minutes, normalize messages, deduplicate against Arbor, and insert to Supabase
 2. **Supabase (Data Distribution):** PostgreSQL database with REST API (for n8n inserts) and WebSocket Realtime (for React live updates)
 3. **React (Dashboard):** Single-page app that subscribes to realtime changes, displays messages, shows toast alerts, allows mark-as-read
 
 **Tech Stack:**
+
 - n8n Cloud/Self-hosted (automation engine)
 - Supabase (PostgreSQL + Realtime + REST API)
 - React 18+ (frontend)
@@ -22,18 +24,21 @@
 ### Task 1: Deploy Supabase Schema
 
 **Files:**
+
 - Read: `supabase/schema.sql`
 - No code changes needed (schema already prepared)
 
 **Step 1: Open Supabase dashboard**
 
 Go to: https://app.supabase.com
+
 - Log in with your account
 - Select the "charlie-oakes-tracker" project (or create if not exists)
 
 **Step 2: Open SQL editor**
 
 In Supabase dashboard:
+
 - Click "SQL Editor" (left sidebar)
 - Click "New Query"
 
@@ -58,6 +63,7 @@ Expected output: "Success" with no errors
 
 Click "Table Editor" (left sidebar)
 Expected: You see 4 tables:
+
 - `messages`
 - `categories`
 - `attachments`
@@ -72,6 +78,7 @@ Expected: 6 rows (Academic, Events, Health, Admin, Pastoral, General)
 
 Go to Settings → API → Project URL and API Keys
 Save these for later:
+
 - **SUPABASE_URL:** `https://your-project.supabase.co`
 - **SUPABASE_ANON_KEY:** `eyJ...` (anon/public key)
 - **SUPABASE_SERVICE_ROLE_KEY:** `eyJ...` (service role for n8n)
@@ -86,6 +93,7 @@ git commit -m "docs: add implementation plan for MVP"
 ```
 
 **Verification Checklist:**
+
 - [ ] All 4 tables exist in Supabase
 - [ ] Categories table has 6 rows
 - [ ] RLS is enabled
@@ -99,6 +107,7 @@ git commit -m "docs: add implementation plan for MVP"
 
 **Prerequisite Decision:**
 Choose one (see `docs/n8n-setup.md` for detailed comparison):
+
 - **Option A: n8n Cloud (Recommended)** - Sign up at https://n8n.cloud
 - **Option B: Self-hosted** - Run Docker locally
 - **Option C: Existing Instance** - Use if already running
@@ -106,12 +115,14 @@ Choose one (see `docs/n8n-setup.md` for detailed comparison):
 **Step 1: Create n8n Account or Access Instance**
 
 If n8n Cloud:
+
 - Go to https://n8n.cloud
 - Click "Sign up"
 - Create account with email
 - Create workspace
 
 If Self-hosted:
+
 ```bash
 docker run -d -p 5678:5678 \
   -e N8N_USER_EMAIL=your@email.com \
@@ -131,6 +142,7 @@ Save these for later reference
 **Step 3: Create Supabase Credentials in n8n**
 
 In n8n dashboard:
+
 - Click "Credentials" (left sidebar)
 - Click "Create New Credential"
 - Type: `HTTP Header Auth`
@@ -142,12 +154,14 @@ In n8n dashboard:
 **Step 4: Create Environment Variables (if self-hosted) or Credentials (if Cloud)**
 
 In n8n Settings → Variables (or Credentials):
+
 - Add: `ARBOR_EMAIL` = your school email address
 - Add: `ARBOR_PASSWORD` = your Arbor login password
 
 **Step 5: Test Supabase Connection**
 
 In n8n:
+
 - Click "+" to add new node
 - Search "HTTP Request"
 - Add node
@@ -163,6 +177,7 @@ Expected: Returns 1 category object (e.g., `{"id": "...", "name": "Academic", ..
 Click the HTTP Request node → Delete (we don't need this permanently)
 
 **Verification Checklist:**
+
 - [ ] n8n instance is running and accessible
 - [ ] Can log in successfully
 - [ ] Supabase credentials created
@@ -176,12 +191,14 @@ Click the HTTP Request node → Delete (we don't need this permanently)
 ### Task 3: Import and Configure Arbor Scraper Workflow
 
 **Files:**
+
 - Existing: `workflows/arbor-scraper.json`
 - No modifications needed (workflow is ready)
 
 **Step 1: Open n8n Workflows**
 
 In n8n dashboard:
+
 - Click "Workflows" (left sidebar)
 
 **Step 2: Import Arbor Workflow**
@@ -195,6 +212,7 @@ Expected: Workflow loads with multiple nodes (Schedule, Open Browser, Navigate t
 **Step 3: Verify All Nodes Load**
 
 Scroll through the workflow and verify all nodes are present:
+
 - Schedule (Cron trigger)
 - Check Supabase (HTTP Request)
 - Open Browser (Playwright)
@@ -208,6 +226,7 @@ Scroll through the workflow and verify all nodes are present:
 **Step 4: Fix HTTP Header Credential**
 
 Find "Check Supabase" node:
+
 - Click the node
 - Under "Authentication", select `supabaseHeaderAuth` (created in Task 2)
 - If not available, create it again
@@ -215,10 +234,12 @@ Find "Check Supabase" node:
 **Step 5: Verify Environment Variables**
 
 Find "Fill Email" node:
+
 - Value field should be: `{{ $env.ARBOR_EMAIL }}`
 - If not, update it
 
 Find "Fill Password" node:
+
 - Value field should be: `{{ $env.ARBOR_PASSWORD }}`
 - If not, update it
 
@@ -250,6 +271,7 @@ Expected: "Workflow saved" notification
 We'll activate after testing the full pipeline. Leave workflow in "inactive" state for now.
 
 **Verification Checklist:**
+
 - [ ] Workflow imported successfully
 - [ ] All nodes load without errors
 - [ ] Supabase credential linked
@@ -264,11 +286,13 @@ We'll activate after testing the full pipeline. Leave workflow in "inactive" sta
 ### Task 4: Complete Arbor Workflow Message Extraction
 
 **Files:**
+
 - Modify: `workflows/arbor-scraper.json` (the imported workflow in n8n)
 - Reference: `docs/design.md` → "Workflow 1: Arbor Scraper" section
 
 **Context:**
 The imported workflow has browser automation setup but may need the message extraction logic completed. This task adds the final steps to:
+
 1. Navigate to messages page
 2. Extract message list from HTML
 3. Check Supabase for duplicates
@@ -278,6 +302,7 @@ The imported workflow has browser automation setup but may need the message extr
 **Step 1: Add "Navigate to Messages Page" Node**
 
 In n8n:
+
 - After "Wait for Dashboard" node, click "+" to add node
 - Type: `Playwright`
 - Name: `Navigate to Messages Page`
@@ -293,6 +318,7 @@ In n8n:
 - Name: `Extract Messages`
 
 Code:
+
 ```javascript
 // Extract all messages from Arbor page DOM
 // This is a simplified example - adjust selectors based on actual Arbor HTML
@@ -300,14 +326,14 @@ Code:
 const messages = [];
 const messageElements = document.querySelectorAll('[data-testid="message"]'); // adjust selector
 
-messageElements.forEach(el => {
+messageElements.forEach((el) => {
   const message = {
-    arbor_message_id: el.getAttribute('data-id'),
-    subject: el.querySelector('.message-subject')?.textContent || '',
-    content: el.querySelector('.message-content')?.textContent || '',
-    sender_name: el.querySelector('.sender-name')?.textContent || '',
-    sender_email: el.querySelector('.sender-email')?.textContent || '',
-    received_at: el.getAttribute('data-timestamp')
+    arbor_message_id: el.getAttribute("data-id"),
+    subject: el.querySelector(".message-subject")?.textContent || "",
+    content: el.querySelector(".message-content")?.textContent || "",
+    sender_name: el.querySelector(".sender-name")?.textContent || "",
+    sender_email: el.querySelector(".sender-email")?.textContent || "",
+    received_at: el.getAttribute("data-timestamp"),
   };
   messages.push(message);
 });
@@ -327,11 +353,13 @@ return { items: messages };
 **Step 4: Add "Check if Message Exists" Node (Inside Loop)**
 
 Inside the loop:
+
 - Click "+" to add node
 - Type: `HTTP Request`
 - Name: `Check if Message Exists`
 
 Configuration:
+
 ```
 Method: GET
 URL: https://YOUR_PROJECT.supabase.co/rest/v1/messages?arbor_message_id=eq.{{ $json.arbor_message_id }}&select=id
@@ -349,11 +377,13 @@ Authentication: supabaseHeaderAuth
 **Step 6: Add "Insert Message" Node (True Branch)**
 
 On the "True" branch of the IF node:
+
 - Click "+" to add node
 - Type: `HTTP Request`
 - Name: `Insert Message to Supabase`
 
 Configuration:
+
 ```
 Method: POST
 URL: https://YOUR_PROJECT.supabase.co/rest/v1/messages
@@ -374,11 +404,13 @@ Body:
 **Step 7: Add "Log to Sync Table" Node (After Loop)**
 
 After the loop completes:
+
 - Click "+" to add node
 - Type: `HTTP Request`
 - Name: `Log Sync Result`
 
 Configuration:
+
 ```
 Method: POST
 URL: https://YOUR_PROJECT.supabase.co/rest/v1/sync_log
@@ -400,6 +432,7 @@ Click "Save" (Ctrl+S)
 **Step 9: Test Full Workflow**
 
 Do NOT activate yet. Just test:
+
 - Right-click "Schedule" node → "Execute Node"
 - Watch the workflow execute through all steps
 - Expected: Messages extracted, checked, and inserted (if new)
@@ -407,6 +440,7 @@ Do NOT activate yet. Just test:
 Check Supabase `sync_log` table to verify run was logged
 
 **Verification Checklist:**
+
 - [ ] All extraction nodes added and configured
 - [ ] Loop node correctly configured
 - [ ] Conditional logic correct (only insert new messages)
@@ -422,6 +456,7 @@ Check Supabase `sync_log` table to verify run was logged
 ### Task 5: Create Gmail OAuth2 Credentials in n8n
 
 **Files:**
+
 - Reference: `docs/gmail-setup.md` → Steps 1-2
 - No code files yet
 
@@ -431,12 +466,14 @@ You need a Google Cloud Console project with Gmail API enabled. See `docs/gmail-
 **Step 1: Note Google Cloud Credentials**
 
 From Google Cloud Console:
+
 - Client ID: `...googleusercontent.com`
 - Client Secret: `...` (keep this secret!)
 
 **Step 2: Add Gmail Credential in n8n**
 
 In n8n dashboard:
+
 - Click "Credentials" (left sidebar)
 - Click "Create New Credential"
 - Type: `Gmail`
@@ -448,11 +485,13 @@ In n8n dashboard:
 **Step 3: Set OAuth2 Scopes**
 
 In the credential form:
+
 - Scopes field: `https://www.googleapis.com/auth/gmail.readonly https://www.googleapis.com/auth/gmail.modify`
 
 **Step 4: Authorize with Google**
 
 In the credential form:
+
 - Click "Sign in with Google"
 - You'll be redirected to Google
 - Select your account
@@ -471,6 +510,7 @@ Expected: "Credential saved successfully"
 - You should see `Gmail OAuth2` in the list
 
 **Verification Checklist:**
+
 - [ ] Google Cloud Console project created
 - [ ] Gmail API enabled
 - [ ] OAuth2 credentials created (Client ID & Secret)
@@ -483,6 +523,7 @@ Expected: "Credential saved successfully"
 ### Task 6: Create Gmail Scraper Workflow
 
 **Files:**
+
 - Create: `workflows/email-scraper.json` (will be auto-saved by n8n)
 - Reference: `docs/design.md` → "Workflow 2: Gmail Scraper" section
 - Reference: `docs/gmail-setup.md` → "Step 3: Create Gmail Node"
@@ -509,6 +550,7 @@ Expected: "Credential saved successfully"
 - Name: `Get Emails`
 
 Configuration:
+
 ```
 Credentials: Gmail OAuth2 (select from dropdown)
 Operation: Get Messages
@@ -535,12 +577,14 @@ Filter by From: (optional, you can leave blank or filter by domain)
 **Step 6: Add "Extract Email Data" Code Node (Inside Loop)**
 
 Inside the loop:
+
 - Click "+"
 - Type: `Code`
 - Language: `JavaScript`
 - Name: `Extract Email Data`
 
 Code:
+
 ```javascript
 // Parse Gmail message format
 const email = $json;
@@ -553,9 +597,7 @@ const senderEmail = email.from.match(/<(.+?)>/)?.[1] || email.from;
 const senderName = email.from.match(/^(.+?)</)?.[1]?.trim() || email.from;
 
 // Normalize subject (remove "Re:", "Fwd:")
-const normalizedSubject = email.subject
-  .replace(/^(Re|Fwd):\s*/i, '')
-  .trim();
+const normalizedSubject = email.subject.replace(/^(Re|Fwd):\s*/i, "").trim();
 
 return {
   gmail_id: email.id,
@@ -564,7 +606,7 @@ return {
   subject: normalizedSubject,
   snippet: email.snippet,
   received_at: receivedAt,
-  full_email: email
+  full_email: email,
 };
 ```
 
@@ -575,6 +617,7 @@ return {
 - Name: `Check if Arbor Message Exists`
 
 Configuration:
+
 ```
 Method: GET
 URL: https://YOUR_PROJECT.supabase.co/rest/v1/messages?source=eq.arbor&sender_email=eq.{{ $json.from }}&subject=ilike.{{ $json.subject }}&select=id
@@ -591,11 +634,13 @@ Authentication: supabaseHeaderAuth
 **Step 9: Add "Insert Email" Node (True Branch)**
 
 On the "True" branch:
+
 - Click "+"
 - Type: `HTTP Request`
 - Name: `Insert Email to Supabase`
 
 Configuration:
+
 ```
 Method: POST
 URL: https://YOUR_PROJECT.supabase.co/rest/v1/messages
@@ -616,11 +661,13 @@ Body:
 **Step 10: Add "Log Sync" Node (After Loop)**
 
 After the loop ends:
+
 - Click "+"
 - Type: `HTTP Request`
 - Name: `Log Sync Result`
 
 Configuration:
+
 ```
 Method: POST
 URL: https://YOUR_PROJECT.supabase.co/rest/v1/sync_log
@@ -648,10 +695,12 @@ Click "Save" (Ctrl+S)
 **Step 13: Export Workflow**
 
 For version control:
+
 - Click "..." menu → "Download"
 - Save to `workflows/email-scraper.json`
 
 **Verification Checklist:**
+
 - [ ] Workflow created with correct name
 - [ ] Schedule trigger (15-min) configured
 - [ ] Gmail node gets emails successfully
@@ -670,6 +719,7 @@ For version control:
 ### Task 7: Initialize React Project
 
 **Files:**
+
 - Create: `package.json`
 - Create: `.env.local`
 - Create: `public/index.html`
@@ -679,6 +729,7 @@ For version control:
 **Step 1: Choose React Setup Method**
 
 Pick one:
+
 - **Option A: Vite (Fastest, Recommended)** - Modern, instant HMR
 - **Option B: Create React App** - Traditional, well-known
 - **Option C: Next.js** - Full-stack if needed later
@@ -726,15 +777,15 @@ Expected: `node_modules/` folder created, ~200 packages installed
 File: `/c/Users/david/charlie-tracker/vite.config.js`
 
 ```javascript
-import { defineConfig } from 'vite'
-import react from '@vitejs/plugin-react'
+import { defineConfig } from "vite";
+import react from "@vitejs/plugin-react";
 
 export default defineConfig({
   plugins: [react()],
   server: {
-    port: 5173
-  }
-})
+    port: 5173,
+  },
+});
 ```
 
 **Step 5: Create HTML Entry Point**
@@ -744,15 +795,15 @@ File: `/c/Users/david/charlie-tracker/public/index.html`
 ```html
 <!DOCTYPE html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Charlie Oakes Tracker</title>
-</head>
-<body>
-  <div id="root"></div>
-  <script type="module" src="/src/index.js"></script>
-</body>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Charlie Oakes Tracker</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/index.js"></script>
+  </body>
 </html>
 ```
 
@@ -761,15 +812,15 @@ File: `/c/Users/david/charlie-tracker/public/index.html`
 File: `/c/Users/david/charlie-tracker/src/index.js`
 
 ```javascript
-import React from 'react'
-import ReactDOM from 'react-dom/client'
-import App from './App'
+import React from "react";
+import ReactDOM from "react-dom/client";
+import App from "./App";
 
-ReactDOM.createRoot(document.getElementById('root')).render(
+ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>
     <App />
   </React.StrictMode>,
-)
+);
 ```
 
 **Step 7: Create Environment Config**
@@ -788,12 +839,12 @@ VITE_SUPABASE_ANON_KEY=your-anon-key-here
 File: `/c/Users/david/charlie-tracker/src/lib/supabase.js`
 
 ```javascript
-import { createClient } from '@supabase/supabase-js'
+import { createClient } from "@supabase/supabase-js";
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey)
+export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 ```
 
 **Step 9: Create Basic App Component**
@@ -801,34 +852,34 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey)
 File: `/c/Users/david/charlie-tracker/src/App.js`
 
 ```javascript
-import React, { useState, useEffect } from 'react'
-import { supabase } from './lib/supabase'
-import './App.css'
+import React, { useState, useEffect } from "react";
+import { supabase } from "./lib/supabase";
+import "./App.css";
 
 function App() {
-  const [messages, setMessages] = useState([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState(null)
+  const [messages, setMessages] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
-    loadMessages()
-  }, [])
+    loadMessages();
+  }, []);
 
   async function loadMessages() {
     try {
-      setLoading(true)
+      setLoading(true);
       const { data, error } = await supabase
-        .from('messages')
-        .select('*')
-        .order('received_at', { ascending: false })
-        .limit(50)
+        .from("messages")
+        .select("*")
+        .order("received_at", { ascending: false })
+        .limit(50);
 
-      if (error) throw error
-      setMessages(data || [])
+      if (error) throw error;
+      setMessages(data || []);
     } catch (error) {
-      setError(error.message)
+      setError(error.message);
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
   }
 
@@ -841,7 +892,7 @@ function App() {
         {loading && <p>Loading...</p>}
         {error && <p className="error">Error: {error}</p>}
         <ul className="message-list">
-          {messages.map(msg => (
+          {messages.map((msg) => (
             <li key={msg.id} className="message-item">
               <h3>{msg.subject}</h3>
               <p className="sender">{msg.sender_name}</p>
@@ -852,10 +903,10 @@ function App() {
         </ul>
       </main>
     </div>
-  )
+  );
 }
 
-export default App
+export default App;
 ```
 
 **Step 10: Create Basic Styles**
@@ -864,9 +915,9 @@ File: `/c/Users/david/charlie-tracker/src/App.css`
 
 ```css
 :root {
-  --primary: #3B82F6;
-  --success: #10B981;
-  --danger: #EF4444;
+  --primary: #3b82f6;
+  --success: #10b981;
+  --danger: #ef4444;
   --bg: #f9fafb;
   --border: #e5e7eb;
 }
@@ -878,7 +929,8 @@ File: `/c/Users/david/charlie-tracker/src/App.css`
 }
 
 body {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-family:
+    -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   background-color: var(--bg);
 }
 
@@ -917,7 +969,7 @@ header h1 {
 }
 
 .message-item:hover {
-  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
 .message-item h3 {
@@ -967,6 +1019,7 @@ npm run dev
 ```
 
 Expected:
+
 ```
 VITE v4.4.0  ready in 200 ms
 
@@ -989,6 +1042,7 @@ git commit -m "feat: initialize React project with Supabase integration"
 ```
 
 **Verification Checklist:**
+
 - [ ] npm install succeeded
 - [ ] vite.config.js created
 - [ ] .env.local has Supabase credentials
@@ -1002,6 +1056,7 @@ git commit -m "feat: initialize React project with Supabase integration"
 ### Task 8: Add Real-Time Message Subscriptions
 
 **Files:**
+
 - Modify: `src/App.js`
 - Create: `src/hooks/useRealtime.js`
 
@@ -1010,32 +1065,32 @@ git commit -m "feat: initialize React project with Supabase integration"
 File: `/c/Users/david/charlie-tracker/src/hooks/useRealtime.js`
 
 ```javascript
-import { useEffect } from 'react'
-import { supabase } from '../lib/supabase'
+import { useEffect } from "react";
+import { supabase } from "../lib/supabase";
 
 export function useRealtimeMessages(onInsert) {
   useEffect(() => {
     const channel = supabase
-      .channel('public:messages')
+      .channel("public:messages")
       .on(
-        'postgres_changes',
+        "postgres_changes",
         {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'messages',
+          event: "INSERT",
+          schema: "public",
+          table: "messages",
         },
         (payload) => {
-          onInsert(payload.new)
-        }
+          onInsert(payload.new);
+        },
       )
       .subscribe((status) => {
-        console.log('Realtime status:', status)
-      })
+        console.log("Realtime status:", status);
+      });
 
     return () => {
-      channel.unsubscribe()
-    }
-  }, [onInsert])
+      channel.unsubscribe();
+    };
+  }, [onInsert]);
 }
 ```
 
@@ -1044,30 +1099,33 @@ export function useRealtimeMessages(onInsert) {
 Modify: `/c/Users/david/charlie-tracker/src/App.js`
 
 Add import at top:
+
 ```javascript
-import { useRealtimeMessages } from './hooks/useRealtime'
+import { useRealtimeMessages } from "./hooks/useRealtime";
 ```
 
 Replace the `useEffect` with:
+
 ```javascript
 useEffect(() => {
-  loadMessages()
-}, [])
+  loadMessages();
+}, []);
 
 useRealtimeMessages((newMessage) => {
-  setMessages(prev => [newMessage, ...prev])
-  showNotification(`New message from ${newMessage.sender_name}`)
-})
+  setMessages((prev) => [newMessage, ...prev]);
+  showNotification(`New message from ${newMessage.sender_name}`);
+});
 
 function showNotification(text) {
   // Simple notification (will enhance in next task)
-  console.log('Notification:', text)
+  console.log("Notification:", text);
 }
 ```
 
 **Step 3: Test Realtime Connection**
 
 Start dev server:
+
 ```bash
 npm run dev
 ```
@@ -1078,6 +1136,7 @@ Expected: See "Realtime status: ok"
 **Step 4: Verify Connection Works**
 
 In another terminal, insert a test message to Supabase:
+
 ```bash
 curl -X POST https://YOUR_PROJECT.supabase.co/rest/v1/messages \
   -H "Authorization: Bearer YOUR_SERVICE_ROLE_KEY" \
@@ -1109,6 +1168,7 @@ git commit -m "feat: add real-time message subscriptions"
 ```
 
 **Verification Checklist:**
+
 - [ ] useRealtime hook created
 - [ ] App.js updated with realtime subscription
 - [ ] Dev server running without errors
@@ -1122,6 +1182,7 @@ git commit -m "feat: add real-time message subscriptions"
 ### Task 9: Add Toast Notifications
 
 **Files:**
+
 - Create: `src/components/Toast.js`
 - Modify: `src/App.js`
 - Create: `src/App.css` (update with toast styles)
@@ -1131,27 +1192,29 @@ git commit -m "feat: add real-time message subscriptions"
 File: `/c/Users/david/charlie-tracker/src/components/Toast.js`
 
 ```javascript
-import React, { useState, useEffect } from 'react'
-import '../styles/Toast.css'
+import React, { useState, useEffect } from "react";
+import "../styles/Toast.css";
 
-export function Toast({ message, onClose, type = 'info' }) {
+export function Toast({ message, onClose, type = "info" }) {
   useEffect(() => {
-    const timer = setTimeout(onClose, 3000) // Auto-dismiss after 3 seconds
-    return () => clearTimeout(timer)
-  }, [onClose])
+    const timer = setTimeout(onClose, 3000); // Auto-dismiss after 3 seconds
+    return () => clearTimeout(timer);
+  }, [onClose]);
 
   return (
     <div className={`toast toast-${type}`}>
       <p>{message}</p>
-      <button onClick={onClose} className="toast-close">×</button>
+      <button onClick={onClose} className="toast-close">
+        ×
+      </button>
     </div>
-  )
+  );
 }
 
 export function ToastContainer({ toasts, onRemove }) {
   return (
     <div className="toast-container">
-      {toasts.map(toast => (
+      {toasts.map((toast) => (
         <Toast
           key={toast.id}
           message={toast.message}
@@ -1160,7 +1223,7 @@ export function ToastContainer({ toasts, onRemove }) {
         />
       ))}
     </div>
-  )
+  );
 }
 ```
 
@@ -1181,7 +1244,7 @@ File: `/c/Users/david/charlie-tracker/src/styles/Toast.css`
 
 .toast {
   background: white;
-  border-left: 4px solid #3B82F6;
+  border-left: 4px solid #3b82f6;
   padding: 15px;
   border-radius: 4px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
@@ -1194,19 +1257,19 @@ File: `/c/Users/david/charlie-tracker/src/styles/Toast.css`
 }
 
 .toast-success {
-  border-left-color: #10B981;
+  border-left-color: #10b981;
 }
 
 .toast-error {
-  border-left-color: #EF4444;
+  border-left-color: #ef4444;
 }
 
 .toast-warning {
-  border-left-color: #F59E0B;
+  border-left-color: #f59e0b;
 }
 
 .toast-info {
-  border-left-color: #3B82F6;
+  border-left-color: #3b82f6;
 }
 
 .toast p {
@@ -1251,36 +1314,41 @@ File: `/c/Users/david/charlie-tracker/src/styles/Toast.css`
 Modify: `/c/Users/david/charlie-tracker/src/App.js`
 
 Add imports:
+
 ```javascript
-import { ToastContainer } from './components/Toast'
+import { ToastContainer } from "./components/Toast";
 ```
 
 Add state:
+
 ```javascript
-const [toasts, setToasts] = useState([])
+const [toasts, setToasts] = useState([]);
 ```
 
 Add function:
+
 ```javascript
-function addToast(message, type = 'info') {
-  const id = Date.now()
-  setToasts(prev => [...prev, { id, message, type }])
+function addToast(message, type = "info") {
+  const id = Date.now();
+  setToasts((prev) => [...prev, { id, message, type }]);
 }
 
 function removeToast(id) {
-  setToasts(prev => prev.filter(t => t.id !== id))
+  setToasts((prev) => prev.filter((t) => t.id !== id));
 }
 ```
 
 Update realtime handler:
+
 ```javascript
 useRealtimeMessages((newMessage) => {
-  setMessages(prev => [newMessage, ...prev])
-  addToast(`New message from ${newMessage.sender_name}`, 'info')
-})
+  setMessages((prev) => [newMessage, ...prev]);
+  addToast(`New message from ${newMessage.sender_name}`, "info");
+});
 ```
 
 Add to JSX (inside the app div):
+
 ```javascript
 <ToastContainer toasts={toasts} onRemove={removeToast} />
 ```
@@ -1288,6 +1356,7 @@ Add to JSX (inside the app div):
 **Step 4: Test Toast Notifications**
 
 Start dev server:
+
 ```bash
 npm run dev
 ```
@@ -1312,6 +1381,7 @@ git commit -m "feat: add toast notification system"
 ```
 
 **Verification Checklist:**
+
 - [ ] Toast component created
 - [ ] Toast styles created
 - [ ] App.js updated with toast state and handlers
@@ -1325,6 +1395,7 @@ git commit -m "feat: add toast notification system"
 ### Task 10: Add Message Filtering & Search
 
 **Files:**
+
 - Create: `src/components/Filters.js`
 - Modify: `src/App.js`
 - Modify: `src/App.css`
@@ -1334,14 +1405,14 @@ git commit -m "feat: add toast notification system"
 File: `/c/Users/david/charlie-tracker/src/components/Filters.js`
 
 ```javascript
-import React from 'react'
-import '../styles/Filters.css'
+import React from "react";
+import "../styles/Filters.css";
 
 export function Filters({
   onStatusChange,
   onSourceChange,
   onSearchChange,
-  categories = []
+  categories = [],
 }) {
   return (
     <div className="filters">
@@ -1372,7 +1443,7 @@ export function Filters({
         />
       </div>
     </div>
-  )
+  );
 }
 ```
 
@@ -1418,7 +1489,7 @@ File: `/c/Users/david/charlie-tracker/src/styles/Filters.css`
 .filter-group select:focus,
 .filter-group input:focus {
   outline: none;
-  border-color: #3B82F6;
+  border-color: #3b82f6;
   box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
 }
 
@@ -1433,49 +1504,54 @@ File: `/c/Users/david/charlie-tracker/src/styles/Filters.css`
 Modify: `/c/Users/david/charlie-tracker/src/App.js`
 
 Add imports:
+
 ```javascript
-import { Filters } from './components/Filters'
+import { Filters } from "./components/Filters";
 ```
 
 Add state:
+
 ```javascript
-const [statusFilter, setStatusFilter] = useState('all')
-const [sourceFilter, setSourceFilter] = useState('all')
-const [searchQuery, setSearchQuery] = useState('')
+const [statusFilter, setStatusFilter] = useState("all");
+const [sourceFilter, setSourceFilter] = useState("all");
+const [searchQuery, setSearchQuery] = useState("");
 ```
 
 Add filter function:
+
 ```javascript
 function getFilteredMessages() {
-  let filtered = messages
+  let filtered = messages;
 
   // Status filter
-  if (statusFilter === 'unread') {
-    filtered = filtered.filter(m => !m.is_read)
-  } else if (statusFilter === 'read') {
-    filtered = filtered.filter(m => m.is_read)
+  if (statusFilter === "unread") {
+    filtered = filtered.filter((m) => !m.is_read);
+  } else if (statusFilter === "read") {
+    filtered = filtered.filter((m) => m.is_read);
   }
 
   // Source filter
-  if (sourceFilter !== 'all') {
-    filtered = filtered.filter(m => m.source === sourceFilter)
+  if (sourceFilter !== "all") {
+    filtered = filtered.filter((m) => m.source === sourceFilter);
   }
 
   // Search filter
   if (searchQuery) {
-    const query = searchQuery.toLowerCase()
-    filtered = filtered.filter(m =>
-      m.subject.toLowerCase().includes(query) ||
-      m.sender_name.toLowerCase().includes(query) ||
-      (m.content && m.content.toLowerCase().includes(query))
-    )
+    const query = searchQuery.toLowerCase();
+    filtered = filtered.filter(
+      (m) =>
+        m.subject.toLowerCase().includes(query) ||
+        m.sender_name.toLowerCase().includes(query) ||
+        (m.content && m.content.toLowerCase().includes(query)),
+    );
   }
 
-  return filtered
+  return filtered;
 }
 ```
 
 Add to JSX (after header, before message list):
+
 ```javascript
 <Filters
   onStatusChange={setStatusFilter}
@@ -1485,6 +1561,7 @@ Add to JSX (after header, before message list):
 ```
 
 Update message list to use filtered messages:
+
 ```javascript
 const filteredMessages = getFilteredMessages()
 
@@ -1501,6 +1578,7 @@ const filteredMessages = getFilteredMessages()
 ```
 
 Add CSS to `src/App.css`:
+
 ```css
 .no-messages {
   text-align: center;
@@ -1513,11 +1591,13 @@ Add CSS to `src/App.css`:
 **Step 4: Test Filtering**
 
 Start dev server:
+
 ```bash
 npm run dev
 ```
 
 Test each filter:
+
 1. Click "Status" → Select "Unread" → Should show only unread
 2. Click "Source" → Select "Arbor" → Should show only Arbor messages
 3. Type in "Search" field → Should filter by subject/sender
@@ -1542,6 +1622,7 @@ git commit -m "feat: add message filtering and search"
 ```
 
 **Verification Checklist:**
+
 - [ ] Filters component created
 - [ ] Status filter works (All, Unread, Read)
 - [ ] Source filter works (All, Arbor, Gmail)
@@ -1555,6 +1636,7 @@ git commit -m "feat: add message filtering and search"
 ### Task 11: Add Mark-as-Read Functionality
 
 **Files:**
+
 - Create: `src/components/MessageCard.js`
 - Modify: `src/App.js`
 - Modify: `src/App.css`
@@ -1564,34 +1646,37 @@ git commit -m "feat: add message filtering and search"
 File: `/c/Users/david/charlie-tracker/src/components/MessageCard.js`
 
 ```javascript
-import React, { useState } from 'react'
-import { supabase } from '../lib/supabase'
-import '../styles/MessageCard.css'
+import React, { useState } from "react";
+import { supabase } from "../lib/supabase";
+import "../styles/MessageCard.css";
 
 export function MessageCard({ message, onMarkAsRead }) {
-  const [expanded, setExpanded] = useState(false)
-  const [isUpdating, setIsUpdating] = useState(false)
+  const [expanded, setExpanded] = useState(false);
+  const [isUpdating, setIsUpdating] = useState(false);
 
   async function toggleReadStatus() {
     try {
-      setIsUpdating(true)
+      setIsUpdating(true);
       const { error } = await supabase
-        .from('messages')
+        .from("messages")
         .update({ is_read: !message.is_read })
-        .eq('id', message.id)
+        .eq("id", message.id);
 
-      if (error) throw error
-      onMarkAsRead(message.id, !message.is_read)
+      if (error) throw error;
+      onMarkAsRead(message.id, !message.is_read);
     } catch (error) {
-      console.error('Error updating message:', error)
+      console.error("Error updating message:", error);
     } finally {
-      setIsUpdating(false)
+      setIsUpdating(false);
     }
   }
 
   return (
-    <li className={`message-card ${message.is_read ? 'read' : 'unread'}`}>
-      <div className="message-card-header" onClick={() => setExpanded(!expanded)}>
+    <li className={`message-card ${message.is_read ? "read" : "unread"}`}>
+      <div
+        className="message-card-header"
+        onClick={() => setExpanded(!expanded)}
+      >
         <div className="message-card-info">
           <h3 className="message-subject">{message.subject}</h3>
           <p className="message-sender">{message.sender_name}</p>
@@ -1609,22 +1694,20 @@ export function MessageCard({ message, onMarkAsRead }) {
 
       {expanded && (
         <div className="message-card-expanded">
-          <div className="message-content">
-            {message.content}
-          </div>
+          <div className="message-content">{message.content}</div>
           <div className="message-card-actions">
             <button
               onClick={toggleReadStatus}
               disabled={isUpdating}
               className="btn btn-secondary"
             >
-              {message.is_read ? 'Mark as Unread' : 'Mark as Read'}
+              {message.is_read ? "Mark as Unread" : "Mark as Read"}
             </button>
           </div>
         </div>
       )}
     </li>
-  )
+  );
 }
 ```
 
@@ -1643,7 +1726,7 @@ File: `/c/Users/david/charlie-tracker/src/styles/MessageCard.css`
 
 .message-card.unread {
   background: #f0f9ff;
-  border-left: 4px solid #3B82F6;
+  border-left: 4px solid #3b82f6;
 }
 
 .message-card.read {
@@ -1722,7 +1805,7 @@ File: `/c/Users/david/charlie-tracker/src/styles/MessageCard.css`
 .unread-dot {
   width: 8px;
   height: 8px;
-  background: #3B82F6;
+  background: #3b82f6;
   border-radius: 50%;
 }
 
@@ -1768,8 +1851,8 @@ File: `/c/Users/david/charlie-tracker/src/styles/MessageCard.css`
 }
 
 .btn-secondary {
-  border-color: #3B82F6;
-  color: #3B82F6;
+  border-color: #3b82f6;
+  color: #3b82f6;
 }
 
 .btn-secondary:hover:not(:disabled) {
@@ -1793,34 +1876,34 @@ File: `/c/Users/david/charlie-tracker/src/styles/MessageCard.css`
 Modify: `/c/Users/david/charlie-tracker/src/App.js`
 
 Add import:
+
 ```javascript
-import { MessageCard } from './components/MessageCard'
+import { MessageCard } from "./components/MessageCard";
 ```
 
 Add function:
+
 ```javascript
 function handleMarkAsRead(messageId, isRead) {
-  setMessages(prev => prev.map(m =>
-    m.id === messageId ? { ...m, is_read: isRead } : m
-  ))
+  setMessages((prev) =>
+    prev.map((m) => (m.id === messageId ? { ...m, is_read: isRead } : m)),
+  );
 }
 ```
 
 Replace message list JSX with:
+
 ```javascript
 <ul className="message-list">
-  {filteredMessages.map(msg => (
-    <MessageCard
-      key={msg.id}
-      message={msg}
-      onMarkAsRead={handleMarkAsRead}
-    />
+  {filteredMessages.map((msg) => (
+    <MessageCard key={msg.id} message={msg} onMarkAsRead={handleMarkAsRead} />
   ))}
 </ul>
 ```
 
 Update App.css to remove the old .message-item styles:
 Remove:
+
 ```css
 .message-item { ... }
 .message-item:hover { ... }
@@ -1833,6 +1916,7 @@ Remove:
 **Step 4: Test Mark as Read**
 
 Start dev server:
+
 ```bash
 npm run dev
 ```
@@ -1858,6 +1942,7 @@ git commit -m "feat: add message expansion and mark-as-read functionality"
 ```
 
 **Verification Checklist:**
+
 - [ ] MessageCard component created with expand/collapse
 - [ ] Mark as read button works
 - [ ] is_read field updates in Supabase
@@ -1873,6 +1958,7 @@ git commit -m "feat: add message expansion and mark-as-read functionality"
 ### Task 12: Activate n8n Workflows
 
 **Files:**
+
 - No code changes (configuration only)
 - Existing: `workflows/arbor-scraper.json`
 - Existing: `workflows/email-scraper.json`
@@ -1880,6 +1966,7 @@ git commit -m "feat: add message expansion and mark-as-read functionality"
 **Step 1: Activate Arbor Scraper**
 
 In n8n:
+
 - Click "Workflows" → "arbor-scraper"
 - Click "Activate" button (should be green)
 
@@ -1888,6 +1975,7 @@ Expected: "Workflow activated" notification
 **Step 2: Verify Schedule Running**
 
 Wait 15 minutes OR manually trigger:
+
 - Right-click "Schedule" node → "Execute Node"
 - Workflow should run through to completion
 - Check Supabase `sync_log` table for a new entry
@@ -1895,6 +1983,7 @@ Wait 15 minutes OR manually trigger:
 **Step 3: Activate Gmail Scraper**
 
 In n8n:
+
 - Click "Workflows" → "email-scraper"
 - Click "Activate" button
 
@@ -1903,6 +1992,7 @@ Expected: "Workflow activated" notification
 **Step 4: Verify Gmail Running**
 
 Manually trigger:
+
 - Right-click "Schedule" node → "Execute Node"
 - Workflow should run through to completion
 - Check Supabase `sync_log` table for a new entry
@@ -1910,6 +2000,7 @@ Manually trigger:
 **Step 5: Check Both Are in Status**
 
 In n8n Workflows list:
+
 - Both "arbor-scraper" and "email-scraper" should show green "Active" badge
 
 **Step 6: Monitor for 24 Hours**
@@ -1919,6 +2010,7 @@ In n8n Workflows list:
 - Alert on any failures in workflow execution history
 
 **Verification Checklist:**
+
 - [ ] Arbor scraper is activated (green badge)
 - [ ] Gmail scraper is activated (green badge)
 - [ ] Both workflows run every 15 minutes
@@ -1932,20 +2024,24 @@ In n8n Workflows list:
 ### Task 13: Deploy React App to Production
 
 **Files:**
+
 - Existing: `src/`, `public/`, package.json, vite.config.js
 - Create: `.env.production` (for production Supabase credentials)
 
 **Choose Deployment Target:**
 
 **Option A: Vercel (Recommended, easiest)**
+
 - Zero-config, auto-deployed on git push
 - Free for personal projects
 
 **Option B: Netlify**
+
 - Similar to Vercel, great DX
 - Free tier available
 
 **Option C: Self-hosted (AWS, DigitalOcean)**
+
 - More control, ongoing cost
 
 This plan uses **Vercel**. Adjust if different.
@@ -1958,6 +2054,7 @@ npm run build
 ```
 
 Expected:
+
 ```
 vite v4.4.0 building for production...
 ✓ 123 modules transformed
@@ -1969,12 +2066,14 @@ dist/assets/index-xyz.css 2.15 kB
 **Step 2: Verify Build Output**
 
 Check `dist/` folder exists with:
+
 - index.html
 - assets/ folder with .js and .css files
 
 **Step 3: Sign Up for Vercel (if needed)**
 
 Go to https://vercel.com
+
 - Click "Sign Up"
 - Use GitHub account (recommended)
 - Authorize Vercel
@@ -2012,12 +2111,14 @@ git push -u origin main
 **Step 7: Deploy to Vercel**
 
 Option A: Via GitHub (recommended)
+
 - Go to https://vercel.com/import
 - Select your GitHub repo
 - Click "Import"
 - Vercel auto-detects Vite and builds
 
 Option B: Via Vercel CLI
+
 ```bash
 npm i -g vercel
 vercel login
@@ -2043,11 +2144,13 @@ Delete test message from Supabase
 **Step 11: Configure Custom Domain (Optional)**
 
 In Vercel dashboard:
+
 - Go to Settings → Domains
 - Add your domain (e.g., charlie-tracker.yourdomain.com)
 - Follow DNS instructions
 
 **Verification Checklist:**
+
 - [ ] `npm run build` succeeds
 - [ ] dist/ folder created with all assets
 - [ ] GitHub repo created and code pushed
@@ -2063,6 +2166,7 @@ In Vercel dashboard:
 ### Task 14: End-to-End Testing & Verification
 
 **Files:**
+
 - None (testing and verification only)
 
 **Test 1: Arbor → Supabase → React Pipeline**
@@ -2148,6 +2252,7 @@ In Vercel dashboard:
 3. Expected: All browsers receive realtime update instantly
 
 **Verification Checklist:**
+
 - [ ] Arbor → Supabase → React works end-to-end
 - [ ] Gmail → Supabase → React works end-to-end
 - [ ] Deduplication correctly skips email (trusts Arbor)
@@ -2166,11 +2271,13 @@ In Vercel dashboard:
 ### Task 15: Set Up Monitoring & Alerts
 
 **Files:**
+
 - Create: `docs/monitoring.md` (reference guide)
 
 **Step 1: Monitor Supabase**
 
 In Supabase dashboard:
+
 - Go to "Database" → "Realtime" → Monitor WebSocket connections
 - Should see connections from React dashboard
 - Check "Storage" for any attachment uploads
@@ -2178,6 +2285,7 @@ In Supabase dashboard:
 **Step 2: Monitor n8n Workflows**
 
 In n8n:
+
 - Go to each workflow → "Executions" tab
 - Should see runs every 15 minutes
 - Click each run to verify success
@@ -2186,6 +2294,7 @@ In n8n:
 **Step 3: Query Sync Log**
 
 In Supabase SQL Editor, run:
+
 ```sql
 SELECT
   DATE(created_at) as day,
@@ -2204,6 +2313,7 @@ Expected: All rows show status='success', messages_new > 0
 **Step 4: Check Database Performance**
 
 In Supabase SQL Editor:
+
 ```sql
 SELECT
   schemaname,
@@ -2219,6 +2329,7 @@ Expected: messages table growing at expected rate (~10-50 new rows per day)
 **Step 5: Set Up Email Alert (Optional)**
 
 Configure n8n to send you an email if a workflow fails:
+
 - After error handling node
 - Add "Email" node
 - Send to your email address
@@ -2226,6 +2337,7 @@ Configure n8n to send you an email if a workflow fails:
 **Step 6: Daily Health Check**
 
 Create a checklist to run daily:
+
 - [ ] n8n Arbor scraper ran last 15 min (check Executions)
 - [ ] n8n Gmail scraper ran last 15 min (check Executions)
 - [ ] New messages appeared in Supabase
@@ -2235,6 +2347,7 @@ Create a checklist to run daily:
 **Step 7: Document in `docs/monitoring.md`**
 
 Create monitoring guide with:
+
 - How to check workflow executions
 - How to query sync_log
 - How to check Supabase performance
@@ -2246,12 +2359,14 @@ Create monitoring guide with:
 ## Completion Checklist
 
 ### Setup Complete ✅
+
 - [ ] Supabase database deployed
 - [ ] n8n Arbor workflow activated
 - [ ] n8n Gmail workflow activated
 - [ ] React dashboard deployed to production
 
 ### Functionality Complete ✅
+
 - [ ] Messages sync from Arbor every 15 minutes
 - [ ] Messages sync from Gmail every 15 minutes
 - [ ] Duplicate emails are skipped (trust Arbor)
@@ -2263,6 +2378,7 @@ Create monitoring guide with:
 - [ ] Search messages by subject/sender
 
 ### Testing Complete ✅
+
 - [ ] End-to-end Arbor pipeline tested
 - [ ] End-to-end Gmail pipeline tested
 - [ ] Deduplication tested and working
@@ -2271,15 +2387,16 @@ Create monitoring guide with:
 - [ ] Performance acceptable
 
 ### Documentation Complete ✅
+
 - [ ] Implementation plan saved to git
 - [ ] README updated with setup instructions
 - [ ] Architecture documented in ARCHITECTURE.md
 - [ ] Monitoring guide created
 
 ### Ready for Production ✅
+
 - [ ] All workflows monitoring for 24+ hours
 - [ ] No errors in logs
 - [ ] Dashboard stable and responsive
 - [ ] Realtime working reliably
 - [ ] Team trained (if applicable)
-

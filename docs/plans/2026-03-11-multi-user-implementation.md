@@ -13,6 +13,7 @@
 ## Task 1: Database Migration — Profiles & Auth Support
 
 **Files:**
+
 - Create: `supabase/migrations/2026-03-11-multi-user-auth.sql`
 
 **Step 1: Write the migration SQL**
@@ -73,6 +74,7 @@ git commit -m "feat: add profiles table and auth trigger"
 ## Task 2: Database Migration — Per-User Read Status
 
 **Files:**
+
 - Create: `supabase/migrations/2026-03-11-message-read-status.sql`
 
 **Step 1: Write the migration SQL**
@@ -122,6 +124,7 @@ git commit -m "feat: add per-user read status table, update action columns"
 ## Task 3: Database Migration — Notifications & Action Trigger
 
 **Files:**
+
 - Create: `supabase/migrations/2026-03-11-user-notifications.sql`
 
 **Step 1: Write the migration SQL**
@@ -198,6 +201,7 @@ git commit -m "feat: add notifications table and action trigger"
 ## Task 4: Database Migration — RLS Policy Updates
 
 **Files:**
+
 - Create: `supabase/migrations/2026-03-11-rls-hardening.sql`
 
 **Step 1: Write the migration SQL**
@@ -274,6 +278,7 @@ git commit -m "feat: harden RLS policies to require authentication"
 ## Task 5: Edge Function — Invite User
 
 **Files:**
+
 - Create: `supabase/functions/invite-user/index.ts`
 
 **Step 1: Write the Edge Function**
@@ -300,9 +305,12 @@ Deno.serve(async (req) => {
     const supabaseUser = createClient(
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_ANON_KEY")!,
-      { global: { headers: { Authorization: authHeader } } }
+      { global: { headers: { Authorization: authHeader } } },
     );
-    const { data: { user }, error: authError } = await supabaseUser.auth.getUser();
+    const {
+      data: { user },
+      error: authError,
+    } = await supabaseUser.auth.getUser();
     if (authError || !user) {
       return new Response(JSON.stringify({ error: "Not authenticated" }), {
         status: 401,
@@ -312,32 +320,38 @@ Deno.serve(async (req) => {
 
     const { email, display_name } = await req.json();
     if (!email || !display_name) {
-      return new Response(JSON.stringify({ error: "email and display_name required" }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return new Response(
+        JSON.stringify({ error: "email and display_name required" }),
+        {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
+      );
     }
 
     // Check user count
     const supabaseAdmin = createClient(
       Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
     );
     const { count } = await supabaseAdmin
       .from("profiles")
       .select("*", { count: "exact", head: true });
 
     if ((count || 0) >= 2) {
-      return new Response(JSON.stringify({ error: "Maximum 2 users allowed" }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return new Response(
+        JSON.stringify({ error: "Maximum 2 users allowed" }),
+        {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
+      );
     }
 
     // Send invite
     const { data, error } = await supabaseAdmin.auth.admin.inviteUserByEmail(
       email,
-      { data: { display_name } }
+      { data: { display_name } },
     );
 
     if (error) {
@@ -347,9 +361,12 @@ Deno.serve(async (req) => {
       });
     }
 
-    return new Response(JSON.stringify({ success: true, user_id: data.user.id }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    return new Response(
+      JSON.stringify({ success: true, user_id: data.user.id }),
+      {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      },
+    );
   } catch (err) {
     return new Response(JSON.stringify({ error: err.message }), {
       status: 500,
@@ -366,7 +383,8 @@ Look at existing Edge Functions to see if they share CORS headers. If not, creat
 ```typescript
 export const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Headers":
+    "authorization, x-client-info, apikey, content-type",
 };
 ```
 
@@ -388,6 +406,7 @@ git commit -m "feat: add invite-user Edge Function"
 ## Task 6: Supabase Client — Add Auth Support
 
 **Files:**
+
 - Modify: `src/lib/supabase.js`
 
 **Step 1: Update the Supabase client config**
@@ -395,10 +414,10 @@ git commit -m "feat: add invite-user Edge Function"
 Replace `src/lib/supabase.js` with:
 
 ```javascript
-import { createClient } from '@supabase/supabase-js'
+import { createClient } from "@supabase/supabase-js";
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
@@ -406,7 +425,7 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     persistSession: true,
     detectSessionInUrl: true,
   },
-})
+});
 ```
 
 **Step 2: Verify**
@@ -425,76 +444,80 @@ git commit -m "feat: configure Supabase client for auth"
 ## Task 7: Auth Context Provider
 
 **Files:**
+
 - Create: `src/lib/AuthContext.jsx`
 
 **Step 1: Create the auth context**
 
 ```jsx
-import React, { createContext, useContext, useState, useEffect } from 'react'
-import { supabase } from './supabase'
+import React, { createContext, useContext, useState, useEffect } from "react";
+import { supabase } from "./supabase";
 
-const AuthContext = createContext(null)
+const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
-  const [user, setUser] = useState(null)
-  const [profile, setProfile] = useState(null)
-  const [loading, setLoading] = useState(true)
+  const [user, setUser] = useState(null);
+  const [profile, setProfile] = useState(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     // Get initial session
     supabase.auth.getSession().then(({ data: { session } }) => {
-      setUser(session?.user ?? null)
-      if (session?.user) loadProfile(session.user.id)
-      else setLoading(false)
-    })
+      setUser(session?.user ?? null);
+      if (session?.user) loadProfile(session.user.id);
+      else setLoading(false);
+    });
 
     // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (_event, session) => {
-        setUser(session?.user ?? null)
-        if (session?.user) await loadProfile(session.user.id)
-        else {
-          setProfile(null)
-          setLoading(false)
-        }
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange(async (_event, session) => {
+      setUser(session?.user ?? null);
+      if (session?.user) await loadProfile(session.user.id);
+      else {
+        setProfile(null);
+        setLoading(false);
       }
-    )
+    });
 
-    return () => subscription.unsubscribe()
-  }, [])
+    return () => subscription.unsubscribe();
+  }, []);
 
   async function loadProfile(userId) {
     const { data } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('id', userId)
-      .single()
-    setProfile(data)
-    setLoading(false)
+      .from("profiles")
+      .select("*")
+      .eq("id", userId)
+      .single();
+    setProfile(data);
+    setLoading(false);
   }
 
   async function signIn(email, password) {
-    const { error } = await supabase.auth.signInWithPassword({ email, password })
-    return { error }
+    const { error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+    return { error };
   }
 
   async function signOut() {
-    await supabase.auth.signOut()
-    setUser(null)
-    setProfile(null)
+    await supabase.auth.signOut();
+    setUser(null);
+    setProfile(null);
   }
 
   return (
     <AuthContext.Provider value={{ user, profile, loading, signIn, signOut }}>
       {children}
     </AuthContext.Provider>
-  )
+  );
 }
 
 export function useAuth() {
-  const context = useContext(AuthContext)
-  if (!context) throw new Error('useAuth must be used within AuthProvider')
-  return context
+  const context = useContext(AuthContext);
+  if (!context) throw new Error("useAuth must be used within AuthProvider");
+  return context;
 }
 ```
 
@@ -514,28 +537,29 @@ git commit -m "feat: add AuthContext provider and useAuth hook"
 ## Task 8: Login Page
 
 **Files:**
+
 - Create: `src/components/LoginPage.jsx`
 
 **Step 1: Create the login component**
 
 ```jsx
-import React, { useState } from 'react'
-import { useAuth } from '../lib/AuthContext'
+import React, { useState } from "react";
+import { useAuth } from "../lib/AuthContext";
 
 export default function LoginPage() {
-  const { signIn } = useAuth()
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
-  const [error, setError] = useState(null)
-  const [loading, setLoading] = useState(false)
+  const { signIn } = useAuth();
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState(null);
+  const [loading, setLoading] = useState(false);
 
   async function handleSubmit(e) {
-    e.preventDefault()
-    setError(null)
-    setLoading(true)
-    const { error } = await signIn(email, password)
-    if (error) setError(error.message)
-    setLoading(false)
+    e.preventDefault();
+    setError(null);
+    setLoading(true);
+    const { error } = await signIn(email, password);
+    if (error) setError(error.message);
+    setLoading(false);
   }
 
   return (
@@ -550,7 +574,7 @@ export default function LoginPage() {
               id="email"
               type="email"
               value={email}
-              onChange={e => setEmail(e.target.value)}
+              onChange={(e) => setEmail(e.target.value)}
               required
               autoFocus
             />
@@ -561,18 +585,18 @@ export default function LoginPage() {
               id="password"
               type="password"
               value={password}
-              onChange={e => setPassword(e.target.value)}
+              onChange={(e) => setPassword(e.target.value)}
               required
             />
           </div>
           {error && <p className="login-error">{error}</p>}
           <button type="submit" className="login-btn" disabled={loading}>
-            {loading ? 'Signing in...' : 'Sign In'}
+            {loading ? "Signing in..." : "Sign In"}
           </button>
         </form>
       </div>
     </div>
-  )
+  );
 }
 ```
 
@@ -685,6 +709,7 @@ git commit -m "feat: add login page component and styles"
 ## Task 9: Wire Auth into App Shell
 
 **Files:**
+
 - Modify: `src/index.jsx`
 - Modify: `src/App.jsx`
 
@@ -693,18 +718,18 @@ git commit -m "feat: add login page component and styles"
 Replace the contents of `src/index.jsx`:
 
 ```jsx
-import React from 'react'
-import ReactDOM from 'react-dom/client'
-import { AuthProvider } from './lib/AuthContext'
-import App from './App'
+import React from "react";
+import ReactDOM from "react-dom/client";
+import { AuthProvider } from "./lib/AuthContext";
+import App from "./App";
 
-ReactDOM.createRoot(document.getElementById('root')).render(
+ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>
     <AuthProvider>
       <App />
     </AuthProvider>
-  </React.StrictMode>
-)
+  </React.StrictMode>,
+);
 ```
 
 **Step 2: Add auth gate to `src/App.jsx`**
@@ -712,21 +737,21 @@ ReactDOM.createRoot(document.getElementById('root')).render(
 At the top of `App.jsx`, add imports:
 
 ```javascript
-import { useAuth } from './lib/AuthContext'
-import LoginPage from './components/LoginPage'
+import { useAuth } from "./lib/AuthContext";
+import LoginPage from "./components/LoginPage";
 ```
 
 Inside the `App` function, at the very beginning (before existing state declarations), add:
 
 ```javascript
-const { user, profile, loading: authLoading, signOut } = useAuth()
+const { user, profile, loading: authLoading, signOut } = useAuth();
 
 if (authLoading) {
-  return <div className="loading-screen">Loading...</div>
+  return <div className="loading-screen">Loading...</div>;
 }
 
 if (!user) {
-  return <LoginPage />
+  return <LoginPage />;
 }
 ```
 
@@ -743,7 +768,9 @@ Replace the existing `<header>` block with:
     </div>
     <div className="header-right">
       <span className="user-name">{profile?.display_name}</span>
-      <button className="sign-out-btn" onClick={signOut}>Sign Out</button>
+      <button className="sign-out-btn" onClick={signOut}>
+        Sign Out
+      </button>
     </div>
   </div>
 </header>
@@ -811,6 +838,7 @@ git commit -m "feat: wire auth into app shell with login gate"
 ## Task 10: Replace `is_read` with Per-User Read Status
 
 **Files:**
+
 - Modify: `src/App.jsx`
 
 **Step 1: Update `loadMessages` to include read status**
@@ -819,31 +847,35 @@ Replace the existing `loadMessages` function:
 
 ```javascript
 async function loadMessages() {
-  setLoading(true)
+  setLoading(true);
   try {
     const { data, error } = await supabase
-      .from('messages')
-      .select(`
+      .from("messages")
+      .select(
+        `
         *,
         attachments(id, filename, file_path, mime_type, file_size),
         message_read_status!left(user_id, read_at)
-      `)
-      .order('received_at', { ascending: false })
-      .limit(100)
+      `,
+      )
+      .order("received_at", { ascending: false })
+      .limit(100);
 
-    if (error) throw error
+    if (error) throw error;
 
     // Annotate each message with is_read for current user
-    const annotated = (data || []).map(msg => ({
+    const annotated = (data || []).map((msg) => ({
       ...msg,
-      is_read: (msg.message_read_status || []).some(rs => rs.user_id === user.id),
-    }))
+      is_read: (msg.message_read_status || []).some(
+        (rs) => rs.user_id === user.id,
+      ),
+    }));
 
-    setMessages(annotated)
+    setMessages(annotated);
   } catch (err) {
-    setError(err.message)
+    setError(err.message);
   } finally {
-    setLoading(false)
+    setLoading(false);
   }
 }
 ```
@@ -852,27 +884,29 @@ async function loadMessages() {
 
 ```javascript
 async function toggleReadStatus(message) {
-  const currentlyRead = message.is_read
+  const currentlyRead = message.is_read;
   try {
     if (currentlyRead) {
       // Mark as unread: delete the row
       await supabase
-        .from('message_read_status')
+        .from("message_read_status")
         .delete()
-        .eq('user_id', user.id)
-        .eq('message_id', message.id)
+        .eq("user_id", user.id)
+        .eq("message_id", message.id);
     } else {
       // Mark as read: insert a row
       await supabase
-        .from('message_read_status')
-        .upsert({ user_id: user.id, message_id: message.id })
+        .from("message_read_status")
+        .upsert({ user_id: user.id, message_id: message.id });
     }
 
-    setMessages(prev => prev.map(m =>
-      m.id === message.id ? { ...m, is_read: !currentlyRead } : m
-    ))
+    setMessages((prev) =>
+      prev.map((m) =>
+        m.id === message.id ? { ...m, is_read: !currentlyRead } : m,
+      ),
+    );
   } catch (err) {
-    addToast('Failed to update read status', 'error')
+    addToast("Failed to update read status", "error");
   }
 }
 ```
@@ -883,22 +917,22 @@ In the message expand toggle handler (where `expandedMessages` is updated), add 
 
 ```javascript
 function toggleExpanded(msgId) {
-  setExpandedMessages(prev => {
-    const next = new Set(prev)
+  setExpandedMessages((prev) => {
+    const next = new Set(prev);
     if (next.has(msgId)) {
-      next.delete(msgId)
+      next.delete(msgId);
     } else {
-      next.add(msgId)
+      next.add(msgId);
       // Auto-mark as read after 1 second
-      const msg = messages.find(m => m.id === msgId)
+      const msg = messages.find((m) => m.id === msgId);
       if (msg && !msg.is_read) {
         setTimeout(() => {
-          toggleReadStatus(msg)
-        }, 1000)
+          toggleReadStatus(msg);
+        }, 1000);
       }
     }
-    return next
-  })
+    return next;
+  });
 }
 ```
 
@@ -907,11 +941,15 @@ function toggleExpanded(msgId) {
 Find the Messages tab button and add an unread count badge:
 
 ```jsx
-<button className={`tab-btn ${activeTab === 'messages' ? 'active' : ''}`}
-  onClick={() => setActiveTab('messages')}>
+<button
+  className={`tab-btn ${activeTab === "messages" ? "active" : ""}`}
+  onClick={() => setActiveTab("messages")}
+>
   Messages
-  {messages.filter(m => !m.is_read).length > 0 && (
-    <span className="tab-badge">{messages.filter(m => !m.is_read).length}</span>
+  {messages.filter((m) => !m.is_read).length > 0 && (
+    <span className="tab-badge">
+      {messages.filter((m) => !m.is_read).length}
+    </span>
   )}
 </button>
 ```
@@ -946,30 +984,31 @@ git commit -m "feat: replace global is_read with per-user read status"
 ## Task 11: Action Modal with Notes
 
 **Files:**
+
 - Create: `src/components/ActionModal.jsx`
 - Modify: `src/App.jsx`
 
 **Step 1: Create the ActionModal component**
 
 ```jsx
-import React, { useState, useRef, useEffect } from 'react'
+import React, { useState, useRef, useEffect } from "react";
 
 export default function ActionModal({ message, onConfirm, onCancel }) {
-  const [note, setNote] = useState('')
-  const inputRef = useRef(null)
+  const [note, setNote] = useState("");
+  const inputRef = useRef(null);
 
   useEffect(() => {
-    inputRef.current?.focus()
-  }, [])
+    inputRef.current?.focus();
+  }, []);
 
   function handleSubmit(e) {
-    e.preventDefault()
-    onConfirm(note.trim())
+    e.preventDefault();
+    onConfirm(note.trim());
   }
 
   return (
     <div className="modal-overlay" onClick={onCancel}>
-      <div className="modal-card" onClick={e => e.stopPropagation()}>
+      <div className="modal-card" onClick={(e) => e.stopPropagation()}>
         <h3>Action Message</h3>
         <p className="modal-subject">{message.subject}</p>
         <form onSubmit={handleSubmit}>
@@ -979,19 +1018,27 @@ export default function ActionModal({ message, onConfirm, onCancel }) {
               id="action-note"
               ref={inputRef}
               value={note}
-              onChange={e => setNote(e.target.value)}
+              onChange={(e) => setNote(e.target.value)}
               placeholder="e.g. Signed and returned the form"
               rows={3}
             />
           </div>
           <div className="modal-actions">
-            <button type="button" className="modal-cancel-btn" onClick={onCancel}>Cancel</button>
-            <button type="submit" className="modal-confirm-btn">Mark as Actioned</button>
+            <button
+              type="button"
+              className="modal-cancel-btn"
+              onClick={onCancel}
+            >
+              Cancel
+            </button>
+            <button type="submit" className="modal-confirm-btn">
+              Mark as Actioned
+            </button>
           </div>
         </form>
       </div>
     </div>
-  )
+  );
 }
 ```
 
@@ -1085,7 +1132,7 @@ export default function ActionModal({ message, onConfirm, onCancel }) {
 Add state for the modal:
 
 ```javascript
-const [actionModalMessage, setActionModalMessage] = useState(null)
+const [actionModalMessage, setActionModalMessage] = useState(null);
 ```
 
 Replace the existing `actionMessage` function:
@@ -1094,49 +1141,49 @@ Replace the existing `actionMessage` function:
 function openActionModal(msg) {
   if (msg.actioned_at) {
     // Undo action — no modal needed
-    undoAction(msg)
+    undoAction(msg);
   } else {
-    setActionModalMessage(msg)
+    setActionModalMessage(msg);
   }
 }
 
 async function confirmAction(note) {
-  const msg = actionModalMessage
-  setActionModalMessage(null)
+  const msg = actionModalMessage;
+  setActionModalMessage(null);
   try {
     const updates = {
       actioned_at: new Date().toISOString(),
       actioned_by: user.id,
       action_note: note || null,
-    }
+    };
     const { error } = await supabase
-      .from('messages')
+      .from("messages")
       .update(updates)
-      .eq('id', msg.id)
-    if (error) throw error
-    setMessages(prev => prev.map(m =>
-      m.id === msg.id ? { ...m, ...updates } : m
-    ))
-    addToast('Message marked as actioned', 'success')
+      .eq("id", msg.id);
+    if (error) throw error;
+    setMessages((prev) =>
+      prev.map((m) => (m.id === msg.id ? { ...m, ...updates } : m)),
+    );
+    addToast("Message marked as actioned", "success");
   } catch (err) {
-    addToast('Failed to action message', 'error')
+    addToast("Failed to action message", "error");
   }
 }
 
 async function undoAction(msg) {
   try {
-    const updates = { actioned_at: null, actioned_by: null, action_note: null }
+    const updates = { actioned_at: null, actioned_by: null, action_note: null };
     const { error } = await supabase
-      .from('messages')
+      .from("messages")
       .update(updates)
-      .eq('id', msg.id)
-    if (error) throw error
-    setMessages(prev => prev.map(m =>
-      m.id === msg.id ? { ...m, ...updates } : m
-    ))
-    addToast('Action undone', 'info')
+      .eq("id", msg.id);
+    if (error) throw error;
+    setMessages((prev) =>
+      prev.map((m) => (m.id === msg.id ? { ...m, ...updates } : m)),
+    );
+    addToast("Action undone", "info");
   } catch (err) {
-    addToast('Failed to undo action', 'error')
+    addToast("Failed to undo action", "error");
   }
 }
 ```
@@ -1146,13 +1193,15 @@ async function undoAction(msg) {
 Add the modal render at the end of the return JSX (before the closing fragment/div):
 
 ```jsx
-{actionModalMessage && (
-  <ActionModal
-    message={actionModalMessage}
-    onConfirm={confirmAction}
-    onCancel={() => setActionModalMessage(null)}
-  />
-)}
+{
+  actionModalMessage && (
+    <ActionModal
+      message={actionModalMessage}
+      onConfirm={confirmAction}
+      onCancel={() => setActionModalMessage(null)}
+    />
+  );
+}
 ```
 
 Update all existing `onClick={() => actionMessage(msg)}` calls to use `onClick={() => openActionModal(msg)}`.
@@ -1162,13 +1211,15 @@ Update all existing `onClick={() => actionMessage(msg)}` calls to use `onClick={
 Where the actioned badge currently shows, update to display the profile name and note. This requires loading profiles. Add a `profiles` state and loader:
 
 ```javascript
-const [profiles, setProfiles] = useState({})
+const [profiles, setProfiles] = useState({});
 
 async function loadProfiles() {
-  const { data } = await supabase.from('profiles').select('*')
-  const map = {}
-  ;(data || []).forEach(p => { map[p.id] = p })
-  setProfiles(map)
+  const { data } = await supabase.from("profiles").select("*");
+  const map = {};
+  (data || []).forEach((p) => {
+    map[p.id] = p;
+  });
+  setProfiles(map);
 }
 ```
 
@@ -1177,15 +1228,17 @@ Call `loadProfiles()` in the initial `useEffect` alongside `loadMessages()`.
 In the message card JSX, update the actioned display:
 
 ```jsx
-{msg.actioned_at && (
-  <div className="actioned-info">
-    <span className="actioned-badge">Actioned</span>
-    <span className="actioned-detail">
-      by {profiles[msg.actioned_by]?.display_name || 'Unknown'}
-      {msg.action_note && ` — ${msg.action_note}`}
-    </span>
-  </div>
-)}
+{
+  msg.actioned_at && (
+    <div className="actioned-info">
+      <span className="actioned-badge">Actioned</span>
+      <span className="actioned-detail">
+        by {profiles[msg.actioned_by]?.display_name || "Unknown"}
+        {msg.action_note && ` — ${msg.action_note}`}
+      </span>
+    </div>
+  );
+}
 ```
 
 Add CSS:
@@ -1221,100 +1274,110 @@ git commit -m "feat: add action modal with notes and actioner display"
 ## Task 12: Top Bar Notifications
 
 **Files:**
+
 - Create: `src/components/NotificationBell.jsx`
 - Modify: `src/App.jsx`
 
 **Step 1: Create the NotificationBell component**
 
 ```jsx
-import React, { useState, useEffect, useRef } from 'react'
-import { supabase } from '../lib/supabase'
-import { useAuth } from '../lib/AuthContext'
+import React, { useState, useEffect, useRef } from "react";
+import { supabase } from "../lib/supabase";
+import { useAuth } from "../lib/AuthContext";
 
 export default function NotificationBell({ onNavigateToMessage }) {
-  const { user } = useAuth()
-  const [notifications, setNotifications] = useState([])
-  const [open, setOpen] = useState(false)
-  const dropdownRef = useRef(null)
+  const { user } = useAuth();
+  const [notifications, setNotifications] = useState([]);
+  const [open, setOpen] = useState(false);
+  const dropdownRef = useRef(null);
 
   useEffect(() => {
-    if (!user) return
-    loadNotifications()
+    if (!user) return;
+    loadNotifications();
 
     // Realtime subscription
     const channel = supabase
-      .channel('user-notifications')
+      .channel("user-notifications")
       .on(
-        'postgres_changes',
+        "postgres_changes",
         {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'user_notifications',
+          event: "INSERT",
+          schema: "public",
+          table: "user_notifications",
           filter: `user_id=eq.${user.id}`,
         },
         (payload) => {
-          setNotifications(prev => [payload.new, ...prev])
-        }
+          setNotifications((prev) => [payload.new, ...prev]);
+        },
       )
-      .subscribe()
+      .subscribe();
 
-    return () => { supabase.removeChannel(channel) }
-  }, [user])
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user]);
 
   // Close dropdown on outside click
   useEffect(() => {
     function handleClick(e) {
       if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
-        setOpen(false)
+        setOpen(false);
       }
     }
-    document.addEventListener('mousedown', handleClick)
-    return () => document.removeEventListener('mousedown', handleClick)
-  }, [])
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, []);
 
   async function loadNotifications() {
     const { data } = await supabase
-      .from('user_notifications')
-      .select('*')
-      .eq('user_id', user.id)
-      .is('dismissed_at', null)
-      .order('created_at', { ascending: false })
-      .limit(20)
-    setNotifications(data || [])
+      .from("user_notifications")
+      .select("*")
+      .eq("user_id", user.id)
+      .is("dismissed_at", null)
+      .order("created_at", { ascending: false })
+      .limit(20);
+    setNotifications(data || []);
   }
 
   async function dismiss(id) {
     await supabase
-      .from('user_notifications')
+      .from("user_notifications")
       .update({ dismissed_at: new Date().toISOString() })
-      .eq('id', id)
-    setNotifications(prev => prev.filter(n => n.id !== id))
+      .eq("id", id);
+    setNotifications((prev) => prev.filter((n) => n.id !== id));
   }
 
   async function dismissAll() {
-    const ids = notifications.map(n => n.id)
-    if (ids.length === 0) return
+    const ids = notifications.map((n) => n.id);
+    if (ids.length === 0) return;
     await supabase
-      .from('user_notifications')
+      .from("user_notifications")
       .update({ dismissed_at: new Date().toISOString() })
-      .in('id', ids)
-    setNotifications([])
+      .in("id", ids);
+    setNotifications([]);
   }
 
   function handleClick(notification) {
-    dismiss(notification.id)
+    dismiss(notification.id);
     if (onNavigateToMessage && notification.message_id) {
-      onNavigateToMessage(notification.message_id)
+      onNavigateToMessage(notification.message_id);
     }
-    setOpen(false)
+    setOpen(false);
   }
 
-  const count = notifications.length
+  const count = notifications.length;
 
   return (
     <div className="notification-bell" ref={dropdownRef}>
       <button className="bell-btn" onClick={() => setOpen(!open)}>
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+        <svg
+          width="20"
+          height="20"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+        >
           <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
           <path d="M13.73 21a2 2 0 0 1-3.46 0" />
         </svg>
@@ -1335,8 +1398,12 @@ export default function NotificationBell({ onNavigateToMessage }) {
             <p className="notification-empty">No new notifications</p>
           ) : (
             <ul className="notification-list">
-              {notifications.map(n => (
-                <li key={n.id} className="notification-item" onClick={() => handleClick(n)}>
+              {notifications.map((n) => (
+                <li
+                  key={n.id}
+                  className="notification-item"
+                  onClick={() => handleClick(n)}
+                >
                   <p className="notification-summary">{n.summary}</p>
                   <span className="notification-time">
                     {new Date(n.created_at).toLocaleString()}
@@ -1348,7 +1415,7 @@ export default function NotificationBell({ onNavigateToMessage }) {
         </div>
       )}
     </div>
-  )
+  );
 }
 ```
 
@@ -1472,20 +1539,20 @@ export default function NotificationBell({ onNavigateToMessage }) {
 Import the component:
 
 ```javascript
-import NotificationBell from './components/NotificationBell'
+import NotificationBell from "./components/NotificationBell";
 ```
 
 Add a `navigateToMessage` function:
 
 ```javascript
 function navigateToMessage(messageId) {
-  setActiveTab('messages')
-  setExpandedMessages(prev => new Set([...prev, messageId]))
+  setActiveTab("messages");
+  setExpandedMessages((prev) => new Set([...prev, messageId]));
   // Scroll to message after a tick
   setTimeout(() => {
-    const el = document.getElementById(`message-${messageId}`)
-    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' })
-  }, 100)
+    const el = document.getElementById(`message-${messageId}`);
+    if (el) el.scrollIntoView({ behavior: "smooth", block: "center" });
+  }, 100);
 }
 ```
 
@@ -1497,7 +1564,9 @@ Add NotificationBell to the header-right div, before the user name:
 <div className="header-right">
   <NotificationBell onNavigateToMessage={navigateToMessage} />
   <span className="user-name">{profile?.display_name}</span>
-  <button className="sign-out-btn" onClick={signOut}>Sign Out</button>
+  <button className="sign-out-btn" onClick={signOut}>
+    Sign Out
+  </button>
 </div>
 ```
 
@@ -1517,56 +1586,60 @@ git commit -m "feat: add notification bell with realtime action alerts"
 ## Task 13: Settings Panel with Invite
 
 **Files:**
+
 - Create: `src/components/SettingsPanel.jsx`
 - Modify: `src/App.jsx`
 
 **Step 1: Create the SettingsPanel component**
 
 ```jsx
-import React, { useState, useEffect } from 'react'
-import { supabase } from '../lib/supabase'
-import { useAuth } from '../lib/AuthContext'
+import React, { useState, useEffect } from "react";
+import { supabase } from "../lib/supabase";
+import { useAuth } from "../lib/AuthContext";
 
 export default function SettingsPanel() {
-  const { user, profile } = useAuth()
-  const [profiles, setProfiles] = useState([])
-  const [inviteEmail, setInviteEmail] = useState('')
-  const [inviteName, setInviteName] = useState('')
-  const [inviting, setInviting] = useState(false)
-  const [message, setMessage] = useState(null)
+  const { user, profile } = useAuth();
+  const [profiles, setProfiles] = useState([]);
+  const [inviteEmail, setInviteEmail] = useState("");
+  const [inviteName, setInviteName] = useState("");
+  const [inviting, setInviting] = useState(false);
+  const [message, setMessage] = useState(null);
 
   useEffect(() => {
-    loadProfiles()
-  }, [])
+    loadProfiles();
+  }, []);
 
   async function loadProfiles() {
-    const { data } = await supabase.from('profiles').select('*').order('created_at')
-    setProfiles(data || [])
+    const { data } = await supabase
+      .from("profiles")
+      .select("*")
+      .order("created_at");
+    setProfiles(data || []);
   }
 
   async function handleInvite(e) {
-    e.preventDefault()
-    setInviting(true)
-    setMessage(null)
+    e.preventDefault();
+    setInviting(true);
+    setMessage(null);
 
     try {
-      const { data, error } = await supabase.functions.invoke('invite-user', {
+      const { data, error } = await supabase.functions.invoke("invite-user", {
         body: { email: inviteEmail, display_name: inviteName },
-      })
-      if (error) throw error
-      if (data.error) throw new Error(data.error)
-      setMessage({ type: 'success', text: `Invite sent to ${inviteEmail}` })
-      setInviteEmail('')
-      setInviteName('')
-      loadProfiles()
+      });
+      if (error) throw error;
+      if (data.error) throw new Error(data.error);
+      setMessage({ type: "success", text: `Invite sent to ${inviteEmail}` });
+      setInviteEmail("");
+      setInviteName("");
+      loadProfiles();
     } catch (err) {
-      setMessage({ type: 'error', text: err.message })
+      setMessage({ type: "error", text: err.message });
     } finally {
-      setInviting(false)
+      setInviting(false);
     }
   }
 
-  const canInvite = profiles.length < 2
+  const canInvite = profiles.length < 2;
 
   return (
     <div className="settings-panel">
@@ -1575,7 +1648,7 @@ export default function SettingsPanel() {
       <section className="settings-section">
         <h3>Users</h3>
         <ul className="user-list">
-          {profiles.map(p => (
+          {profiles.map((p) => (
             <li key={p.id} className="user-item">
               <span className="user-item-name">{p.display_name}</span>
               <span className="user-item-email">{p.email}</span>
@@ -1595,7 +1668,7 @@ export default function SettingsPanel() {
                 id="invite-name"
                 type="text"
                 value={inviteName}
-                onChange={e => setInviteName(e.target.value)}
+                onChange={(e) => setInviteName(e.target.value)}
                 placeholder="e.g. Sarah"
                 required
               />
@@ -1606,7 +1679,7 @@ export default function SettingsPanel() {
                 id="invite-email"
                 type="email"
                 value={inviteEmail}
-                onChange={e => setInviteEmail(e.target.value)}
+                onChange={(e) => setInviteEmail(e.target.value)}
                 placeholder="partner@email.com"
                 required
               />
@@ -1615,13 +1688,13 @@ export default function SettingsPanel() {
               <p className={`settings-msg ${message.type}`}>{message.text}</p>
             )}
             <button type="submit" className="invite-btn" disabled={inviting}>
-              {inviting ? 'Sending...' : 'Send Invite'}
+              {inviting ? "Sending..." : "Send Invite"}
             </button>
           </form>
         </section>
       )}
     </div>
-  )
+  );
 }
 ```
 
@@ -1715,14 +1788,16 @@ export default function SettingsPanel() {
 Import the component:
 
 ```javascript
-import SettingsPanel from './components/SettingsPanel'
+import SettingsPanel from "./components/SettingsPanel";
 ```
 
 Add a Settings tab button in the tab nav:
 
 ```jsx
-<button className={`tab-btn ${activeTab === 'settings' ? 'active' : ''}`}
-  onClick={() => setActiveTab('settings')}>
+<button
+  className={`tab-btn ${activeTab === "settings" ? "active" : ""}`}
+  onClick={() => setActiveTab("settings")}
+>
   Settings
 </button>
 ```
@@ -1730,7 +1805,9 @@ Add a Settings tab button in the tab nav:
 Add the settings content in the tab content area:
 
 ```jsx
-{activeTab === 'settings' && <SettingsPanel />}
+{
+  activeTab === "settings" && <SettingsPanel />;
+}
 ```
 
 **Step 4: Verify**
@@ -1749,6 +1826,7 @@ git commit -m "feat: add settings panel with user list and invite"
 ## Task 14: PWA Setup
 
 **Files:**
+
 - Modify: `package.json` (add vite-plugin-pwa)
 - Modify: `vite.config.js`
 - Modify: `index.html`
@@ -1763,35 +1841,35 @@ npm install -D vite-plugin-pwa
 **Step 2: Update `vite.config.js`**
 
 ```javascript
-import { defineConfig } from 'vite'
-import react from '@vitejs/plugin-react'
-import { VitePWA } from 'vite-plugin-pwa'
+import { defineConfig } from "vite";
+import react from "@vitejs/plugin-react";
+import { VitePWA } from "vite-plugin-pwa";
 
 export default defineConfig({
   plugins: [
     react(),
     VitePWA({
-      registerType: 'autoUpdate',
+      registerType: "autoUpdate",
       manifest: {
-        name: 'Charlie Tracker',
-        short_name: 'Charlie',
-        start_url: '/',
-        display: 'standalone',
-        background_color: '#1a1a2e',
-        theme_color: '#1a1a2e',
+        name: "Charlie Tracker",
+        short_name: "Charlie",
+        start_url: "/",
+        display: "standalone",
+        background_color: "#1a1a2e",
+        theme_color: "#1a1a2e",
         icons: [
-          { src: '/icons/icon-192.png', sizes: '192x192', type: 'image/png' },
-          { src: '/icons/icon-512.png', sizes: '512x512', type: 'image/png' },
+          { src: "/icons/icon-192.png", sizes: "192x192", type: "image/png" },
+          { src: "/icons/icon-512.png", sizes: "512x512", type: "image/png" },
         ],
       },
       workbox: {
-        globPatterns: ['**/*.{js,css,html,ico,png,svg}'],
+        globPatterns: ["**/*.{js,css,html,ico,png,svg}"],
         runtimeCaching: [
           {
             urlPattern: /^https:\/\/.*\.supabase\.co\/.*/i,
-            handler: 'NetworkFirst',
+            handler: "NetworkFirst",
             options: {
-              cacheName: 'supabase-api',
+              cacheName: "supabase-api",
               expiration: { maxEntries: 50, maxAgeSeconds: 300 },
             },
           },
@@ -1802,7 +1880,7 @@ export default defineConfig({
   server: {
     port: 5173,
   },
-})
+});
 ```
 
 **Step 3: Update `index.html`**
@@ -1812,7 +1890,10 @@ Add inside `<head>`:
 ```html
 <meta name="theme-color" content="#1a1a2e" />
 <meta name="apple-mobile-web-app-capable" content="yes" />
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta
+  name="apple-mobile-web-app-status-bar-style"
+  content="black-translucent"
+/>
 <link rel="apple-touch-icon" href="/icons/icon-192.png" />
 ```
 
@@ -1829,6 +1910,7 @@ Use a canvas-based script or online tool to create simple "CT" text icons at 192
 **Step 5: Verify**
 
 Run `npm run build && npm run preview` — check that:
+
 - Service worker registers (check DevTools > Application > Service Workers)
 - Manifest loads (DevTools > Application > Manifest)
 - "Install" option appears in browser
@@ -1845,6 +1927,7 @@ git commit -m "feat: add PWA support with service worker and manifest"
 ## Task 15: Update Edge Functions for Auth
 
 **Files:**
+
 - Modify: `supabase/functions/index-message/index.ts`
 - Modify: `supabase/functions/index-document/index.ts`
 - Modify: `supabase/functions/rag-chat/index.ts`
@@ -1883,6 +1966,7 @@ git commit -m "feat: add auth checks to Edge Functions"
 ## Task 16: Update `schema.sql` Reference
 
 **Files:**
+
 - Modify: `supabase/schema.sql`
 
 **Step 1: Update the schema file to reflect the new state**
@@ -1900,26 +1984,27 @@ git commit -m "docs: update schema.sql reference with multi-user tables"
 
 ## Execution Order Summary
 
-| Task | Description | Dependencies |
-|------|-------------|-------------|
-| 1 | Profiles table + auth trigger | None |
-| 2 | Read status table + message column changes | None |
-| 3 | Notifications table + action trigger | Task 1 (profiles) |
-| 4 | RLS policy updates | None |
-| 5 | Invite user Edge Function | Task 1 |
-| 6 | Supabase client auth config | None |
-| 7 | AuthContext provider | Task 6 |
-| 8 | Login page | Task 7 |
-| 9 | Wire auth into App shell | Tasks 7, 8 |
-| 10 | Per-user read status frontend | Tasks 2, 9 |
-| 11 | Action modal with notes | Tasks 2, 9 |
-| 12 | Notification bell | Tasks 3, 9 |
-| 13 | Settings panel with invite | Tasks 5, 9 |
-| 14 | PWA setup | None (independent) |
-| 15 | Edge Function auth | Task 9 |
-| 16 | Schema reference update | All above |
+| Task | Description                                | Dependencies       |
+| ---- | ------------------------------------------ | ------------------ |
+| 1    | Profiles table + auth trigger              | None               |
+| 2    | Read status table + message column changes | None               |
+| 3    | Notifications table + action trigger       | Task 1 (profiles)  |
+| 4    | RLS policy updates                         | None               |
+| 5    | Invite user Edge Function                  | Task 1             |
+| 6    | Supabase client auth config                | None               |
+| 7    | AuthContext provider                       | Task 6             |
+| 8    | Login page                                 | Task 7             |
+| 9    | Wire auth into App shell                   | Tasks 7, 8         |
+| 10   | Per-user read status frontend              | Tasks 2, 9         |
+| 11   | Action modal with notes                    | Tasks 2, 9         |
+| 12   | Notification bell                          | Tasks 3, 9         |
+| 13   | Settings panel with invite                 | Tasks 5, 9         |
+| 14   | PWA setup                                  | None (independent) |
+| 15   | Edge Function auth                         | Task 9             |
+| 16   | Schema reference update                    | All above          |
 
 **Parallel groups:**
+
 - Tasks 1, 2, 4, 6, 14 can run in parallel (no dependencies)
 - Tasks 3, 5, 7 can run after their deps
 - Tasks 8-13 are sequential (UI building)

@@ -13,6 +13,7 @@
 ### Task 1: Schema Migration — Events table changes
 
 **Files:**
+
 - Create: `supabase/migrations/2026-03-11-document-date-extraction.sql`
 - Modify: `supabase/schema.sql` (update reference schema to match)
 
@@ -61,6 +62,7 @@ Run the migration SQL against the live database using the Supabase `execute_sql`
 **Step 3: Update schema.sql reference**
 
 Update `supabase/schema.sql` to reflect the new state:
+
 - Change `message_id UUID NOT NULL` to `message_id UUID` on the events table
 - Add `document_id UUID REFERENCES documents(id) ON DELETE CASCADE` to events
 - Add the CHECK constraint
@@ -79,6 +81,7 @@ git commit -m "feat: schema migration for document date extraction and direct up
 ### Task 2: Create `extract-dates` Edge Function
 
 **Files:**
+
 - Create: `supabase/functions/extract-dates/index.ts`
 
 **Step 1: Create the edge function**
@@ -103,10 +106,10 @@ Deno.serve(async (req) => {
     const { document_id } = await req.json();
 
     if (!document_id) {
-      return new Response(
-        JSON.stringify({ error: "document_id required" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      return new Response(JSON.stringify({ error: "document_id required" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
@@ -116,7 +119,10 @@ Deno.serve(async (req) => {
     if (!openaiKey) {
       return new Response(
         JSON.stringify({ error: "OPENAI_API_KEY not configured" }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
       );
     }
 
@@ -130,16 +136,21 @@ Deno.serve(async (req) => {
       .single();
 
     if (fetchErr || !doc) {
-      return new Response(
-        JSON.stringify({ error: "Document not found" }),
-        { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      return new Response(JSON.stringify({ error: "Document not found" }), {
+        status: 404,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
     if (!doc.content_text || doc.content_text.trim().length < 20) {
       return new Response(
-        JSON.stringify({ error: "Document has no extracted text. Run text extraction first." }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        JSON.stringify({
+          error: "Document has no extracted text. Run text extraction first.",
+        }),
+        {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
       );
     }
 
@@ -165,19 +176,22 @@ Document filename: ${doc.filename}
 Document content:
 ${doc.content_text.slice(0, 30000)}`;
 
-    const openaiResp = await fetch("https://api.openai.com/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${openaiKey}`,
-        "Content-Type": "application/json",
+    const openaiResp = await fetch(
+      "https://api.openai.com/v1/chat/completions",
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${openaiKey}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model: "gpt-4o-mini",
+          messages: [{ role: "user", content: prompt }],
+          temperature: 0.1,
+          response_format: { type: "json_object" },
+        }),
       },
-      body: JSON.stringify({
-        model: "gpt-4o-mini",
-        messages: [{ role: "user", content: prompt }],
-        temperature: 0.1,
-        response_format: { type: "json_object" },
-      }),
-    });
+    );
 
     if (!openaiResp.ok) {
       const err = await openaiResp.text();
@@ -191,7 +205,7 @@ ${doc.content_text.slice(0, 30000)}`;
     try {
       const parsed = JSON.parse(rawContent);
       // Handle both { events: [...] } and direct array
-      events = Array.isArray(parsed) ? parsed : (parsed.events || []);
+      events = Array.isArray(parsed) ? parsed : parsed.events || [];
     } catch {
       throw new Error("Failed to parse OpenAI response as JSON");
     }
@@ -200,20 +214,24 @@ ${doc.content_text.slice(0, 30000)}`;
       // Mark as extracted even if no dates found
       await supabase
         .from("documents")
-        .update({ dates_extracted: true, dates_extracted_at: new Date().toISOString() })
+        .update({
+          dates_extracted: true,
+          dates_extracted_at: new Date().toISOString(),
+        })
         .eq("id", document_id);
 
       return new Response(
-        JSON.stringify({ success: true, events_created: 0, message: "No dates found in document." }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        JSON.stringify({
+          success: true,
+          events_created: 0,
+          message: "No dates found in document.",
+        }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }
 
     // Delete any existing events for this document (in case of re-extraction)
-    await supabase
-      .from("events")
-      .delete()
-      .eq("document_id", document_id);
+    await supabase.from("events").delete().eq("document_id", document_id);
 
     // Insert events
     const rows = events
@@ -227,9 +245,7 @@ ${doc.content_text.slice(0, 30000)}`;
         action_required: e.action_required || false,
       }));
 
-    const { error: insertErr } = await supabase
-      .from("events")
-      .insert(rows);
+    const { error: insertErr } = await supabase.from("events").insert(rows);
 
     if (insertErr) {
       throw new Error(`Failed to insert events: ${insertErr.message}`);
@@ -238,18 +254,21 @@ ${doc.content_text.slice(0, 30000)}`;
     // Update document flags
     await supabase
       .from("documents")
-      .update({ dates_extracted: true, dates_extracted_at: new Date().toISOString() })
+      .update({
+        dates_extracted: true,
+        dates_extracted_at: new Date().toISOString(),
+      })
       .eq("id", document_id);
 
     return new Response(
       JSON.stringify({ success: true, events_created: rows.length }),
-      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      { headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
   } catch (err) {
-    return new Response(
-      JSON.stringify({ error: err.message }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
+    return new Response(JSON.stringify({ error: err.message }), {
+      status: 500,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
   }
 });
 ```
@@ -270,11 +289,13 @@ git commit -m "feat: add extract-dates edge function for LLM date extraction"
 ### Task 3: Add Upload Button to DocumentBrowser
 
 **Files:**
+
 - Modify: `src/components/DocumentBrowser.jsx`
 
 **Step 1: Add upload state and handler**
 
 Add to DocumentBrowser component:
+
 - `uploading` state (boolean)
 - Hidden file input ref
 - `handleUpload` function that:
@@ -299,6 +320,7 @@ git commit -m "feat: add direct document upload to DocumentBrowser"
 ### Task 4: Add Extract Text & Extract Dates Buttons to DocumentCard
 
 **Files:**
+
 - Modify: `src/components/DocumentCard.jsx`
 - Modify: `src/components/DocumentBrowser.jsx` (pass `content_text` and `dates_extracted` to cards)
 
@@ -307,6 +329,7 @@ git commit -m "feat: add direct document upload to DocumentBrowser"
 In `loadDocuments()`, add `content_text, dates_extracted` to the select query. We only need to know if `content_text` exists (not the full text), so we'll check `content_text IS NOT NULL` client-side.
 
 Change the select to:
+
 ```javascript
 .select('id, filename, file_path, source_url, source_type, tags, category, indexed_for_rag, content_text, dates_extracted, created_at')
 ```
@@ -314,6 +337,7 @@ Change the select to:
 **Step 2: Add Extract Text button to DocumentCard**
 
 Add a button that:
+
 - Shows "Extract Text" when `content_text` is null/empty
 - Triggers n8n webhook (same as existing RAG flow when no text exists)
 - Shows "Text Extracted" (disabled) when content_text exists
@@ -322,6 +346,7 @@ Add a button that:
 **Step 3: Add Extract Dates button to DocumentCard**
 
 Add a button that:
+
 - Shows "Extract Dates" when `content_text` exists AND `dates_extracted` is false
 - Disabled when no `content_text` (tooltip: "Extract text first")
 - Calls `supabase.functions.invoke('extract-dates', { body: { document_id: doc.id } })`
@@ -331,6 +356,7 @@ Add a button that:
 **Step 4: Add dates_extracted badge to DocumentCard meta row**
 
 Next to the RAG badge, show a dates badge:
+
 - "Dates Extracted" (green) when `dates_extracted` is true
 - Nothing when false (the button handles it)
 
@@ -346,12 +372,14 @@ git commit -m "feat: add extract text and extract dates buttons to DocumentCard"
 ### Task 5: Update CalendarView and Events List to Support Document-Sourced Events
 
 **Files:**
+
 - Modify: `src/App.jsx`
 - Modify: `src/components/CalendarView.jsx`
 
 **Step 1: Update loadEvents query in App.jsx**
 
 Change the events select to also fetch document info:
+
 ```javascript
 .select('*, messages(id, subject, sender_name, sender_email, content, source, received_at, is_read, attachments(id, filename, file_path, mime_type, file_size)), documents(id, filename, file_path), event_tags(tag)')
 ```
@@ -359,6 +387,7 @@ Change the events select to also fetch document info:
 **Step 2: Update CalendarView to show document source**
 
 In `renderEventCard`, after the existing message source display:
+
 - If `evt.documents` exists (and no `evt.messages`), show document icon + filename
 - The expand hint should say "Show document" / "Hide document" instead of "Show message"
 - The expanded panel shows document filename with a download link (using signed URL from Storage)
@@ -366,6 +395,7 @@ In `renderEventCard`, after the existing message source display:
 **Step 3: Update Events list in App.jsx**
 
 In the events tab rendering (lines ~339-429):
+
 - After the existing message panel, add document panel support
 - If `evt.documents` exists, show "From: {document filename}" in event source
 - Expanded view shows document filename + download link
@@ -383,6 +413,7 @@ git commit -m "feat: support document-sourced events in calendar and events list
 ### Task 6: Add CSS Styles for New UI Elements
 
 **Files:**
+
 - Modify: `src/App.css`
 
 **Step 1: Add styles for upload button**

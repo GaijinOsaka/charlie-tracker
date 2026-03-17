@@ -4,7 +4,7 @@ export const CHUNK_OVERLAP = 100;
 export function chunkText(
   text: string,
   chunkSize = CHUNK_SIZE,
-  overlap = CHUNK_OVERLAP
+  overlap = CHUNK_OVERLAP,
 ): { content: string; char_start: number; char_end: number }[] {
   const chunks: { content: string; char_start: number; char_end: number }[] =
     [];
@@ -41,7 +41,7 @@ export function chunkText(
 
 export async function generateEmbeddings(
   texts: string[],
-  openaiKey: string
+  openaiKey: string,
 ): Promise<number[][]> {
   const resp = await fetch("https://api.openai.com/v1/embeddings", {
     method: "POST",

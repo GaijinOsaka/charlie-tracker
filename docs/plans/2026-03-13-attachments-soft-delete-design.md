@@ -13,11 +13,14 @@
 ## Feature 1: Attachment Viewer Modal
 
 ### Design
+
 When users click an attachment on mobile:
+
 - **PDFs & Images:** Open in in-app modal/lightbox (full-screen on mobile, centered on desktop)
 - **Other types:** Download as before
 
 ### Components
+
 - New: `AttachmentViewer.jsx` - Modal component
   - PDF rendering via `pdfjs-dist`
   - Image lightbox with next/prev navigation
@@ -25,12 +28,15 @@ When users click an attachment on mobile:
   - Close: ESC key or button
 
 ### Frontend Changes
+
 In `App.jsx`:
+
 1. Add `openAttachmentViewer(attachment)` function
 2. Update attachment click handlers to call viewer instead of download
 3. Add dependency: `pdfjs-dist`
 
 ### Logic
+
 ```javascript
 openAttachmentViewer(attachment) {
   // Check mime_type
@@ -47,6 +53,7 @@ openAttachmentViewer(attachment) {
 ### Database Schema
 
 **New table: `message_deletions`**
+
 ```sql
 CREATE TABLE message_deletions (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -61,6 +68,7 @@ CREATE INDEX idx_message_deletions_message ON message_deletions(message_id);
 ```
 
 **Updated RLS Policy on `messages` table**
+
 ```sql
 CREATE POLICY "users_see_non_deleted_messages" ON messages
   FOR SELECT
@@ -74,6 +82,7 @@ CREATE POLICY "users_see_non_deleted_messages" ON messages
 ```
 
 This ensures:
+
 - User A deletes message → Hidden from A only
 - User B doesn't delete same message → Still visible to B
 - Database enforces visibility at query level
@@ -85,6 +94,7 @@ Create view `messages_with_deletion_info` showing deletion metadata for admins.
 
 **Update `deleteMessage()` function:**
 Replace hard delete (`.delete()`) with soft delete insert:
+
 ```javascript
 async function deleteMessage(msgId) {
   if (!window.confirm("Delete this message from your view?")) return;
@@ -108,6 +118,7 @@ async function deleteMessage(msgId) {
 **No query changes needed:** RLS policy automatically filters results - existing `loadMessages()` works as-is.
 
 ### Behavior
+
 - Related events and attachments are NOT soft-deleted (only message)
 - Message stays in database with deletion tracking
 - Other users can still see message, events, and attachments
@@ -118,6 +129,7 @@ async function deleteMessage(msgId) {
 ## Data Flow
 
 **User A deletes a message:**
+
 1. Clicks "Delete" button
 2. Confirms: "Delete this message from your view?"
 3. Inserts row into `message_deletions` (user_id=A, message_id=X)
@@ -126,11 +138,13 @@ async function deleteMessage(msgId) {
 6. Toast: "Message deleted from your view"
 
 **User B views same message:**
+
 - No deletion record for (B, X)
 - RLS policy allows view
 - Message still visible with all events/attachments
 
 **User clicks attachment:**
+
 1. Handler calls `openAttachmentViewer(att)`
 2. Checks `att.mime_type`
 3. PDF/image: Fetch and render in modal
@@ -142,6 +156,7 @@ async function deleteMessage(msgId) {
 ## Testing Plan
 
 ### Soft Delete Tests
+
 - [ ] User A deletes message → Not visible to A
 - [ ] Same message still visible to User B
 - [ ] User B deletes same message → Not visible to B
@@ -150,6 +165,7 @@ async function deleteMessage(msgId) {
 - [ ] Admin can see both deletions with metadata
 
 ### Attachment Viewer Tests
+
 - [ ] Click PDF → Opens in modal with pdfjs viewer
 - [ ] Click image → Opens in lightbox (next/prev nav)
 - [ ] Click Word/Excel → Downloads (fallback)

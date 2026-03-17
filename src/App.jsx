@@ -9,6 +9,7 @@ import ChatDrawer from "./components/ChatDrawer";
 import ActionModal from "./components/ActionModal";
 import NotificationBell from "./components/NotificationBell";
 import { AttachmentViewer } from "./components/AttachmentViewer";
+import SetPassword from "./components/SetPassword";
 import { Agentation } from "agentation";
 import "./App.css";
 
@@ -43,7 +44,13 @@ function renderMarkdown(text) {
 }
 
 function App() {
-  const { user, profile, loading: authLoading, signOut } = useAuth();
+  const {
+    user,
+    profile,
+    loading: authLoading,
+    needsPasswordSet,
+    signOut,
+  } = useAuth();
   const [activeTab, setActiveTab] = useState("messages");
   const [messages, setMessages] = useState([]);
   const [events, setEvents] = useState([]);
@@ -197,10 +204,12 @@ function App() {
         .eq("user_id", user.id);
 
       if (deleteError) throw deleteError;
-      const deletedMessageIds = new Set((deletedIds || []).map(d => d.message_id));
+      const deletedMessageIds = new Set(
+        (deletedIds || []).map((d) => d.message_id),
+      );
 
       const annotated = (data || [])
-        .filter(msg => !deletedMessageIds.has(msg.id))
+        .filter((msg) => !deletedMessageIds.has(msg.id))
         .map((msg) => ({
           ...msg,
           is_read: (msg.message_read_status || []).some(
@@ -340,7 +349,11 @@ function App() {
   }
 
   async function deleteMessage(msgId) {
-    if (!window.confirm("Delete this message from your view? (Attachments and events will be preserved)"))
+    if (
+      !window.confirm(
+        "Delete this message from your view? (Attachments and events will be preserved)",
+      )
+    )
       return;
     try {
       // Insert soft delete record - message hidden from this user only
@@ -567,6 +580,10 @@ function App() {
 
   if (!user) {
     return <LoginPage />;
+  }
+
+  if (needsPasswordSet) {
+    return <SetPassword />;
   }
 
   return (

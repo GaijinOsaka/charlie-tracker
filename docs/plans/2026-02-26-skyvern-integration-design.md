@@ -52,13 +52,13 @@ n8n (1GB droplet)                    4GB droplet (Docker)
 
 ## Resource Allocation (4GB Droplet)
 
-| Container | Idle RAM | Active RAM | Notes |
-|-----------|----------|------------|-------|
-| Docling | ~300MB | ~1GB | Only when processing |
-| Skyvern API | ~200MB | ~500MB | Task engine |
-| Skyvern Postgres | ~100MB | ~150MB | Task state/history |
-| Skyvern Browser | ~0MB | ~800MB | Only during scrape |
-| **Total peak** | | **~2.5GB** | Leaves ~1.5GB headroom |
+| Container        | Idle RAM | Active RAM | Notes                  |
+| ---------------- | -------- | ---------- | ---------------------- |
+| Docling          | ~300MB   | ~1GB       | Only when processing   |
+| Skyvern API      | ~200MB   | ~500MB     | Task engine            |
+| Skyvern Postgres | ~100MB   | ~150MB     | Task state/history     |
+| Skyvern Browser  | ~0MB     | ~800MB     | Only during scrape     |
+| **Total peak**   |          | **~2.5GB** | Leaves ~1.5GB headroom |
 
 Skyvern's browser only runs during a scrape (a few minutes every 15). Docling is on-demand. They rarely overlap.
 
@@ -117,6 +117,7 @@ services:
 ```
 
 Key differences from local config:
+
 - `BROWSER_TYPE=chromium-headless` (not `cdp-connect` — no external Chrome on server)
 - No `skyvern-ui` service (n8n calls the API directly)
 - Port binds to private IP via `SKYVERN_BIND_IP`
@@ -180,6 +181,7 @@ Based on working local config, with credentials externalised:
 ## n8n Workflow Design
 
 ### Trigger
+
 Schedule trigger: `*/15 * * * *` (every 15 minutes)
 
 ### Step 1: Create Skyvern Task (HTTP Request)
@@ -242,19 +244,19 @@ Response includes:
 
 ### DO Cloud Firewall
 
-| Rule | Port | Source | Purpose |
-|------|------|--------|---------|
-| Allow | 8000 | n8n droplet private IP only | Skyvern API |
-| Allow | 22 | Your home IP | SSH access |
-| Deny | All | Everything else | Default deny |
+| Rule  | Port | Source                      | Purpose      |
+| ----- | ---- | --------------------------- | ------------ |
+| Allow | 8000 | n8n droplet private IP only | Skyvern API  |
+| Allow | 22   | Your home IP                | SSH access   |
+| Deny  | All  | Everything else             | Default deny |
 
 ### Credentials
 
-| Credential | Stored In | Access |
-|------------|-----------|--------|
-| Arbor email/password | n8n environment variables | Passed to Skyvern per-task |
-| Skyvern API key | n8n credentials + `.env.skyvern` | Auth between n8n and Skyvern |
-| Skyvern DB password | `.env.skyvern` on 4GB droplet | Internal only |
+| Credential           | Stored In                        | Access                       |
+| -------------------- | -------------------------------- | ---------------------------- |
+| Arbor email/password | n8n environment variables        | Passed to Skyvern per-task   |
+| Skyvern API key      | n8n credentials + `.env.skyvern` | Auth between n8n and Skyvern |
+| Skyvern DB password  | `.env.skyvern` on 4GB droplet    | Internal only                |
 
 ---
 
@@ -275,12 +277,12 @@ Response includes:
 
 ## Changes to Original MVP Plan
 
-| Component | Original Plan | New Plan |
-|-----------|--------------|----------|
-| Arbor scraping | Playwright in n8n | Skyvern on separate container |
-| Browser automation | CSS selectors (brittle) | AI vision (resilient) |
-| n8n workflow | Complex Playwright nodes | Simple HTTP Request nodes |
-| Infrastructure | n8n droplet only | n8n droplet + 4GB droplet |
-| Resilience | Breaks on UI changes | Adapts to UI changes |
+| Component          | Original Plan            | New Plan                      |
+| ------------------ | ------------------------ | ----------------------------- |
+| Arbor scraping     | Playwright in n8n        | Skyvern on separate container |
+| Browser automation | CSS selectors (brittle)  | AI vision (resilient)         |
+| n8n workflow       | Complex Playwright nodes | Simple HTTP Request nodes     |
+| Infrastructure     | n8n droplet only         | n8n droplet + 4GB droplet     |
+| Resilience         | Breaks on UI changes     | Adapts to UI changes          |
 
 Everything else (Supabase schema, React dashboard, Gmail integration, deduplication) remains unchanged.
