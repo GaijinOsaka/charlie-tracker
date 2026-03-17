@@ -125,7 +125,9 @@ export default function EventModal({
                 onChange={(e) => setEventEndDate(e.target.value)}
               />
             </div>
+          </div>
 
+          <div className="form-row">
             <div className="form-group">
               <label htmlFor="time">Time</label>
               <input
@@ -135,9 +137,7 @@ export default function EventModal({
                 onChange={(e) => setEventTime(e.target.value)}
               />
             </div>
-          </div>
 
-          <div className="form-row">
             <div className="form-group">
               <label htmlFor="endTime">End Time</label>
               <input
