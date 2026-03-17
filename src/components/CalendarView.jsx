@@ -15,6 +15,8 @@ function CalendarView({ events, linkify, downloadAttachment, archiveEvent, onCre
   const [showEventModal, setShowEventModal] = useState(false)
   const [selectedDateForCreate, setSelectedDateForCreate] = useState(null)
   const [editingEvent, setEditingEvent] = useState(null)
+  const [lastTapTime, setLastTapTime] = useState({})
+  const [lastTapDate, setLastTapDate] = useState(null)
 
   // Build a map of date string -> events
   const eventsByDate = {}
@@ -97,9 +99,32 @@ function CalendarView({ events, linkify, downloadAttachment, archiveEvent, onCre
   }
 
   function handleDateDoubleClick(day, ds) {
+    if (!onCreateEvent) return
     setSelectedDateForCreate(ds)
     setEditingEvent(null)
     setShowEventModal(true)
+  }
+
+  function handleDateTap(day, ds) {
+    const now = Date.now()
+    const timeSinceLastTap = lastTapTime[ds] ? now - lastTapTime[ds] : null
+
+    // Double tap detected (within 300ms)
+    if (timeSinceLastTap && timeSinceLastTap < 300 && lastTapDate === ds) {
+      if (onCreateEvent) {
+        setSelectedDateForCreate(ds)
+        setEditingEvent(null)
+        setShowEventModal(true)
+      }
+      setLastTapTime({})
+      setLastTapDate(null)
+    } else {
+      // Single tap - select date
+      setSelectedDate(ds)
+      setExpandedCalEvent(null)
+      setLastTapTime({ ...lastTapTime, [ds]: now })
+      setLastTapDate(ds)
+    }
   }
 
   const selectedEvents = selectedDate ? (eventsByDate[selectedDate] || []) : []
@@ -277,11 +302,8 @@ function CalendarView({ events, linkify, downloadAttachment, archiveEvent, onCre
             <div
               key={ds}
               className={`cal-cell ${isToday ? 'cal-today' : ''} ${isSelected ? 'cal-selected' : ''} ${hasEvents ? 'cal-has-events' : ''} ${onCreateEvent ? 'cal-clickable' : ''}`}
-              onClick={() => {
-                setSelectedDate(ds)
-                setExpandedCalEvent(null)
-              }}
-              onDoubleClick={() => onCreateEvent && handleDateDoubleClick(day, ds)}
+              onClick={() => handleDateTap(day, ds)}
+              onDoubleClick={() => handleDateDoubleClick(day, ds)}
               title={onCreateEvent ? 'Click to select or double-click to create event' : ''}
             >
               <span className="cal-day-num">{day}</span>
