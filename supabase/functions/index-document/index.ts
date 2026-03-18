@@ -141,14 +141,14 @@ Deno.serve(async (req) => {
 
     if (!isServiceRole) {
       const anonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
-      const supabaseAuth = createClient(supabaseUrl, anonKey, {
-        global: { headers: { Authorization: authHeader } },
-      });
+      const supabaseAuth = createClient(supabaseUrl, anonKey);
+      const token = authHeader.replace("Bearer ", "");
       const {
         data: { user },
         error: authError,
-      } = await supabaseAuth.auth.getUser();
+      } = await supabaseAuth.auth.getUser(token);
       if (authError || !user) {
+        console.error("Auth validation error:", authError?.message);
         return new Response(
           JSON.stringify({
             error: "Auth validation failed",
