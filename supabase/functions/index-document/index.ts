@@ -73,7 +73,7 @@ async function indexDocument(
   }
 
   // Update document flags and status
-  await supabase
+  const updateSuccessRes = await supabase
     .from("documents")
     .update({
       indexed_for_rag: true,
@@ -82,6 +82,15 @@ async function indexDocument(
       rag_error: null,
     })
     .eq("id", docId);
+
+  if (updateSuccessRes.error) {
+    console.error("Error updating status to indexed:", updateSuccessRes.error);
+    return {
+      success: false,
+      chunks_created: totalCreated,
+      error: `Failed to update status: ${updateSuccessRes.error.message}`,
+    };
+  }
 
   return { success: true, chunks_created: totalCreated };
 }
@@ -208,13 +217,17 @@ Deno.serve(async (req) => {
         }
 
         // Update status to extracting
-        await supabase
+        const updateExtractingRes = await supabase
           .from("documents")
           .update({
             rag_status: "extracting",
             last_rag_attempt: new Date().toISOString(),
           })
           .eq("id", doc_id);
+
+        if (updateExtractingRes.error) {
+          console.error("Error updating status to extracting:", updateExtractingRes.error);
+        }
 
         // Fire and forget — n8n will extract text via Docling, save it,
         // then call this Edge Function again to chunk + embed
@@ -236,13 +249,17 @@ Deno.serve(async (req) => {
       }
 
       // Update status to indexing
-      await supabase
+      const updateIndexingRes = await supabase
         .from("documents")
         .update({
           rag_status: "indexing",
           last_rag_attempt: new Date().toISOString(),
         })
         .eq("id", doc_id);
+
+      if (updateIndexingRes.error) {
+        console.error("Error updating status to indexing:", updateIndexingRes.error);
+      }
 
       const result = await indexDocument(supabase, doc_id, openaiKey);
 
@@ -259,13 +276,17 @@ Deno.serve(async (req) => {
         }).catch(() => {});
       } else {
         // Update status to failed with error message
-        await supabase
+        const updateFailedRes = await supabase
           .from("documents")
           .update({
             rag_status: "failed",
             rag_error: result.error || "Unknown indexing error",
           })
           .eq("id", doc_id);
+
+        if (updateFailedRes.error) {
+          console.error("Error updating status to failed:", updateFailedRes.error);
+        }
       }
 
       return new Response(JSON.stringify(result), {
