@@ -56,17 +56,10 @@ export default function DocumentCard({
     const action = doc.indexed_for_rag ? "remove" : "index";
     setIndexing(true);
     try {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-
       const { data, error } = await supabase.functions.invoke(
         "index-document",
         {
           body: { doc_id: doc.id, action },
-          headers: session?.access_token
-            ? { Authorization: `Bearer ${session.access_token}` }
-            : {},
         },
       );
 
