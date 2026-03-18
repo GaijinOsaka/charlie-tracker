@@ -161,27 +161,27 @@ export default function DocumentCard({
         {/* RAG Status Badge */}
         {doc.rag_status === "indexing" && (
           <span className="doc-rag-badge rag-indexing">
-            \u{23F3} Indexing...
+            ⏳ Indexing...
           </span>
         )}
         {doc.rag_status === "extracting" && (
           <span className="doc-rag-badge rag-extracting">
-            \u{1F4C4} Extracting (2-3 min)
+            📄 Extracting (2-3 min)
           </span>
         )}
         {doc.rag_status === "indexed" && (
           <span className="doc-rag-badge rag-yes">
-            \u26A1 Indexed
+            ⚡ Indexed
           </span>
         )}
         {doc.rag_status === "failed" && (
           <span className="doc-rag-badge rag-failed">
-            \u274C Failed
+            ❌ Failed
           </span>
         )}
         {(!doc.rag_status || doc.rag_status === "idle") && (
           <span className="doc-rag-badge rag-no">
-            \u{1F512} Not Indexed
+            🔒 Not Indexed
           </span>
         )}
 
