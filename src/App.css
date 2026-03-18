@@ -20,6 +20,14 @@
   box-sizing: border-box;
 }
 
+/* Touch-friendly button and interactive element handling */
+button, [role="button"], .clickable {
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
 body {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   background-color: var(--bg);
@@ -116,6 +124,7 @@ header h1 {
   cursor: pointer;
   transition: all 0.2s;
   overflow: hidden;
+  max-width: 100%;
 }
 
 .message-item.unread {
@@ -152,6 +161,8 @@ header h1 {
   margin-bottom: 4px;
   overflow-wrap: break-word;
   word-break: break-word;
+  max-width: 100%;
+  white-space: normal;
 }
 
 .message-sender {
@@ -210,7 +221,8 @@ header h1 {
   overflow-wrap: break-word;
   word-break: break-word;
   max-width: 100%;
-  overflow: hidden;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 .message-content.expandable {
@@ -221,6 +233,10 @@ header h1 {
   color: var(--primary);
   text-decoration: underline;
   word-break: break-all;
+  display: inline-block;
+  max-width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 .inline-link:hover {
@@ -1013,6 +1029,8 @@ header h1 {
   display: flex;
   flex-direction: column;
   transition: all 0.2s;
+  overflow: hidden;
+  max-width: 100%;
 }
 
 .event-item:hover {
@@ -1103,6 +1121,8 @@ header h1 {
   font-weight: 600;
   color: var(--text);
   margin-bottom: 4px;
+  word-break: break-word;
+  max-width: 100%;
 }
 
 .event-desc {
@@ -1110,6 +1130,9 @@ header h1 {
   color: var(--text-secondary);
   line-height: 1.5;
   margin-bottom: 6px;
+  word-break: break-word;
+  overflow-wrap: break-word;
+  max-width: 100%;
 }
 
 .event-meta {
@@ -2551,4 +2574,49 @@ header h1 {
 .btn-event-delete:hover {
   background: var(--danger);
   color: white;
+}
+
+/* Extra mobile constraints for very small screens (480px and below) */
+@media (max-width: 480px) {
+  .message-item {
+    max-width: 100%;
+    overflow: hidden;
+    word-break: break-word;
+  }
+
+  .message-subject {
+    font-size: 15px;
+    max-width: 100%;
+    word-break: break-word;
+  }
+
+  .message-content {
+    font-size: 13px;
+    max-width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .inline-link {
+    max-width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .event-item {
+    max-width: 100%;
+    overflow: hidden;
+  }
+
+  .event-title {
+    font-size: 14px;
+    max-width: 100%;
+    word-break: break-word;
+  }
+
+  .event-desc {
+    font-size: 12px;
+    max-width: 100%;
+    word-break: break-word;
+  }
 }
