@@ -92,13 +92,30 @@ export default function DocumentCard({
       if (error) {
         let msg = error.message;
         let detail = "";
+
+        // Log full error object for debugging
+        console.error("Full error object:", error);
+        console.error("Error keys:", Object.keys(error));
+
+        // Try different ways to extract the response body
         try {
           if (error.context && typeof error.context.json === "function") {
             const body = await error.context.json();
+            console.log("Error body from context.json():", body);
             msg = body.error || msg;
             detail = body.detail || "";
+            if (body.errorName) detail = `${detail} (${body.errorName})`;
+            if (body.userNull !== undefined) detail = `${detail} [user: ${body.userNull ? "null" : "exists"}]`;
           }
-        } catch (_) {}
+        } catch (parseErr) {
+          console.error("Error parsing error.context.json():", parseErr);
+        }
+
+        // Try to get status code if available
+        if (error.status) {
+          msg = `${msg} (HTTP ${error.status})`;
+        }
+
         throw new Error(detail ? `${msg}: ${detail}` : msg);
       }
       if (data && !data.success)
