@@ -50,17 +50,16 @@ export default function DocumentCard({
   }
 
   async function toggleRagFlag() {
+    // Prevent concurrent calls
+    if (indexing) return;
+
     const action = doc.indexed_for_rag ? "remove" : "index";
     setIndexing(true);
     try {
       const {
         data: { session },
       } = await supabase.auth.getSession();
-      console.log("RAG auth debug:", {
-        hasSession: !!session,
-        hasToken: !!session?.access_token,
-        tokenPrefix: session?.access_token?.substring(0, 20),
-      });
+
       const { data, error } = await supabase.functions.invoke(
         "index-document",
         {
