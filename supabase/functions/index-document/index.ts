@@ -72,12 +72,14 @@ async function indexDocument(
     totalCreated += batch.length;
   }
 
-  // Update document flags
+  // Update document flags and status
   await supabase
     .from("documents")
     .update({
       indexed_for_rag: true,
       last_indexed_at: new Date().toISOString(),
+      rag_status: "indexed",
+      rag_error: null,
     })
     .eq("id", docId);
 
@@ -91,10 +93,15 @@ async function removeDocument(
   // Delete chunks
   await supabase.from("document_chunks").delete().eq("document_id", docId);
 
-  // Reset flag
+  // Reset flags and status
   await supabase
     .from("documents")
-    .update({ indexed_for_rag: false, last_indexed_at: null })
+    .update({
+      indexed_for_rag: false,
+      last_indexed_at: null,
+      rag_status: "idle",
+      rag_error: null,
+    })
     .eq("id", docId);
 
   return { success: true };
@@ -200,6 +207,15 @@ Deno.serve(async (req) => {
           );
         }
 
+        // Update status to extracting
+        await supabase
+          .from("documents")
+          .update({
+            rag_status: "extracting",
+            last_rag_attempt: new Date().toISOString(),
+          })
+          .eq("id", doc_id);
+
         // Fire and forget — n8n will extract text via Docling, save it,
         // then call this Edge Function again to chunk + embed
         fetch(n8nWebhookUrl, {
@@ -219,6 +235,15 @@ Deno.serve(async (req) => {
         );
       }
 
+      // Update status to indexing
+      await supabase
+        .from("documents")
+        .update({
+          rag_status: "indexing",
+          last_rag_attempt: new Date().toISOString(),
+        })
+        .eq("id", doc_id);
+
       const result = await indexDocument(supabase, doc_id, openaiKey);
 
       // After successful indexing, automatically extract dates
@@ -232,6 +257,15 @@ Deno.serve(async (req) => {
           },
           body: JSON.stringify({ document_id: doc_id }),
         }).catch(() => {});
+      } else {
+        // Update status to failed with error message
+        await supabase
+          .from("documents")
+          .update({
+            rag_status: "failed",
+            rag_error: result.error || "Unknown indexing error",
+          })
+          .eq("id", doc_id);
       }
 
       return new Response(JSON.stringify(result), {
@@ -248,6 +282,18 @@ Deno.serve(async (req) => {
       },
     );
   } catch (err) {
+    // Update document status to failed on any error
+    if (doc_id) {
+      await supabase
+        .from("documents")
+        .update({
+          rag_status: "failed",
+          rag_error: err.message,
+        })
+        .eq("id", doc_id)
+        .catch(() => {}); // Ignore errors updating status
+    }
+
     return new Response(JSON.stringify({ error: err.message }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },

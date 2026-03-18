@@ -72,7 +72,7 @@ export default function DocumentBrowser() {
       const { data, error } = await supabase
         .from("documents")
         .select(
-          "id, filename, file_path, source_url, source_type, tags, category, indexed_for_rag, dates_extracted, created_at",
+          "id, filename, file_path, source_url, source_type, tags, category, indexed_for_rag, dates_extracted, created_at, rag_status, rag_error, last_rag_attempt",
         )
         .order("filename", { ascending: true });
 

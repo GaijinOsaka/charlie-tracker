@@ -158,13 +158,33 @@ export default function DocumentCard({
         >
           {doc.category || "other"}
         </span>
-        <span
-          className={`doc-rag-badge ${doc.indexed_for_rag ? "rag-yes" : "rag-no"}`}
-        >
-          {doc.indexed_for_rag
-            ? "\u26A1 Indexed"
-            : "\u{1F512} Not Indexed"}
-        </span>
+        {/* RAG Status Badge */}
+        {doc.rag_status === "indexing" && (
+          <span className="doc-rag-badge rag-indexing">
+            \u{23F3} Indexing...
+          </span>
+        )}
+        {doc.rag_status === "extracting" && (
+          <span className="doc-rag-badge rag-extracting">
+            \u{1F4C4} Extracting (2-3 min)
+          </span>
+        )}
+        {doc.rag_status === "indexed" && (
+          <span className="doc-rag-badge rag-yes">
+            \u26A1 Indexed
+          </span>
+        )}
+        {doc.rag_status === "failed" && (
+          <span className="doc-rag-badge rag-failed">
+            \u274C Failed
+          </span>
+        )}
+        {(!doc.rag_status || doc.rag_status === "idle") && (
+          <span className="doc-rag-badge rag-no">
+            \u{1F512} Not Indexed
+          </span>
+        )}
+
         {doc.indexed_for_rag && (
           <span className="doc-text-badge">Text Extracted</span>
         )}
@@ -172,6 +192,13 @@ export default function DocumentCard({
           <span className="doc-dates-badge">Dates Extracted</span>
         )}
       </div>
+
+      {/* RAG Error Message */}
+      {doc.rag_status === "failed" && doc.rag_error && (
+        <div className="doc-error-message">
+          <strong>Error:</strong> {doc.rag_error}
+        </div>
+      )}
 
       {tags.length > 0 && (
         <div className="doc-tags">
@@ -194,19 +221,30 @@ export default function DocumentCard({
         >
           {downloading ? "Opening..." : "Download"}
         </button>
-        <button
-          className={`btn-doc ${doc.indexed_for_rag ? "btn-remove-rag" : "btn-add-rag"}`}
-          onClick={toggleRagFlag}
-          disabled={indexing}
-        >
-          {indexing
-            ? doc.indexed_for_rag
-              ? "Removing..."
-              : "Indexing..."
-            : doc.indexed_for_rag
-              ? "Remove from RAG"
-              : "Add to RAG"}
-        </button>
+        {doc.rag_status === "failed" ? (
+          <button
+            className="btn-doc btn-retry-rag"
+            onClick={toggleRagFlag}
+            disabled={indexing}
+            title="Retry RAG indexing"
+          >
+            {indexing ? "Retrying..." : "Retry"}
+          </button>
+        ) : (
+          <button
+            className={`btn-doc ${doc.indexed_for_rag ? "btn-remove-rag" : "btn-add-rag"}`}
+            onClick={toggleRagFlag}
+            disabled={indexing || doc.rag_status === "indexing" || doc.rag_status === "extracting"}
+          >
+            {doc.rag_status === "indexing" || doc.rag_status === "extracting"
+              ? doc.rag_status === "extracting"
+                ? "Extracting..."
+                : "Indexing..."
+              : doc.indexed_for_rag
+                ? "Remove from RAG"
+                : "Add to RAG"}
+          </button>
+        )}
         <button
           className="btn-doc btn-delete"
           onClick={handleDelete}
