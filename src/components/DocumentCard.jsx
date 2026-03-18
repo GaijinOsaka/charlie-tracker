@@ -56,6 +56,11 @@ export default function DocumentCard({
       const {
         data: { session },
       } = await supabase.auth.getSession();
+      console.log("RAG auth debug:", {
+        hasSession: !!session,
+        hasToken: !!session?.access_token,
+        tokenPrefix: session?.access_token?.substring(0, 20),
+      });
       const { data, error } = await supabase.functions.invoke(
         "index-document",
         {
@@ -68,13 +73,15 @@ export default function DocumentCard({
 
       if (error) {
         let msg = error.message;
+        let detail = "";
         try {
           if (error.context && typeof error.context.json === "function") {
             const body = await error.context.json();
             msg = body.error || msg;
+            detail = body.detail || "";
           }
         } catch (_) {}
-        throw new Error(msg);
+        throw new Error(detail ? `${msg}: ${detail}` : msg);
       }
       if (data && !data.success)
         throw new Error(data.error || "Indexing failed");

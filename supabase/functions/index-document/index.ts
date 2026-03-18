@@ -110,10 +110,13 @@ Deno.serve(async (req) => {
     // Verify authentication (accepts user tokens and service role key)
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) {
-      return new Response(JSON.stringify({ error: "Not authenticated" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return new Response(
+        JSON.stringify({ error: "No Authorization header present" }),
+        {
+          status: 401,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
+      );
     }
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
@@ -121,20 +124,26 @@ Deno.serve(async (req) => {
     const isServiceRole = authHeader === `Bearer ${supabaseKey}`;
 
     if (!isServiceRole) {
-      const supabaseAuth = createClient(
-        supabaseUrl,
-        Deno.env.get("SUPABASE_ANON_KEY")!,
-        { global: { headers: { Authorization: authHeader } } },
-      );
+      const anonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
+      const supabaseAuth = createClient(supabaseUrl, anonKey, {
+        global: { headers: { Authorization: authHeader } },
+      });
       const {
         data: { user },
         error: authError,
       } = await supabaseAuth.auth.getUser();
       if (authError || !user) {
-        return new Response(JSON.stringify({ error: "Not authenticated" }), {
-          status: 401,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
+        return new Response(
+          JSON.stringify({
+            error: "Auth validation failed",
+            detail: authError?.message || "No user returned",
+            tokenPrefix: authHeader.substring(0, 20) + "...",
+          }),
+          {
+            status: 401,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          },
+        );
       }
     }
 
