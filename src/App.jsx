@@ -1,5 +1,10 @@
 import React, { useState, useEffect } from "react";
-import { supabase, createManualEvent, updateManualEvent, deleteManualEvent } from "./lib/supabase";
+import {
+  supabase,
+  createManualEvent,
+  updateManualEvent,
+  deleteManualEvent,
+} from "./lib/supabase";
 import { useAuth } from "./lib/AuthContext";
 import LoginPage from "./components/LoginPage";
 import DocumentBrowser from "./components/DocumentBrowser";
@@ -328,7 +333,7 @@ function App() {
   async function handleUpdateEvent(eventId, formData) {
     try {
       const updatedEvent = await updateManualEvent(eventId, formData);
-      setEvents(events.map(e => e.id === eventId ? updatedEvent : e));
+      setEvents(events.map((e) => (e.id === eventId ? updatedEvent : e)));
       addToast("Event updated successfully", "success");
     } catch (err) {
       console.error("Error updating event:", err);
@@ -340,7 +345,7 @@ function App() {
     if (!window.confirm("Delete this event?")) return;
     try {
       await deleteManualEvent(eventId);
-      setEvents(events.filter(e => e.id !== eventId));
+      setEvents(events.filter((e) => e.id !== eventId));
       addToast("Event deleted", "success");
     } catch (err) {
       console.error("Error deleting event:", err);
@@ -438,10 +443,13 @@ function App() {
     const action = msg.indexed_for_rag ? "remove" : "index";
     setIndexingMessages((prev) => new Set(prev).add(msg.id));
     try {
+      const {
+        data: { session: sess },
+      } = await supabase.auth.getSession();
       const { data, error } = await supabase.functions.invoke("index-message", {
         body: { message_id: msg.id, action },
-        headers: session?.access_token
-          ? { Authorization: `Bearer ${session.access_token}` }
+        headers: sess?.access_token
+          ? { Authorization: `Bearer ${sess.access_token}` }
           : {},
       });
 
