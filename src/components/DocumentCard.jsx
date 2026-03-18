@@ -62,6 +62,10 @@ export default function DocumentCard({
 
       console.log("Session:", session);
       console.log("Access token:", session?.access_token ? "exists" : "missing");
+      console.log(
+        "Token preview:",
+        session?.access_token?.substring(0, 20) + "..."
+      );
 
       if (!session?.access_token) {
         throw new Error(
@@ -69,15 +73,21 @@ export default function DocumentCard({
         );
       }
 
+      const authHeader = `Bearer ${session.access_token}`;
+      console.log("Auth header length:", authHeader.length);
+      console.log("Invoking with headers:", { Authorization: "Bearer ..." });
+
       const { data, error } = await supabase.functions.invoke(
         "index-document",
         {
           body: { doc_id: doc.id, action },
           headers: {
-            Authorization: `Bearer ${session.access_token}`,
+            Authorization: authHeader,
           },
         },
       );
+
+      console.log("Response:", { data, error });
 
       if (error) {
         let msg = error.message;
