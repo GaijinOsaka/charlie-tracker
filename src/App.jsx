@@ -440,6 +440,9 @@ function App() {
     try {
       const { data, error } = await supabase.functions.invoke("index-message", {
         body: { message_id: msg.id, action },
+        headers: session?.access_token
+          ? { Authorization: `Bearer ${session.access_token}` }
+          : {},
       });
 
       if (error) {

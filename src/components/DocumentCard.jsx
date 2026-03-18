@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { supabase } from "../lib/supabase";
+import { useAuth } from "../lib/AuthContext";
 import TagEditor from "./TagEditor";
 
 const CATEGORY_COLORS = {
@@ -19,6 +20,7 @@ export default function DocumentCard({
   selected,
   onToggleSelect,
 }) {
+  const { session } = useAuth();
   const [downloading, setDownloading] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [indexing, setIndexing] = useState(false);
@@ -57,6 +59,9 @@ export default function DocumentCard({
         "index-document",
         {
           body: { doc_id: document.id, action },
+          headers: session?.access_token
+            ? { Authorization: `Bearer ${session.access_token}` }
+            : {},
         },
       );
 
