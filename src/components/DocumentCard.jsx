@@ -13,7 +13,7 @@ const CATEGORY_COLORS = {
 };
 
 export default function DocumentCard({
-  document,
+  document: doc,
   onUpdate,
   onDelete,
   selected,
@@ -22,22 +22,22 @@ export default function DocumentCard({
   const [downloading, setDownloading] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [indexing, setIndexing] = useState(false);
-  const tags = document.tags || [];
+  const tags = doc.tags || [];
   const categoryStyle =
-    CATEGORY_COLORS[document.category] || CATEGORY_COLORS.other;
+    CATEGORY_COLORS[doc.category] || CATEGORY_COLORS.other;
 
   async function handleDownload() {
     setDownloading(true);
     try {
       const { data, error } = await supabase.storage
         .from("charlie-documents")
-        .download(document.file_path);
+        .download(doc.file_path);
 
       if (error) throw error;
       const url = URL.createObjectURL(data);
       const a = document.createElement("a");
       a.href = url;
-      a.download = document.filename || document.file_path.split("/").pop();
+      a.download = doc.filename || doc.file_path.split("/").pop();
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
@@ -50,7 +50,7 @@ export default function DocumentCard({
   }
 
   async function toggleRagFlag() {
-    const action = document.indexed_for_rag ? "remove" : "index";
+    const action = doc.indexed_for_rag ? "remove" : "index";
     setIndexing(true);
     try {
       const {
@@ -64,7 +64,7 @@ export default function DocumentCard({
       const { data, error } = await supabase.functions.invoke(
         "index-document",
         {
-          body: { doc_id: document.id, action },
+          body: { doc_id: doc.id, action },
           headers: session?.access_token
             ? { Authorization: `Bearer ${session.access_token}` }
             : {},
@@ -95,7 +95,7 @@ export default function DocumentCard({
       }
 
       if (onUpdate) {
-        onUpdate({ ...document, indexed_for_rag: action === "index" });
+        onUpdate({ ...doc, indexed_for_rag: action === "index" });
       }
     } catch (err) {
       console.error("RAG toggle error:", err);
@@ -108,7 +108,7 @@ export default function DocumentCard({
   async function handleDelete() {
     if (
       !window.confirm(
-        `Delete "${document.filename}"? This will remove the file from storage and the database.`,
+        `Delete "${doc.filename}"? This will remove the file from storage and the database.`,
       )
     ) {
       return;
@@ -116,18 +116,18 @@ export default function DocumentCard({
     setDeleting(true);
     try {
       // Delete from storage
-      if (document.file_path) {
+      if (doc.file_path) {
         await supabase.storage
           .from("charlie-documents")
-          .remove([document.file_path]);
+          .remove([doc.file_path]);
       }
       // Delete from database (cascades to document_chunks)
       const { error } = await supabase
         .from("documents")
         .delete()
-        .eq("id", document.id);
+        .eq("id", doc.id);
       if (error) throw error;
-      if (onDelete) onDelete(document.id);
+      if (onDelete) onDelete(doc.id);
     } catch (err) {
       console.error("Delete error:", err);
       alert("Failed to delete document: " + err.message);
@@ -145,10 +145,10 @@ export default function DocumentCard({
           onChange={onToggleSelect}
         />
         <span className="doc-icon">
-          {document.filename?.endsWith(".pdf") ? "\u{1F4C4}" : "\u{1F4CE}"}
+          {doc.filename?.endsWith(".pdf") ? "\u{1F4C4}" : "\u{1F4CE}"}
         </span>
-        <h4 className="doc-filename" title={document.filename}>
-          {document.filename}
+        <h4 className="doc-filename" title={doc.filename}>
+          {doc.filename}
         </h4>
       </div>
 
@@ -157,19 +157,19 @@ export default function DocumentCard({
           className="doc-category-badge"
           style={{ background: categoryStyle.bg, color: categoryStyle.color }}
         >
-          {document.category || "other"}
+          {doc.category || "other"}
         </span>
         <span
-          className={`doc-rag-badge ${document.indexed_for_rag ? "rag-yes" : "rag-no"}`}
+          className={`doc-rag-badge ${doc.indexed_for_rag ? "rag-yes" : "rag-no"}`}
         >
-          {document.indexed_for_rag
+          {doc.indexed_for_rag
             ? "\u26A1 Indexed"
             : "\u{1F512} Not Indexed"}
         </span>
-        {document.indexed_for_rag && (
+        {doc.indexed_for_rag && (
           <span className="doc-text-badge">Text Extracted</span>
         )}
-        {document.dates_extracted && (
+        {doc.dates_extracted && (
           <span className="doc-dates-badge">Dates Extracted</span>
         )}
       </div>
@@ -196,15 +196,15 @@ export default function DocumentCard({
           {downloading ? "Opening..." : "Download"}
         </button>
         <button
-          className={`btn-doc ${document.indexed_for_rag ? "btn-remove-rag" : "btn-add-rag"}`}
+          className={`btn-doc ${doc.indexed_for_rag ? "btn-remove-rag" : "btn-add-rag"}`}
           onClick={toggleRagFlag}
           disabled={indexing}
         >
           {indexing
-            ? document.indexed_for_rag
+            ? doc.indexed_for_rag
               ? "Removing..."
               : "Indexing..."
-            : document.indexed_for_rag
+            : doc.indexed_for_rag
               ? "Remove from RAG"
               : "Add to RAG"}
         </button>
@@ -217,7 +217,7 @@ export default function DocumentCard({
         </button>
       </div>
 
-      <TagEditor document={document} onUpdate={onUpdate} />
+      <TagEditor document={doc} onUpdate={onUpdate} />
     </div>
   );
 }
