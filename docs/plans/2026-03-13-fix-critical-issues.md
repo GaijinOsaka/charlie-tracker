@@ -5,6 +5,7 @@
 **Goal:** Fix three critical issues: data not loading due to auth race condition, touch events not working, and text escaping outside containers on mobile.
 
 **Architecture:**
+
 - Fix 1: Correct AuthContext loading state management - ensure user is authenticated before App loads data
 - Fix 2: Add viewport meta tag and touch-action CSS for mobile touch support
 - Fix 3: Add max-width constraints and overflow handling to all text containers
@@ -16,16 +17,19 @@
 ## Issue 1: Data Not Loading (Race Condition in Auth)
 
 ### Root Cause
+
 `AuthContext.jsx` sets `loading = false` immediately (line 17) before `onAuthStateChange` listener is set up. This causes `App.jsx` to start loading messages/events before user is authenticated.
 
 ### Task 1: Fix AuthContext Loading State
 
 **Files:**
+
 - Modify: `src/lib/AuthContext.jsx:10-52`
 
 **Step 1: Understand current flow**
 
 Read the file and understand the race condition:
+
 - Line 17: `setLoading(false)` is called immediately
 - Lines 19-36: Auth listener is set up asynchronously
 - Problem: App thinks auth is ready before it actually is
@@ -36,39 +40,40 @@ Replace the entire useEffect in AuthContext.jsx with proper loading state manage
 
 ```javascript
 useEffect(() => {
-  let mounted = true
+  let mounted = true;
 
   // Keep loading as true while we check auth state
-  const { data: { subscription } } = supabase.auth.onAuthStateChange(
-    async (_event, session) => {
-      if (mounted) {
-        setUser(session?.user ?? null)
-        if (session?.user) {
-          try {
-            await loadProfile(session.user.id)
-            setLoading(false)
-          } catch (err) {
-            console.warn('Profile load error:', err)
-            setLoading(false)
-          }
-        } else {
-          setProfile(null)
-          setLoading(false)
+  const {
+    data: { subscription },
+  } = supabase.auth.onAuthStateChange(async (_event, session) => {
+    if (mounted) {
+      setUser(session?.user ?? null);
+      if (session?.user) {
+        try {
+          await loadProfile(session.user.id);
+          setLoading(false);
+        } catch (err) {
+          console.warn("Profile load error:", err);
+          setLoading(false);
         }
+      } else {
+        setProfile(null);
+        setLoading(false);
       }
     }
-  )
+  });
 
   return () => {
-    mounted = false
-    subscription.unsubscribe()
-  }
-}, [])
+    mounted = false;
+    subscription.unsubscribe();
+  };
+}, []);
 ```
 
 **Step 3: Verify the fix**
 
 The key change: Move `setLoading(false)` into the auth state listener, so loading is only set to false AFTER we know user state. This ensures:
+
 - If user is logged in: loading stays true until profile is loaded
 - If user is not logged in: loading is set to false immediately
 - App.jsx dependency on user state is now safe
@@ -85,11 +90,13 @@ git commit -m "fix: move loading state into auth listener to prevent race condit
 ## Issue 2: Touch Events Not Working
 
 ### Root Cause
+
 Viewport meta tag might not have proper touch-action properties, and browser might not report touch support correctly on some devices.
 
 ### Task 2: Add Viewport Meta Tag with Touch Support
 
 **Files:**
+
 - Modify: `index.html`
 
 **Step 1: Check current viewport meta tag**
@@ -101,10 +108,14 @@ Read `index.html` and look for existing viewport meta tag.
 Ensure `index.html` has this in the `<head>`:
 
 ```html
-<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=yes, interactive-widget=resizes-content">
+<meta
+  name="viewport"
+  content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=yes, interactive-widget=resizes-content"
+/>
 ```
 
 Key additions:
+
 - `viewport-fit=cover` - Handle notches/safe areas
 - `user-scalable=yes` - Allow pinch-zoom
 - `interactive-widget=resizes-content` - Handle mobile keyboards properly
@@ -123,6 +134,7 @@ git commit -m "fix: enhance viewport meta tag for mobile touch support"
 ### Task 3: Add Touch-Action CSS
 
 **Files:**
+
 - Modify: `src/App.css:111-116` (add to btn-touch class)
 
 **Step 1: Find button styling section**
@@ -155,6 +167,7 @@ Replace the `.btn-touch` and add new `.interactive` class:
 **Step 3: Apply interactive class to clickable elements**
 
 Update all button classes in App.jsx to include the interactive behavior:
+
 - Line 451: hamburger-btn
 - Line 460: theme-toggle-btn
 - Line 463: sign-out-btn
@@ -170,7 +183,9 @@ For each button, add CSS class or ensure they have touch-action handling.
 Add this CSS rule to ensure all buttons work with touch:
 
 ```css
-button, [role="button"], .clickable {
+button,
+[role="button"],
+.clickable {
   touch-action: manipulation;
   -webkit-tap-highlight-color: transparent;
   -webkit-user-select: none;
@@ -190,11 +205,13 @@ git commit -m "fix: add touch-action and tap highlight styles for mobile"
 ## Issue 3: Text Escaping Outside Boxes
 
 ### Root Cause
+
 Text containers lack max-width constraints, and word-breaking rules don't account for very long URLs or mobile breakpoints.
 
 ### Task 4: Add Max-Width and Overflow Constraints to Message Containers
 
 **Files:**
+
 - Modify: `src/App.css:295-440` (message-item, message-subject, message-content sections)
 
 **Step 1: Find message styling section**
@@ -312,6 +329,7 @@ git commit -m "fix: add max-width and overflow handling to prevent text escape"
 ### Task 5: Update Event Container Styling
 
 **Files:**
+
 - Modify: `src/App.css:534-580` (event styling)
 
 **Step 1: Find event-item styling**
@@ -378,18 +396,21 @@ git commit -m "fix: add width constraints to event styling"
 ### Manual Testing for Each Fix
 
 **After Fix 1 (Auth Loading):**
+
 1. Refresh app and watch browser console
 2. Should see "Realtime status: SUBSCRIBED" (App.jsx line 112)
 3. Messages should appear if user is logged in
 4. Check that loading indicator disappears after auth completes
 
 **After Fix 2 (Touch Events):**
+
 1. Test on mobile device or mobile emulator
 2. Tap buttons and verify they respond immediately
 3. Tap input fields and verify keyboard appears
 4. Check no tap highlight appears (should be transparent)
 
 **After Fix 3 (Text Overflow):**
+
 1. Create test message with very long URL (no spaces): `https://example.com/very-long-url-that-would-normally-overflow-the-container-without-proper-handling`
 2. Verify text wraps or scrolls horizontally, not overflows
 3. Test on 320px, 480px, 768px viewport widths
@@ -398,6 +419,7 @@ git commit -m "fix: add width constraints to event styling"
 ### Browser DevTools Inspection
 
 For each issue:
+
 - Open DevTools Inspector
 - Check computed CSS on problem elements
 - Verify max-width is applied

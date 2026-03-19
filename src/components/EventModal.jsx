@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import '../styles/EventModal.css';
+import { useState, useEffect } from "react";
+import "../styles/EventModal.css";
 
 export default function EventModal({
   isOpen,
@@ -7,40 +7,40 @@ export default function EventModal({
   onSubmit,
   initialDate = null,
   editingEvent = null,
-  creatorName = null
+  creatorName = null,
 }) {
-  const [title, setTitle] = useState('');
-  const [eventDate, setEventDate] = useState(initialDate || '');
-  const [eventEndDate, setEventEndDate] = useState('');
-  const [eventTime, setEventTime] = useState('');
-  const [eventEndTime, setEventEndTime] = useState('');
-  const [description, setDescription] = useState('');
+  const [title, setTitle] = useState("");
+  const [eventDate, setEventDate] = useState(initialDate || "");
+  const [eventEndDate, setEventEndDate] = useState("");
+  const [eventTime, setEventTime] = useState("");
+  const [eventEndTime, setEventEndTime] = useState("");
+  const [description, setDescription] = useState("");
   const [actionRequired, setActionRequired] = useState(false);
-  const [actionDetail, setActionDetail] = useState('');
-  const [error, setError] = useState('');
+  const [actionDetail, setActionDetail] = useState("");
+  const [error, setError] = useState("");
 
   // Pre-fill form if editing
   useEffect(() => {
     if (editingEvent) {
-      setTitle(editingEvent.title || '');
-      setEventDate(editingEvent.event_date || '');
-      setEventEndDate(editingEvent.event_end_date || '');
-      setEventTime(editingEvent.event_time || '');
-      setEventEndTime(editingEvent.event_end_time || '');
-      setDescription(editingEvent.description || '');
+      setTitle(editingEvent.title || "");
+      setEventDate(editingEvent.event_date || "");
+      setEventEndDate(editingEvent.event_end_date || "");
+      setEventTime(editingEvent.event_time || "");
+      setEventEndTime(editingEvent.event_end_time || "");
+      setDescription(editingEvent.description || "");
       setActionRequired(editingEvent.action_required || false);
-      setActionDetail(editingEvent.action_detail || '');
+      setActionDetail(editingEvent.action_detail || "");
     } else {
-      setTitle('');
-      setEventDate(initialDate || '');
-      setEventEndDate('');
-      setEventTime('');
-      setEventEndTime('');
-      setDescription('');
+      setTitle("");
+      setEventDate(initialDate || "");
+      setEventEndDate("");
+      setEventTime("");
+      setEventEndTime("");
+      setDescription("");
       setActionRequired(false);
-      setActionDetail('');
+      setActionDetail("");
     }
-    setError('');
+    setError("");
   }, [editingEvent, initialDate, isOpen]);
 
   const handleSubmit = async (e) => {
@@ -48,11 +48,11 @@ export default function EventModal({
 
     // Validation
     if (!title.trim()) {
-      setError('Title is required');
+      setError("Title is required");
       return;
     }
     if (!eventDate) {
-      setError('Date is required');
+      setError("Date is required");
       return;
     }
 
@@ -65,11 +65,11 @@ export default function EventModal({
         event_end_time: eventEndTime || null,
         description: description.trim() || null,
         action_required: actionRequired,
-        action_detail: actionDetail.trim() || null
+        action_detail: actionDetail.trim() || null,
       });
       // Form reset happens in parent on successful submission
     } catch (err) {
-      setError(err.message || 'Error saving event');
+      setError(err.message || "Error saving event");
     }
   };
 
@@ -79,7 +79,7 @@ export default function EventModal({
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal-content" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
-          <h2>{editingEvent ? 'Edit Event' : 'Create Event'}</h2>
+          <h2>{editingEvent ? "Edit Event" : "Create Event"}</h2>
           <button className="modal-close" onClick={onClose} aria-label="Close">
             &times;
           </button>
@@ -117,7 +117,9 @@ export default function EventModal({
             </div>
 
             <div className="form-group">
-              <label htmlFor="endDate">End Date <span className="optional">(optional)</span></label>
+              <label htmlFor="endDate">
+                End Date <span className="optional">(optional)</span>
+              </label>
               <input
                 id="endDate"
                 type="date"
@@ -188,7 +190,7 @@ export default function EventModal({
               Cancel
             </button>
             <button type="submit" className="btn-submit">
-              {editingEvent ? 'Update Event' : 'Create Event'}
+              {editingEvent ? "Update Event" : "Create Event"}
             </button>
           </div>
         </form>

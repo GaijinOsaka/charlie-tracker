@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from 'react';
-import { supabase } from '../lib/supabase';
-import * as pdfjsLib from 'pdfjs-dist';
-import pdfjsWorker from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
-import './AttachmentViewer.css';
+import React, { useState, useEffect } from "react";
+import { supabase } from "../lib/supabase";
+import * as pdfjsLib from "pdfjs-dist";
+import pdfjsWorker from "pdfjs-dist/build/pdf.worker.min.mjs?url";
+import "./AttachmentViewer.css";
 
 // Set up PDF.js worker with local bundled worker
 // Fallback to CDN if worker URL is invalid
@@ -10,7 +10,8 @@ try {
   pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjsWorker;
 } catch (e) {
   // Fallback to CDN worker
-  pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+  pdfjsLib.GlobalWorkerOptions.workerSrc =
+    "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
 }
 
 export function AttachmentViewer({ attachment, isOpen, onClose }) {
@@ -22,8 +23,8 @@ export function AttachmentViewer({ attachment, isOpen, onClose }) {
   const [containerWidth, setContainerWidth] = useState(window.innerWidth);
   const pdfContainerRef = React.useRef(null);
 
-  const isImage = attachment?.mime_type?.includes('image');
-  const isPdf = attachment?.mime_type?.includes('pdf');
+  const isImage = attachment?.mime_type?.includes("image");
+  const isPdf = attachment?.mime_type?.includes("pdf");
 
   // Measure actual container width when modal opens
   useEffect(() => {
@@ -35,8 +36,8 @@ export function AttachmentViewer({ attachment, isOpen, onClose }) {
     };
     // Measure after render
     setTimeout(updateWidth, 0);
-    window.addEventListener('resize', updateWidth);
-    return () => window.removeEventListener('resize', updateWidth);
+    window.addEventListener("resize", updateWidth);
+    return () => window.removeEventListener("resize", updateWidth);
   }, [isOpen]);
 
   // Fetch file from storage
@@ -50,16 +51,19 @@ export function AttachmentViewer({ attachment, isOpen, onClose }) {
 
         // Add timeout for slow mobile connections (30 seconds)
         const downloadPromise = supabase.storage
-          .from('charlie-documents')
+          .from("charlie-documents")
           .download(attachment.file_path);
 
         const timeoutPromise = new Promise((_, reject) =>
-          setTimeout(() => reject(new Error('Download timeout - slow connection')), 30000)
+          setTimeout(
+            () => reject(new Error("Download timeout - slow connection")),
+            30000,
+          ),
         );
 
         const { data, error: fetchError } = await Promise.race([
           downloadPromise,
-          timeoutPromise
+          timeoutPromise,
         ]);
 
         if (fetchError) throw fetchError;
@@ -75,13 +79,15 @@ export function AttachmentViewer({ attachment, isOpen, onClose }) {
             setPdfPages(pdf.numPages);
             setCurrentPage(1);
           } catch (pdfErr) {
-            console.error('PDF processing error:', pdfErr);
-            throw new Error('Failed to process PDF. Try refreshing or use desktop view.');
+            console.error("PDF processing error:", pdfErr);
+            throw new Error(
+              "Failed to process PDF. Try refreshing or use desktop view.",
+            );
           }
         }
       } catch (err) {
-        console.error('Error loading attachment:', err);
-        setError(err.message || 'Failed to load file');
+        console.error("Error loading attachment:", err);
+        setError(err.message || "Failed to load file");
       } finally {
         setLoading(false);
       }
@@ -93,18 +99,23 @@ export function AttachmentViewer({ attachment, isOpen, onClose }) {
   // Handle keyboard close
   useEffect(() => {
     const handleEsc = (e) => {
-      if (e.key === 'Escape' && isOpen) onClose();
+      if (e.key === "Escape" && isOpen) onClose();
     };
-    window.addEventListener('keydown', handleEsc);
-    return () => window.removeEventListener('keydown', handleEsc);
+    window.addEventListener("keydown", handleEsc);
+    return () => window.removeEventListener("keydown", handleEsc);
   }, [isOpen, onClose]);
 
   if (!isOpen) return null;
 
   return (
     <div className="attachment-viewer-overlay" onClick={onClose}>
-      <div className="attachment-viewer-modal" onClick={(e) => e.stopPropagation()}>
-        <button className="viewer-close-btn" onClick={onClose}>✕</button>
+      <div
+        className="attachment-viewer-modal"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <button className="viewer-close-btn" onClick={onClose}>
+          ✕
+        </button>
 
         {loading && <div className="viewer-loading">Loading...</div>}
         {error && <div className="viewer-error">{error}</div>}
@@ -117,7 +128,11 @@ export function AttachmentViewer({ attachment, isOpen, onClose }) {
 
         {isPdf && fileData && (
           <div className="viewer-pdf" ref={pdfContainerRef}>
-            <PDFPage pdf={fileData} pageNum={currentPage} containerWidth={containerWidth} />
+            <PDFPage
+              pdf={fileData}
+              pageNum={currentPage}
+              containerWidth={containerWidth}
+            />
             <div className="pdf-controls">
               <button
                 disabled={currentPage === 1}
@@ -125,10 +140,14 @@ export function AttachmentViewer({ attachment, isOpen, onClose }) {
               >
                 ← Previous
               </button>
-              <span>{currentPage} / {pdfPages}</span>
+              <span>
+                {currentPage} / {pdfPages}
+              </span>
               <button
                 disabled={currentPage === pdfPages}
-                onClick={() => setCurrentPage(Math.min(pdfPages, currentPage + 1))}
+                onClick={() =>
+                  setCurrentPage(Math.min(pdfPages, currentPage + 1))
+                }
               >
                 Next →
               </button>
@@ -159,26 +178,33 @@ function PDFPage({ pdf, pageNum, containerWidth }) {
         const scale = availableWidth / baseViewport.width;
 
         const viewport = page.getViewport({ scale: Math.min(scale, 3) }); // Cap at 3x to prevent excessive memory use
-        const canvas = document.createElement('canvas');
+        const canvas = document.createElement("canvas");
         canvas.width = viewport.width;
         canvas.height = viewport.height;
 
         await page.render({
-          canvasContext: canvas.getContext('2d'),
+          canvasContext: canvas.getContext("2d"),
           viewport: viewport,
         }).promise;
 
         setImageUrl(canvas.toDataURL());
         setError(null);
       } catch (err) {
-        console.error('Error rendering PDF page:', err);
-        setError('Failed to render page');
+        console.error("Error rendering PDF page:", err);
+        setError("Failed to render page");
       }
     };
 
     renderPage();
   }, [pdf, pageNum, containerWidth]);
 
-  if (error) return <div style={{ color: 'var(--danger)', padding: '20px' }}>{error}</div>;
-  return imageUrl ? <img src={imageUrl} alt="PDF page" className="pdf-page" /> : <div>Rendering...</div>;
+  if (error)
+    return (
+      <div style={{ color: "var(--danger)", padding: "20px" }}>{error}</div>
+    );
+  return imageUrl ? (
+    <img src={imageUrl} alt="PDF page" className="pdf-page" />
+  ) : (
+    <div>Rendering...</div>
+  );
 }

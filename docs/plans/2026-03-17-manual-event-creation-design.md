@@ -6,6 +6,7 @@
 ## Requirements
 
 ### Functional
+
 - Create manual events with: title (required), date (required), time/end time (optional), description, tags/categories
 - Both users can see all manually created events
 - Events show creator attribution
@@ -13,6 +14,7 @@
 - UI: "Create Event" button + click empty calendar date to create
 
 ### Data Model
+
 - Distinguish manual events from extracted events
 - Track event creator via `created_by` user ID
 - Preserve existing extracted event functionality
@@ -22,6 +24,7 @@
 ### Migration: `2026-03-XX-manual-events.sql`
 
 **Add columns to events table:**
+
 ```sql
 ALTER TABLE events
   ADD COLUMN created_by UUID REFERENCES auth.users(id) ON DELETE CASCADE,
@@ -31,11 +34,13 @@ CREATE INDEX idx_events_created_by ON events(created_by);
 ```
 
 **Update constraint logic:**
+
 - For `extracted` events: must have `message_id` OR `document_id`
 - For `manual` events: both sources must be NULL
 - Use trigger or check constraint to enforce
 
 **Update RLS policies:**
+
 ```sql
 -- Allow users to insert their own manual events
 CREATE POLICY "Users can create manual events"
@@ -57,12 +62,14 @@ CREATE POLICY "Users can delete own events"
 ## Frontend Changes
 
 ### New Component: `EventModal.jsx`
+
 - Form fields: title, date, time, end_time, description, tags, action_required, action_detail
 - Validation: title + date required
 - Submit handler: calls `createEvent()` or `updateEvent()`
 - Edit mode: pre-fills form data, show delete button
 
 ### Modify `CalendarView.jsx`
+
 - Add "Create Event" button near month navigation
 - Add click handler on date cells (only empty dates)
 - Pass `onCreateEvent`, `onEditEvent`, `onDeleteEvent` callbacks to parent
@@ -70,6 +77,7 @@ CREATE POLICY "Users can delete own events"
 - Show edit/delete buttons for creator only
 
 ### Modify `App.jsx`
+
 - Import EventModal
 - Add state: `showEventModal`, `editingEvent`, `selectedDateForEvent`
 - Implement `createEvent(eventData)` — calls Supabase
@@ -79,28 +87,31 @@ CREATE POLICY "Users can delete own events"
 - Pass callbacks to CalendarView
 
 ### Supabase Helper Functions (`src/lib/supabase.js`)
+
 ```javascript
 export async function createManualEvent(eventData) {
   const { data, error } = await supabase
-    .from('events')
-    .insert([{
-      title: eventData.title,
-      event_date: eventData.event_date,
-      event_time: eventData.event_time || null,
-      event_end_time: eventData.event_end_time || null,
-      description: eventData.description || null,
-      action_required: eventData.action_required || false,
-      action_detail: eventData.action_detail || null,
-      created_by: supabase.auth.user().id,
-      source_type: 'manual'
-    }])
-    .select()
-  return { data, error }
+    .from("events")
+    .insert([
+      {
+        title: eventData.title,
+        event_date: eventData.event_date,
+        event_time: eventData.event_time || null,
+        event_end_time: eventData.event_end_time || null,
+        description: eventData.description || null,
+        action_required: eventData.action_required || false,
+        action_detail: eventData.action_detail || null,
+        created_by: supabase.auth.user().id,
+        source_type: "manual",
+      },
+    ])
+    .select();
+  return { data, error };
 }
 
 export async function updateManualEvent(eventId, eventData) {
   const { data, error } = await supabase
-    .from('events')
+    .from("events")
     .update({
       title: eventData.title,
       event_date: eventData.event_date,
@@ -108,19 +119,16 @@ export async function updateManualEvent(eventId, eventData) {
       event_end_time: eventData.event_end_time || null,
       description: eventData.description || null,
       action_required: eventData.action_required || false,
-      action_detail: eventData.action_detail || null
+      action_detail: eventData.action_detail || null,
     })
-    .eq('id', eventId)
-    .select()
-  return { data, error }
+    .eq("id", eventId)
+    .select();
+  return { data, error };
 }
 
 export async function deleteManualEvent(eventId) {
-  const { error } = await supabase
-    .from('events')
-    .delete()
-    .eq('id', eventId)
-  return { error }
+  const { error } = await supabase.from("events").delete().eq("id", eventId);
+  return { error };
 }
 ```
 
@@ -140,6 +148,7 @@ For deletes: `deleteEvent()` removes the event
 ## UI Layout
 
 **Event card (manual events):**
+
 ```
 [Title]
 [Date] [Time–EndTime]
@@ -150,6 +159,7 @@ Created by: [Creator Name]
 ```
 
 **Event creation modal:**
+
 ```
 Title: [________]
 Date: [________] (required)
@@ -162,6 +172,7 @@ Tags: [multi-select dropdown]
 ```
 
 ## Success Criteria
+
 - ✓ Can create manual events from "Create Event" button
 - ✓ Can create events by clicking empty dates
 - ✓ Both users see all manual events in calendar

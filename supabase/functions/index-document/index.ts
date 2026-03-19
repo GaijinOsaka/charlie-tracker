@@ -8,7 +8,8 @@ function chunkText(
   chunkSize = CHUNK_SIZE,
   overlap = CHUNK_OVERLAP,
 ): { content: string; char_start: number; char_end: number }[] {
-  const chunks: { content: string; char_start: number; char_end: number }[] = [];
+  const chunks: { content: string; char_start: number; char_end: number }[] =
+    [];
   let start = 0;
 
   while (start < text.length) {
@@ -307,7 +308,10 @@ Deno.serve(async (req) => {
           .eq("id", doc_id);
 
         if (updateExtractingRes.error) {
-          console.error("Error updating status to extracting:", updateExtractingRes.error);
+          console.error(
+            "Error updating status to extracting:",
+            updateExtractingRes.error,
+          );
         }
 
         // Fire and forget — n8n will extract text via Docling, save it,
@@ -339,7 +343,10 @@ Deno.serve(async (req) => {
         .eq("id", doc_id);
 
       if (updateIndexingRes.error) {
-        console.error("Error updating status to indexing:", updateIndexingRes.error);
+        console.error(
+          "Error updating status to indexing:",
+          updateIndexingRes.error,
+        );
       }
 
       const result = await indexDocument(supabase, doc_id, openaiKey);
@@ -366,7 +373,10 @@ Deno.serve(async (req) => {
           .eq("id", doc_id);
 
         if (updateFailedRes.error) {
-          console.error("Error updating status to failed:", updateFailedRes.error);
+          console.error(
+            "Error updating status to failed:",
+            updateFailedRes.error,
+          );
         }
       }
 

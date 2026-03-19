@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { supabase } from "../lib/supabase";
+import { AttachmentViewer } from "./AttachmentViewer";
 import TagEditor from "./TagEditor";
 
 const CATEGORY_COLORS = {
@@ -22,9 +23,9 @@ export default function DocumentCard({
   const [downloading, setDownloading] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [indexing, setIndexing] = useState(false);
+  const [viewerOpen, setViewerOpen] = useState(false);
   const tags = doc.tags || [];
-  const categoryStyle =
-    CATEGORY_COLORS[doc.category] || CATEGORY_COLORS.other;
+  const categoryStyle = CATEGORY_COLORS[doc.category] || CATEGORY_COLORS.other;
 
   async function handleDownload() {
     setDownloading(true);
@@ -56,34 +57,20 @@ export default function DocumentCard({
     const action = doc.indexed_for_rag ? "remove" : "index";
     setIndexing(true);
     try {
+      // Verify user is authenticated (also forces token refresh if expired)
       const {
-        data: { session },
-      } = await supabase.auth.getSession();
-
-      console.log("Session:", session);
-      console.log("Access token:", session?.access_token ? "exists" : "missing");
-      console.log(
-        "Token preview:",
-        session?.access_token?.substring(0, 20) + "..."
-      );
-
-      if (!session?.access_token) {
-        throw new Error(
-          "Not authenticated. Please log in to index documents."
-        );
+        data: { user },
+        error: userError,
+      } = await supabase.auth.getUser();
+      if (userError || !user) {
+        throw new Error("Not authenticated. Please log in to index documents.");
       }
 
-      const authHeader = `Bearer ${session.access_token}`;
-      console.log("Auth header length:", authHeader.length);
-      console.log("Invoking with headers:", { Authorization: "Bearer ..." });
-
+      // Let supabase.functions.invoke() handle the Authorization header automatically
       const { data, error } = await supabase.functions.invoke(
         "index-document",
         {
           body: { doc_id: doc.id, action },
-          headers: {
-            Authorization: authHeader,
-          },
         },
       );
 
@@ -105,7 +92,8 @@ export default function DocumentCard({
             msg = body.error || msg;
             detail = body.detail || "";
             if (body.errorName) detail = `${detail} (${body.errorName})`;
-            if (body.userNull !== undefined) detail = `${detail} [user: ${body.userNull ? "null" : "exists"}]`;
+            if (body.userNull !== undefined)
+              detail = `${detail} [user: ${body.userNull ? "null" : "exists"}]`;
           }
         } catch (parseErr) {
           console.error("Error parsing error.context.json():", parseErr);
@@ -182,7 +170,11 @@ export default function DocumentCard({
         <span className="doc-icon">
           {doc.filename?.endsWith(".pdf") ? "\u{1F4C4}" : "\u{1F4CE}"}
         </span>
-        <h4 className="doc-filename" title={doc.filename}>
+        <h4
+          className="doc-filename doc-filename-link"
+          title={doc.filename}
+          onClick={() => setViewerOpen(true)}
+        >
           {doc.filename}
         </h4>
       </div>
@@ -196,9 +188,7 @@ export default function DocumentCard({
         </span>
         {/* RAG Status Badge */}
         {doc.rag_status === "indexing" && (
-          <span className="doc-rag-badge rag-indexing">
-            ⏳ Indexing...
-          </span>
+          <span className="doc-rag-badge rag-indexing">⏳ Indexing...</span>
         )}
         {doc.rag_status === "extracting" && (
           <span className="doc-rag-badge rag-extracting">
@@ -206,19 +196,13 @@ export default function DocumentCard({
           </span>
         )}
         {doc.rag_status === "indexed" && (
-          <span className="doc-rag-badge rag-yes">
-            ⚡ Indexed
-          </span>
+          <span className="doc-rag-badge rag-yes">⚡ Indexed</span>
         )}
         {doc.rag_status === "failed" && (
-          <span className="doc-rag-badge rag-failed">
-            ❌ Failed
-          </span>
+          <span className="doc-rag-badge rag-failed">❌ Failed</span>
         )}
         {(!doc.rag_status || doc.rag_status === "idle") && (
-          <span className="doc-rag-badge rag-no">
-            🔒 Not Indexed
-          </span>
+          <span className="doc-rag-badge rag-no">🔒 Not Indexed</span>
         )}
 
         {doc.indexed_for_rag && (
@@ -270,7 +254,11 @@ export default function DocumentCard({
           <button
             className={`btn-doc ${doc.indexed_for_rag ? "btn-remove-rag" : "btn-add-rag"}`}
             onClick={toggleRagFlag}
-            disabled={indexing || doc.rag_status === "indexing" || doc.rag_status === "extracting"}
+            disabled={
+              indexing ||
+              doc.rag_status === "indexing" ||
+              doc.rag_status === "extracting"
+            }
           >
             {doc.rag_status === "indexing" || doc.rag_status === "extracting"
               ? doc.rag_status === "extracting"
@@ -291,6 +279,18 @@ export default function DocumentCard({
       </div>
 
       <TagEditor document={doc} onUpdate={onUpdate} />
+
+      <AttachmentViewer
+        attachment={{
+          file_path: doc.file_path,
+          filename: doc.filename,
+          mime_type:
+            doc.mime_type ||
+            (doc.filename?.endsWith(".pdf") ? "application/pdf" : "image/png"),
+        }}
+        isOpen={viewerOpen}
+        onClose={() => setViewerOpen(false)}
+      />
     </div>
   );
 }

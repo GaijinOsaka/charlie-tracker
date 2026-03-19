@@ -1,8 +1,8 @@
 :root {
-  --primary: #3B82F6;
-  --success: #10B981;
-  --danger: #EF4444;
-  --warning: #F59E0B;
+  --primary: #3b82f6;
+  --success: #10b981;
+  --danger: #ef4444;
+  --warning: #f59e0b;
   --bg: #1a2332;
   --bg-surface: #1e2a3a;
   --bg-hover: #243044;
@@ -21,7 +21,9 @@
 }
 
 /* Touch-friendly button and interactive element handling */
-button, [role="button"], .clickable {
+button,
+[role="button"],
+.clickable {
   touch-action: manipulation;
   -webkit-tap-highlight-color: transparent;
   -webkit-user-select: none;
@@ -29,7 +31,8 @@ button, [role="button"], .clickable {
 }
 
 body {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-family:
+    -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   background-color: var(--bg);
   color: var(--text);
   color-scheme: dark;
@@ -581,7 +584,9 @@ header h1 {
 
 /* Toast auto-dismiss */
 .toast {
-  animation: slideIn 0.3s ease-out, slideOut 0.3s ease-out 2.7s forwards;
+  animation:
+    slideIn 0.3s ease-out,
+    slideOut 0.3s ease-out 2.7s forwards;
 }
 
 @keyframes slideOut {
@@ -779,6 +784,16 @@ header h1 {
   line-height: 1.3;
 }
 
+.doc-filename-link {
+  cursor: pointer;
+  transition: color 0.15s;
+}
+
+.doc-filename-link:hover {
+  color: var(--primary);
+  text-decoration: underline;
+}
+
 .doc-card-meta {
   display: flex;
   gap: 8px;
@@ -830,7 +845,8 @@ header h1 {
 }
 
 @keyframes pulse {
-  0%, 100% {
+  0%,
+  100% {
     opacity: 1;
   }
   50% {
@@ -1611,9 +1627,9 @@ header h1 {
 
 .btn-doc-download {
   padding: 6px 12px;
-  border: 1px solid #3B82F6;
+  border: 1px solid #3b82f6;
   background: var(--bg-surface);
-  color: #3B82F6;
+  color: #3b82f6;
   border-radius: 4px;
   font-size: 12px;
   font-weight: 500;
@@ -1684,7 +1700,7 @@ header h1 {
   }
 
   .cal-has-events::after {
-    content: '';
+    content: "";
     display: block;
     width: 6px;
     height: 6px;
@@ -1732,7 +1748,9 @@ header h1 {
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3) !important;
     border-radius: 12px !important;
     opacity: 0 !important;
-    transition: opacity 0.3s ease, transform 0.3s ease !important;
+    transition:
+      opacity 0.3s ease,
+      transform 0.3s ease !important;
   }
 
   .chat-drawer.chat-drawer-open {
@@ -1763,7 +1781,9 @@ header h1 {
   font-weight: 600;
   cursor: grab;
   box-shadow: 0 4px 16px rgba(59, 130, 246, 0.4);
-  transition: box-shadow 0.2s, background 0.2s;
+  transition:
+    box-shadow 0.2s,
+    background 0.2s;
   touch-action: none;
   user-select: none;
 }
@@ -1991,8 +2011,14 @@ header h1 {
 }
 
 @keyframes chatBounce {
-  0%, 60%, 100% { transform: translateY(0); }
-  30% { transform: translateY(-6px); }
+  0%,
+  60%,
+  100% {
+    transform: translateY(0);
+  }
+  30% {
+    transform: translateY(-6px);
+  }
 }
 
 .chat-input-area {
