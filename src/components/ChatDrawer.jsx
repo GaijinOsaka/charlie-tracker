@@ -107,14 +107,13 @@ export default function ChatDrawer() {
         content: m.content,
       }));
 
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
+      // Force token refresh if expired
+      const { error: userError } = await supabase.auth.getUser();
+      if (userError) throw new Error("Not authenticated. Please log in.");
+
+      // Let supabase.functions.invoke() handle the Authorization header automatically
       const { data, error } = await supabase.functions.invoke("rag-chat", {
         body: { question, history },
-        headers: session?.access_token
-          ? { Authorization: `Bearer ${session.access_token}` }
-          : {},
       });
 
       if (error) {
