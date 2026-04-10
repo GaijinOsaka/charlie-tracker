@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { supabase } from "../lib/supabase";
 import { useAuth } from "../lib/AuthContext";
+import WhatsAppSharing from "./WhatsAppSharing";
 
 export default function SettingsPanel() {
   const { user, profile } = useAuth();
@@ -206,6 +207,12 @@ export default function SettingsPanel() {
           </form>
         </section>
       )}
+
+      <section className="settings-section whatsapp-config">
+        <h3>WhatsApp Bot Configuration</h3>
+        <p className="section-description">Manage WhatsApp sharing and access for public/private numbers</p>
+        <WhatsAppSharing />
+      </section>
     </div>
   );
 }
