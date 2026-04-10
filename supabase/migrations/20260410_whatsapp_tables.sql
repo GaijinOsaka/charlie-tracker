@@ -34,6 +34,9 @@ CREATE POLICY "Authenticated users can update shareable_content" ON shareable_co
 -- Indexes for performance
 CREATE INDEX idx_shareable_content_type_id ON shareable_content(content_type, content_id);
 CREATE INDEX idx_shareable_content_created_at ON shareable_content(created_at);
+CREATE INDEX idx_shareable_content_public_documents
+  ON shareable_content(content_id)
+  WHERE content_type = 'document' AND is_shareable = true;
 
 -- 2. whatsapp_users table
 -- Access control for private WhatsApp number - no PII stored

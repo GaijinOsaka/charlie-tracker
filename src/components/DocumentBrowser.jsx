@@ -105,7 +105,7 @@ export default function DocumentBrowser() {
         .select(
           "id, filename, file_path, source_url, source_type, tags, category, indexed_for_rag, dates_extracted, created_at, rag_status, rag_error, last_rag_attempt",
         )
-        .order("filename", { ascending: true });
+        .order("created_at", { ascending: false });
 
       if (error) throw error;
       setDocuments(data || []);
