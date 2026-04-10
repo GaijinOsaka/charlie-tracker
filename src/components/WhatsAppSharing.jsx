@@ -19,6 +19,7 @@ export default function WhatsAppSharing() {
   const [shareableContent, setShareableContent] = useState({});
   const [shareableLoading, setShareableLoading] = useState(false);
   const [savingContentId, setSavingContentId] = useState(null);
+  const [descriptionTimeouts, setDescriptionTimeouts] = useState({});
 
   // Private Number Management
   const privateNumber =
@@ -65,7 +66,7 @@ export default function WhatsAppSharing() {
       .channel("public:shareable_content")
       .on(
         "postgres_changes",
-        { event: "UPDATE", schema: "public", table: "shareable_content" },
+        { event: "*", schema: "public", table: "shareable_content" },
         () => {
           loadShareableContent();
         },
@@ -75,8 +76,21 @@ export default function WhatsAppSharing() {
     return () => {
       auditChannel.unsubscribe();
       shareChannel.unsubscribe();
+      // Clean up all pending description timeouts
+      Object.values(descriptionTimeouts).forEach((timeout) =>
+        clearTimeout(timeout),
+      );
     };
   }, [user]);
+
+  // Clean up timeouts when component unmounts
+  useEffect(() => {
+    return () => {
+      Object.values(descriptionTimeouts).forEach((timeout) =>
+        clearTimeout(timeout),
+      );
+    };
+  }, [descriptionTimeouts]);
 
   // ====================
   // PUBLIC NUMBER
@@ -174,7 +188,7 @@ export default function WhatsAppSharing() {
           content_type: contentType,
           content_id: contentId,
           is_shareable: true,
-          shared_description: "",
+          description: "",
         });
 
         if (error) throw error;
@@ -193,6 +207,31 @@ export default function WhatsAppSharing() {
     }
   }
 
+  function handleDescriptionChange(e, contentType, contentId) {
+    const newValue = e.target.value;
+    const key = `${contentType}_${contentId}`;
+
+    // Clear existing timeout for this content
+    if (descriptionTimeouts[key]) {
+      clearTimeout(descriptionTimeouts[key]);
+    }
+
+    // Set new timeout - only call DB after 500ms of no typing
+    const newTimeout = setTimeout(() => {
+      updateShareDescription(contentType, contentId, newValue);
+      setDescriptionTimeouts((prev) => {
+        const updated = { ...prev };
+        delete updated[key];
+        return updated;
+      });
+    }, 500);
+
+    setDescriptionTimeouts((prev) => ({
+      ...prev,
+      [key]: newTimeout,
+    }));
+  }
+
   async function updateShareDescription(contentType, contentId, description) {
     try {
       setSavingContentId(`${contentType}_${contentId}`);
@@ -202,7 +241,7 @@ export default function WhatsAppSharing() {
       if (current) {
         const { error } = await supabase
           .from("shareable_content")
-          .update({ shared_description: description })
+          .update({ description: description })
           .eq("id", current.id);
 
         if (error) throw error;
@@ -488,12 +527,12 @@ export default function WhatsAppSharing() {
                               <input
                                 type="text"
                                 placeholder="Add description for sharing"
-                                defaultValue={shareInfo?.shared_description || ""}
+                                defaultValue={shareInfo?.description || ""}
                                 onChange={(e) =>
-                                  updateShareDescription(
+                                  handleDescriptionChange(
+                                    e,
                                     "document",
                                     doc.id,
-                                    e.target.value,
                                   )
                                 }
                                 disabled={isSaving}
@@ -549,12 +588,12 @@ export default function WhatsAppSharing() {
                               <input
                                 type="text"
                                 placeholder="Add description for sharing"
-                                defaultValue={shareInfo?.shared_description || ""}
+                                defaultValue={shareInfo?.description || ""}
                                 onChange={(e) =>
-                                  updateShareDescription(
+                                  handleDescriptionChange(
+                                    e,
                                     "event",
                                     evt.id,
-                                    e.target.value,
                                   )
                                 }
                                 disabled={isSaving}
