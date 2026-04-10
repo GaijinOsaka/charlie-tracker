@@ -254,8 +254,13 @@ BEGIN
     (1 - (dc.embedding <=> query_embedding))::float, d.filename, dc.page_number
   FROM document_chunks dc
   JOIN documents d ON d.id = dc.document_id
+  LEFT JOIN shareable_content sc
+    ON sc.content_type = 'document'
+    AND sc.content_id = d.id
+    AND sc.is_shareable = true
   WHERE (1 - (dc.embedding <=> query_embedding)) > match_threshold
   AND d.indexed_for_rag = true
+  AND (access_level = 'private' OR sc.id IS NOT NULL)
   ORDER BY dc.embedding <=> query_embedding
   LIMIT match_count;
 END;
