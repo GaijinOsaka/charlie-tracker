@@ -242,7 +242,8 @@ CREATE POLICY "Authenticated users can read chunks" ON document_chunks FOR SELEC
 CREATE OR REPLACE FUNCTION search_knowledge_base(
   query_embedding vector(1536),
   match_threshold float DEFAULT 0.7,
-  match_count int DEFAULT 5
+  match_count int DEFAULT 5,
+  access_level text DEFAULT 'private'
 )
 RETURNS TABLE (
   chunk_id uuid, document_id uuid, content text,
@@ -260,7 +261,17 @@ BEGIN
     AND sc.is_shareable = true
   WHERE (1 - (dc.embedding <=> query_embedding)) > match_threshold
   AND d.indexed_for_rag = true
-  AND (access_level = 'private' OR sc.id IS NOT NULL)
+  AND CASE
+    WHEN access_level = 'public' THEN
+      EXISTS (
+        SELECT 1 FROM shareable_content
+        WHERE content_type = 'document'
+        AND content_id = d.id
+        AND is_shareable = true
+      )
+    ELSE
+      true
+  END
   ORDER BY dc.embedding <=> query_embedding
   LIMIT match_count;
 END;

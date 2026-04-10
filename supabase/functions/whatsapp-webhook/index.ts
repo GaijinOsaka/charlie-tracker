@@ -49,6 +49,7 @@ async function sendTwilioMessage(
 // Helper: Call rag-chat Edge Function
 async function callRagChat(
   message: string,
+  accessLevel: "public" | "private" = "private",
 ): Promise<string> {
   const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
   const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -64,6 +65,7 @@ async function callRagChat(
       body: JSON.stringify({
         question: message,
         history: [],
+        accessLevel: accessLevel,
       }),
     },
   );
@@ -186,21 +188,21 @@ Deno.serve(async (req) => {
         });
       }
 
-      // Authorized - call rag-chat
+      // Authorized - call rag-chat with private access
       try {
-        responseMessage = await callRagChat(body);
+        responseMessage = await callRagChat(body, "private");
       } catch (ragError) {
         console.error("RAG chat error:", ragError);
         responseMessage =
           "I encountered an error processing your request. Please try again.";
       }
     } else if (to === twilioPublicNumber) {
-      // Public number - allow all
+      // Public number - allow all with public access
       accessLevel = "public";
 
-      // Call rag-chat
+      // Call rag-chat with public access
       try {
-        responseMessage = await callRagChat(body);
+        responseMessage = await callRagChat(body, "public");
       } catch (ragError) {
         console.error("RAG chat error:", ragError);
         responseMessage =

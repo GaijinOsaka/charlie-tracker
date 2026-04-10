@@ -61,7 +61,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    const { question, history } = await req.json();
+    const { question, history, accessLevel } = await req.json();
 
     if (!question || typeof question !== "string") {
       return new Response(JSON.stringify({ error: "question is required" }), {
@@ -121,6 +121,7 @@ Deno.serve(async (req) => {
           query_embedding: `[${queryEmbedding.join(",")}]`,
           match_threshold: 0.2,
           match_count: 5,
+          access_level: level,
         }),
       },
     );
