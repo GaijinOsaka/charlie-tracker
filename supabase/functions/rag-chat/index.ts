@@ -75,6 +75,9 @@ Deno.serve(async (req) => {
       ? accessLevel
       : "private";
 
+    // Log for debugging and audit
+    console.log(`RAG search with access_level: ${level} (requested: ${accessLevel || 'none'})`);
+
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const openaiKey = Deno.env.get("OPENAI_API_KEY");
     const anthropicKey = Deno.env.get("ANTHROPIC_API_KEY");

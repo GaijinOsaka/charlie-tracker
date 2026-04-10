@@ -26,6 +26,15 @@ export default function DocumentCard({
   const categoryStyle =
     CATEGORY_COLORS[doc.category] || CATEGORY_COLORS.other;
 
+  function formatDate(dateString) {
+    const date = new Date(dateString);
+    return new Intl.DateTimeFormat("en-US", {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+    }).format(date);
+  }
+
   async function handleDownload() {
     setDownloading(true);
     try {
@@ -182,9 +191,16 @@ export default function DocumentCard({
         <span className="doc-icon">
           {doc.filename?.endsWith(".pdf") ? "\u{1F4C4}" : "\u{1F4CE}"}
         </span>
-        <h4 className="doc-filename" title={doc.filename}>
-          {doc.filename}
-        </h4>
+        <div className="doc-header-text">
+          <h4 className="doc-filename" title={doc.filename}>
+            {doc.filename}
+          </h4>
+          {doc.created_at && (
+            <span className="doc-upload-date">
+              {formatDate(doc.created_at)}
+            </span>
+          )}
+        </div>
       </div>
 
       <div className="doc-card-meta">
