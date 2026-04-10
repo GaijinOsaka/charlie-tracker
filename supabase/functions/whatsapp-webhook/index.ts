@@ -46,42 +46,9 @@ async function sendTwilioMessage(
   }
 }
 
-// Helper: Build shareable content context for public access
-async function buildShareableContext(
-  supabase: ReturnType<typeof createClient>,
-): Promise<string> {
-  const { data, error } = await supabase
-    .from("shareable_content")
-    .select(
-      "id, content_type, content_id, description, created_at, updated_at",
-    )
-    .eq("is_shareable", true)
-    .order("created_at", { ascending: false })
-    .limit(10);
-
-  if (error) {
-    console.error("Error fetching shareable content:", error);
-    return "No shared content available at this time.";
-  }
-
-  if (!data || data.length === 0) {
-    return "No shared content available at this time.";
-  }
-
-  let context = "Available shared content:\n";
-  for (const item of data) {
-    const dateStr = new Date(item.created_at).toLocaleDateString();
-    context += `- [${item.content_type}] ${item.description || "No description"} (${dateStr})\n`;
-  }
-
-  return context;
-}
-
 // Helper: Call rag-chat Edge Function
 async function callRagChat(
   message: string,
-  context: string,
-  accessLevel: "public" | "private",
 ): Promise<string> {
   const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
   const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -96,8 +63,6 @@ async function callRagChat(
       },
       body: JSON.stringify({
         question: message,
-        context,
-        accessLevel,
         history: [],
       }),
     },
@@ -221,34 +186,21 @@ Deno.serve(async (req) => {
         });
       }
 
-      // Authorized - call rag-chat with full context
+      // Authorized - call rag-chat
       try {
-        responseMessage = await callRagChat(body, "full", "private");
+        responseMessage = await callRagChat(body);
       } catch (ragError) {
         console.error("RAG chat error:", ragError);
         responseMessage =
           "I encountered an error processing your request. Please try again.";
       }
     } else if (to === twilioPublicNumber) {
-      // Public number - allow all with shareable content only
+      // Public number - allow all
       accessLevel = "public";
 
-      // Build context from shareable content
-      let shareableContext: string;
+      // Call rag-chat
       try {
-        shareableContext = await buildShareableContext(supabase);
-      } catch (contextError) {
-        console.error("Error building shareable context:", contextError);
-        shareableContext = "No shared content available at this time.";
-      }
-
-      // Call rag-chat with shareable content context
-      try {
-        responseMessage = await callRagChat(
-          body,
-          shareableContext,
-          "public",
-        );
+        responseMessage = await callRagChat(body);
       } catch (ragError) {
         console.error("RAG chat error:", ragError);
         responseMessage =
