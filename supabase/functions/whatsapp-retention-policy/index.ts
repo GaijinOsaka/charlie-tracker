@@ -111,13 +111,6 @@ async function executeRetentionPolicy(
 
     const result = deleteResponse.data?.[0];
 
-    // Get GDPR compliance report
-    const reportResponse = await supabase.rpc("get_gdpr_compliance_report", {
-      p_days: 90,
-    });
-
-    const report = reportResponse.data?.[0];
-
     return {
       success: true,
       message: `Retention policy executed successfully`,
@@ -215,6 +208,23 @@ Deno.serve(async (req) => {
   // Handle CORS preflight
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
+  }
+
+  // Validate Authorization header (Bearer token required)
+  const authHeader = req.headers.get("Authorization");
+  if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    return new Response(
+      JSON.stringify({
+        success: false,
+        message: "Missing or invalid Authorization header",
+        error: "Bearer token is required to execute retention policy",
+        timestamp: new Date().toISOString(),
+      }),
+      {
+        status: 401,
+        headers: corsHeaders,
+      }
+    );
   }
 
   try {

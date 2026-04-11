@@ -12,12 +12,20 @@ CREATE TABLE gdpr_deletion_log (
   retention_days INTEGER NOT NULL,
   deleted_before_timestamp TIMESTAMPTZ NOT NULL,
   execution_timestamp TIMESTAMPTZ DEFAULT NOW(),
-  CONSTRAINT valid_table_name CHECK (table_name = 'whatsapp_interactions')
+  CONSTRAINT valid_table_name CHECK (table_name = 'whatsapp_interactions'),
+  CONSTRAINT valid_retention_days CHECK (retention_days IS NULL OR retention_days > 0),
+  CONSTRAINT valid_records_deleted CHECK (records_deleted > 0)
 );
 
 -- Index for audit queries
 CREATE INDEX idx_gdpr_deletion_log_timestamp ON gdpr_deletion_log(execution_timestamp DESC);
 CREATE INDEX idx_gdpr_deletion_log_table ON gdpr_deletion_log(table_name);
+
+-- Performance index for efficient retention policy deletion query
+-- Supports: WHERE access_level = 'public' AND created_at < cutoff_date
+CREATE INDEX idx_whatsapp_interactions_access_created
+ON whatsapp_interactions(access_level, created_at DESC)
+WHERE access_level = 'public';
 
 -- Enable RLS (only authenticated users can read compliance logs)
 ALTER TABLE gdpr_deletion_log ENABLE ROW LEVEL SECURITY;
@@ -44,6 +52,12 @@ DECLARE
   v_cutoff_date TIMESTAMPTZ;
   v_execution_time TIMESTAMPTZ;
 BEGIN
+  -- Only service_role can execute this function (via Edge Functions)
+  IF session_user != 'service_role' THEN
+    RAISE EXCEPTION 'Only service_role can execute delete_expired_whatsapp_interactions()'
+      USING HINT = 'This function must be called via Edge Functions with service role credentials';
+  END IF;
+
   v_execution_time := NOW();
   v_cutoff_date := NOW() - MAKE_INTERVAL(days => retention_days);
 
@@ -101,6 +115,12 @@ DECLARE
   v_deleted_count INT;
   v_execution_time TIMESTAMPTZ;
 BEGIN
+  -- Only service_role can execute this function (via Edge Functions)
+  IF session_user != 'service_role' THEN
+    RAISE EXCEPTION 'Only service_role can execute delete_whatsapp_interactions_manual()'
+      USING HINT = 'Manual deletion must be requested through the Edge Function API with proper authorization';
+  END IF;
+
   v_execution_time := NOW();
 
   -- Delete interactions matching criteria
