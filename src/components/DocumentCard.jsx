@@ -19,6 +19,9 @@ export default function DocumentCard({
   onDelete,
   selected,
   onToggleSelect,
+  isShareable,
+  onShareableChange,
+  sharingLoading,
 }) {
   const [downloading, setDownloading] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -158,6 +161,12 @@ export default function DocumentCard({
     }
   }
 
+  async function handleToggleShareable() {
+    if (onShareableChange) {
+      await onShareableChange(doc.id, isShareable);
+    }
+  }
+
   return (
     <div className={`doc-card ${selected ? "doc-card-selected" : ""}`}>
       <div className="doc-card-header">
@@ -211,6 +220,16 @@ export default function DocumentCard({
         {doc.dates_extracted && (
           <span className="doc-dates-badge">Dates Extracted</span>
         )}
+
+        {/* Shareable Badge */}
+        {isShareable && (
+          <span
+            className="doc-shareable-badge"
+            title="Shareable via WhatsApp"
+          >
+            💬 Shareable
+          </span>
+        )}
       </div>
 
       {/* RAG Error Message */}
@@ -240,6 +259,14 @@ export default function DocumentCard({
           disabled={downloading}
         >
           {downloading ? "Opening..." : "Download"}
+        </button>
+        <button
+          className={`btn-doc ${isShareable ? "btn-shareable-active" : "btn-shareable"}`}
+          onClick={handleToggleShareable}
+          disabled={sharingLoading}
+          title={isShareable ? "Click to remove from WhatsApp sharing" : "Click to share via WhatsApp"}
+        >
+          {sharingLoading ? "Updating..." : isShareable ? "Unshare" : "Share"}
         </button>
         {doc.rag_status === "failed" ? (
           <button

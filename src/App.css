@@ -955,6 +955,35 @@ header h1 {
   background: rgba(239, 68, 68, 0.1);
 }
 
+.btn-shareable {
+  color: #8b5cf6;
+  border-color: #8b5cf6;
+}
+
+.btn-shareable:hover {
+  background: rgba(139, 92, 246, 0.1);
+}
+
+.btn-shareable-active {
+  color: var(--success);
+  border-color: var(--success);
+  background: rgba(16, 185, 129, 0.1);
+}
+
+.btn-shareable-active:hover {
+  background: rgba(16, 185, 129, 0.2);
+}
+
+.doc-shareable-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  background: rgba(139, 92, 246, 0.2);
+  color: #a78bfa;
+}
+
 .btn-edit-tags {
   padding: 4px 8px;
   border: 1px solid var(--border);
