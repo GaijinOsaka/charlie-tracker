@@ -3,6 +3,9 @@
   --success: #10B981;
   --danger: #EF4444;
   --warning: #F59E0B;
+  --purple: #8b5cf6;
+  --purple-light: #a78bfa;
+  --purple-rgb: 139, 92, 246;
   --bg: #1a2332;
   --bg-surface: #1e2a3a;
   --bg-hover: #243044;
@@ -955,12 +958,12 @@ header h1 {
 }
 
 .btn-shareable {
-  color: #8b5cf6;
-  border-color: #8b5cf6;
+  color: var(--purple);
+  border-color: var(--purple);
 }
 
 .btn-shareable:hover {
-  background: rgba(139, 92, 246, 0.1);
+  background: rgba(var(--purple-rgb), 0.1);
 }
 
 .btn-shareable-active {
@@ -979,8 +982,8 @@ header h1 {
   border-radius: 4px;
   font-size: 11px;
   font-weight: 600;
-  background: rgba(139, 92, 246, 0.2);
-  color: #a78bfa;
+  background: rgba(var(--purple-rgb), 0.2);
+  color: var(--purple-light);
 }
 
 .btn-edit-tags {
@@ -1588,7 +1591,7 @@ header h1 {
 }
 
 .btn-extract-text:hover {
-  background: rgba(139, 92, 246, 0.08);
+  background: rgba(var(--purple-rgb), 0.08);
 }
 
 /* Extract Dates button */
@@ -1608,8 +1611,8 @@ header h1 {
   border-radius: 4px;
   font-size: 11px;
   font-weight: 600;
-  background: rgba(139, 92, 246, 0.15);
-  color: #c4b5fd;
+  background: rgba(var(--purple-rgb), 0.15);
+  color: var(--purple-light);
 }
 
 .doc-dates-badge {
@@ -1786,6 +1789,17 @@ header h1 {
 
   .chat-fab-label {
     display: none;
+  }
+
+  .doc-card-actions {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .doc-card-actions button {
+    width: 100%;
+    padding: 8px 12px;
+    font-size: 0.85rem;
   }
 }
 
