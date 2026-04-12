@@ -112,3 +112,17 @@ export async function deleteManualEvent(eventId) {
 
   if (error) throw error;
 }
+
+// Message action status functions
+export async function updateActionStatus(messageId, newStatus) {
+  // newStatus can be: 'pending', 'actioned', or null
+  const { error } = await supabase
+    .from("messages")
+    .update({ action_status: newStatus })
+    .eq("id", messageId);
+
+  if (error) {
+    console.error("Failed to update action status:", error);
+    throw error;
+  }
+}
