@@ -921,51 +921,58 @@ function App() {
             </div>
 
             {(() => {
-              const actioned = messages
-                .filter((m) => m.actioned_at)
-                .sort(
-                  (a, b) => new Date(b.actioned_at) - new Date(a.actioned_at),
-                )
-                .slice(0, 5);
-              if (actioned.length === 0) return null;
+              const actionsPending = messages
+                .filter((m) => m.action_status === "pending")
+                .sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at));
+
+              const actionsCompleted = messages
+                .filter((m) => m.action_status === "actioned")
+                .sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at));
+
+              if (actionsPending.length === 0 && actionsCompleted.length === 0)
+                return null;
+
               return (
-                <div className="actioned-box">
-                  <h4 className="actioned-box-title">Recently Actioned</h4>
-                  <ul className="actioned-list">
-                    {actioned.map((msg) => (
-                      <li key={msg.id} className="actioned-item">
-                        <div className="actioned-info">
-                          <span className="actioned-subject">
-                            {msg.subject}
-                          </span>
-                          <span className="actioned-meta">
-                            {profiles[msg.actioned_by]?.display_name ||
-                              msg.actioned_by}{" "}
-                            &middot;{" "}
-                            {new Date(msg.actioned_at).toLocaleString()}
-                          </span>
-                          {msg.action_note && (
-                            <div className="actioned-note">
-                              <span className="actioned-note-label">NOTES</span>
-                              <span className="actioned-note-text">
-                                {renderMarkdown(msg.action_note)}
+                <div className="actions-box">
+                  <h4 className="actions-box-title">Actions</h4>
+
+                  {actionsPending.length > 0 && (
+                    <div className="actions-section">
+                      <h5 className="actions-section-title">Pending</h5>
+                      <ul className="actions-list">
+                        {actionsPending.map((msg) => (
+                          <li key={msg.id} className="actions-item">
+                            <div className="actions-info">
+                              <span className="actions-subject">{msg.subject}</span>
+                              <span className="actions-meta">
+                                {(msg.source || "arbor").toUpperCase()} &middot;{" "}
+                                {new Date(msg.received_at).toLocaleString()}
                               </span>
                             </div>
-                          )}
-                        </div>
-                        <span
-                          className={`source-badge source-${msg.source}`}
-                          style={{
-                            fontSize: "10px",
-                            padding: "2px 6px",
-                            flexShrink: 0,
-                          }}
-                        >
-                          {(msg.source || "arbor").toUpperCase()}
-                        </span>
-                      </li>
-                    ))}
-                  </ul>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+
+                  {actionsCompleted.length > 0 && (
+                    <div className="actions-section">
+                      <h5 className="actions-section-title">Actioned</h5>
+                      <ul className="actions-list">
+                        {actionsCompleted.map((msg) => (
+                          <li key={msg.id} className="actions-item">
+                            <div className="actions-info">
+                              <span className="actions-subject">{msg.subject}</span>
+                              <span className="actions-meta">
+                                {(msg.source || "arbor").toUpperCase()} &middot;{" "}
+                                {new Date(msg.received_at).toLocaleString()}
+                              </span>
+                            </div>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
                 </div>
               );
             })()}
