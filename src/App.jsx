@@ -4,6 +4,7 @@ import {
   createManualEvent,
   updateManualEvent,
   deleteManualEvent,
+  updateActionStatus,
 } from "./lib/supabase";
 import { useAuth } from "./lib/AuthContext";
 import LoginPage from "./components/LoginPage";
@@ -239,8 +240,7 @@ function App() {
         .select(
           "*, messages(id, subject, sender_name, sender_email, content, source, received_at, attachments(id, filename, file_path, mime_type, file_size)), documents(id, filename, file_path), event_tags(tag)",
         )
-        .order("event_date", { ascending: true })
-        .eq("archived", false);
+        .order("event_date", { ascending: true });
       if (error) throw error;
       setEvents(data || []);
     } catch (error) {
@@ -307,9 +307,8 @@ function App() {
   async function archiveEvent(eventId) {
     try {
       const { error } = await supabase
-        .from("events")
-        .update({ archived: true })
-        .eq("id", eventId);
+        .from("event_archives")
+        .insert({ event_id: eventId });
       if (error) throw error;
       setEvents((prev) => prev.filter((e) => e.id !== eventId));
       addToast("Event archived", "success");
@@ -382,60 +381,26 @@ function App() {
     setViewerOpen(true);
   }
 
-  function openActionModal(msg) {
-    if (msg.actioned_at) {
-      undoAction(msg);
-    } else {
-      setActionModalMessage(msg);
-    }
-  }
-
-  async function confirmAction(note) {
-    const msg = actionModalMessage;
-    setActionModalMessage(null);
+  async function toggleActionStatus(msg, targetStatus) {
     try {
-      // Append user name in bold if note exists
-      const noteWithUser = note?.trim()
-        ? `${note.trim()} — **${profile?.full_name || user.email}**`
-        : null;
+      await updateActionStatus(msg.id, targetStatus);
 
-      const updates = {
-        actioned_at: new Date().toISOString(),
-        actioned_by: user.id,
-        action_note: noteWithUser,
-      };
-      const { error } = await supabase
-        .from("messages")
-        .update(updates)
-        .eq("id", msg.id);
-      if (error) throw error;
+      // Update local state optimistically
       setMessages((prev) =>
-        prev.map((m) => (m.id === msg.id ? { ...m, ...updates } : m)),
+        prev.map((m) =>
+          m.id === msg.id ? { ...m, action_status: targetStatus } : m,
+        ),
       );
-      addToast("Message marked as actioned", "success");
-    } catch (err) {
-      addToast("Failed to action message", "error");
-    }
-  }
 
-  async function undoAction(msg) {
-    try {
-      const updates = {
-        actioned_at: null,
-        actioned_by: null,
-        action_note: null,
+      const statusLabels = {
+        pending: "marked as needing action",
+        actioned: "marked as actioned",
+        null: "cleared action status",
       };
-      const { error } = await supabase
-        .from("messages")
-        .update(updates)
-        .eq("id", msg.id);
-      if (error) throw error;
-      setMessages((prev) =>
-        prev.map((m) => (m.id === msg.id ? { ...m, ...updates } : m)),
-      );
-      addToast("Action undone", "info");
+      addToast(`Message ${statusLabels[targetStatus]}`, "success");
     } catch (err) {
-      addToast("Failed to undo action", "error");
+      console.error("Failed to update action status:", err);
+      addToast("Failed to update action status", "error");
     }
   }
 
