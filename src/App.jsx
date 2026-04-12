@@ -311,15 +311,19 @@ function App() {
 
   async function archiveEvent(eventId) {
     try {
+      console.log("Archiving event:", eventId, "for user:", user?.id);
       const { error } = await supabase
         .from("event_archives")
-        .insert({ user_id: user.id, event_id: eventId });
-      if (error) throw error;
+        .upsert({ user_id: user.id, event_id: eventId }, { onConflict: "user_id,event_id" });
+      if (error) {
+        console.error("Supabase error:", error.message, error);
+        throw error;
+      }
       setEvents((prev) => prev.filter((e) => e.id !== eventId));
       addToast("Event archived", "success");
     } catch (err) {
-      console.error("Error archiving event:", err);
-      addToast("Failed to archive event", "error");
+      console.error("Error archiving event:", err.message || err);
+      addToast("Failed to archive event: " + (err.message || "Unknown error"), "error");
     }
   }
 
