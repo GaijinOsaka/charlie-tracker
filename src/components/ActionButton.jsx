@@ -20,12 +20,12 @@ export function ActionButton({ message, onStatusChange }) {
   }, [isOpen]);
 
   const handleActionClick = (status) => {
-    onStatusChange(message.id, status);
+    onStatusChange(message, status);
     setIsOpen(false);
   };
 
   const handleClear = () => {
-    onStatusChange(message.id, null);
+    onStatusChange(message, null);
     setIsOpen(false);
   };
 
