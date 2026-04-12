@@ -1007,19 +1007,10 @@ function App() {
                           {(msg.source || "arbor").toUpperCase()}
                         </span>
                         {!msg.is_read && <span className="unread-dot"></span>}
-                        {msg.actioned_at && (
-                          <div className="actioned-info">
-                            <span className="actioned-badge">Actioned</span>
-                            <span className="actioned-detail">
-                              by{" "}
-                              {profiles[msg.actioned_by]?.display_name ||
-                                "Unknown"}
-                              {msg.action_note && (
-                                <>
-                                  {" — "}
-                                  {renderMarkdown(msg.action_note)}
-                                </>
-                              )}
+                        {msg.action_status && (
+                          <div className="action-status-badge">
+                            <span className={`action-status-label action-status-${msg.action_status}`}>
+                              {msg.action_status === "pending" ? "⏳ Needs Action" : "✓ Actioned"}
                             </span>
                           </div>
                         )}

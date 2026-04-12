@@ -488,6 +488,32 @@ header h1 {
   word-break: break-word;
 }
 
+/* Action Status Badge Styles */
+.action-status-badge {
+  display: inline-block;
+  margin-left: 0.5rem;
+}
+
+.action-status-label {
+  display: inline-block;
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.25rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.action-status-pending {
+  background-color: rgba(245, 158, 11, 0.2);
+  color: #F59E0B;
+}
+
+.action-status-actioned {
+  background-color: rgba(16, 185, 129, 0.2);
+  color: #10B981;
+}
+
 .loading,
 .error,
 .no-messages {
