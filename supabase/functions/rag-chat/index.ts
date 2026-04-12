@@ -135,11 +135,11 @@ Deno.serve(async (req) => {
 
     // 3. Build context from chunks
     const sources: { filename: string; content: string }[] = [];
-    let context = "";
+    let docContext = "";
 
     if (chunks && chunks.length > 0) {
       for (const chunk of chunks) {
-        context += `\n--- From: ${chunk.document_name} ---\n${chunk.content}\n`;
+        docContext += `\n--- From: ${chunk.document_name} ---\n${chunk.content}\n`;
         // Deduplicate sources by filename
         if (!sources.some((s) => s.filename === chunk.document_name)) {
           sources.push({
@@ -150,16 +150,55 @@ Deno.serve(async (req) => {
       }
     }
 
+    // 3b. Fetch calendar events (past 7 days + next 60 days)
+    const today = new Date().toISOString().split("T")[0];
+    const pastDate = new Date(Date.now() - 7 * 86400000)
+      .toISOString()
+      .split("T")[0];
+    const futureDate = new Date(Date.now() + 60 * 86400000)
+      .toISOString()
+      .split("T")[0];
+
+    const { data: events } = await supabase
+      .from("events")
+      .select(
+        "title, event_date, event_end_date, event_time, event_end_time, description, action_required, action_detail, source_type",
+      )
+      .gte("event_date", pastDate)
+      .lte("event_date", futureDate)
+      .eq("archived", false)
+      .order("event_date", { ascending: true });
+
+    let eventsContext = "";
+    if (events && events.length > 0) {
+      eventsContext = "\n## Calendar Events\n";
+      for (const evt of events) {
+        const dateStr =
+          evt.event_date + (evt.event_time ? ` at ${evt.event_time}` : "");
+        const endStr =
+          evt.event_end_date && evt.event_end_date !== evt.event_date
+            ? ` to ${evt.event_end_date}`
+            : "";
+        const actionStr = evt.action_required
+          ? ` [ACTION REQUIRED: ${evt.action_detail || "yes"}]`
+          : "";
+        eventsContext += `- ${dateStr}${endStr}: ${evt.title}${actionStr}${evt.description ? ` — ${evt.description}` : ""}\n`;
+      }
+    }
+
     // 4. Build conversation messages for Claude
     const systemPrompt = `You are Charlie, a helpful assistant for a parent tracking their child's school communications and documents.
 
-Answer questions using ONLY the provided document excerpts below. Always cite which document your answer comes from by mentioning the filename.
+Today's date is ${today}. Use this to understand relative time references like "today", "tomorrow", "this week", "next week", etc.
 
-If the documents don't contain enough information to answer the question, say so clearly — do not make up information.
+Answer questions using the provided document excerpts and calendar events below. When citing information from documents, mention the filename. When answering about events, reference the date and event title.
+
+If the available information doesn't contain enough to answer the question, say so clearly — do not make up information.
 
 Keep answers concise and helpful.
 
-${context ? `## Document Excerpts\n${context}` : "No documents have been indexed yet. Let the user know they need to add documents to RAG first."}`;
+${docContext ? `## Document Excerpts\n${docContext}` : "No documents have been indexed yet."}
+${eventsContext || "No calendar events found in the upcoming period."}`;
 
     // Build messages array with history
     const messages: { role: string; content: string }[] = [];

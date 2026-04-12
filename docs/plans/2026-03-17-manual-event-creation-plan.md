@@ -13,6 +13,7 @@
 ## Task 1: Database Migration - Add Event Creator Tracking
 
 **Files:**
+
 - Create: `supabase/migrations/2026-03-17-manual-events.sql`
 
 **Step 1: Create migration file with schema changes**
@@ -93,6 +94,7 @@ git commit -m "feat: add event creator tracking and source type distinction"
 ## Task 2: Add Event CRUD Helper Functions
 
 **Files:**
+
 - Modify: `src/lib/supabase.js`
 
 **Step 1: Add createManualEvent function**
@@ -102,26 +104,30 @@ Add to `src/lib/supabase.js`:
 ```javascript
 export async function createManualEvent(eventData) {
   // eventData: { title, event_date, event_time, event_end_time, description, action_required, action_detail }
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
 
-  if (!user) throw new Error('User not authenticated');
+  if (!user) throw new Error("User not authenticated");
 
   const { data, error } = await supabase
-    .from('events')
-    .insert([{
-      title: eventData.title,
-      event_date: eventData.event_date,
-      event_time: eventData.event_time || null,
-      event_end_time: eventData.event_end_time || null,
-      description: eventData.description || null,
-      action_required: eventData.action_required || false,
-      action_detail: eventData.action_detail || null,
-      created_by: user.id,
-      source_type: 'manual',
-      message_id: null,
-      document_id: null
-    }])
-    .select()
+    .from("events")
+    .insert([
+      {
+        title: eventData.title,
+        event_date: eventData.event_date,
+        event_time: eventData.event_time || null,
+        event_end_time: eventData.event_end_time || null,
+        description: eventData.description || null,
+        action_required: eventData.action_required || false,
+        action_detail: eventData.action_detail || null,
+        created_by: user.id,
+        source_type: "manual",
+        message_id: null,
+        document_id: null,
+      },
+    ])
+    .select();
 
   if (error) throw error;
   return data[0];
@@ -134,22 +140,25 @@ Add to `src/lib/supabase.js`:
 
 ```javascript
 export async function updateManualEvent(eventId, eventData) {
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
 
-  if (!user) throw new Error('User not authenticated');
+  if (!user) throw new Error("User not authenticated");
 
   // Verify user is the creator (RLS will enforce, but check client-side too)
   const { data: event, error: fetchError } = await supabase
-    .from('events')
-    .select('created_by')
-    .eq('id', eventId)
+    .from("events")
+    .select("created_by")
+    .eq("id", eventId)
     .single();
 
   if (fetchError) throw fetchError;
-  if (event.created_by !== user.id) throw new Error('Only event creator can edit');
+  if (event.created_by !== user.id)
+    throw new Error("Only event creator can edit");
 
   const { data, error } = await supabase
-    .from('events')
+    .from("events")
     .update({
       title: eventData.title,
       event_date: eventData.event_date,
@@ -157,10 +166,10 @@ export async function updateManualEvent(eventId, eventData) {
       event_end_time: eventData.event_end_time || null,
       description: eventData.description || null,
       action_required: eventData.action_required || false,
-      action_detail: eventData.action_detail || null
+      action_detail: eventData.action_detail || null,
     })
-    .eq('id', eventId)
-    .select()
+    .eq("id", eventId)
+    .select();
 
   if (error) throw error;
   return data[0];
@@ -173,24 +182,24 @@ Add to `src/lib/supabase.js`:
 
 ```javascript
 export async function deleteManualEvent(eventId) {
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
 
-  if (!user) throw new Error('User not authenticated');
+  if (!user) throw new Error("User not authenticated");
 
   // Verify user is the creator (RLS will enforce, but check client-side too)
   const { data: event, error: fetchError } = await supabase
-    .from('events')
-    .select('created_by')
-    .eq('id', eventId)
+    .from("events")
+    .select("created_by")
+    .eq("id", eventId)
     .single();
 
   if (fetchError) throw fetchError;
-  if (event.created_by !== user.id) throw new Error('Only event creator can delete');
+  if (event.created_by !== user.id)
+    throw new Error("Only event creator can delete");
 
-  const { error } = await supabase
-    .from('events')
-    .delete()
-    .eq('id', eventId)
+  const { error } = await supabase.from("events").delete().eq("id", eventId);
 
   if (error) throw error;
 }
@@ -213,6 +222,7 @@ git commit -m "feat: add CRUD functions for manual events"
 ## Task 3: Create EventModal Component
 
 **Files:**
+
 - Create: `src/components/EventModal.jsx`
 
 **Step 1: Create EventModal component with form**
@@ -220,8 +230,8 @@ git commit -m "feat: add CRUD functions for manual events"
 Create `src/components/EventModal.jsx`:
 
 ```javascript
-import { useState, useEffect } from 'react';
-import '../styles/EventModal.css';
+import { useState, useEffect } from "react";
+import "../styles/EventModal.css";
 
 export default function EventModal({
   isOpen,
@@ -229,37 +239,37 @@ export default function EventModal({
   onSubmit,
   initialDate = null,
   editingEvent = null,
-  creatorName = null
+  creatorName = null,
 }) {
-  const [title, setTitle] = useState('');
-  const [eventDate, setEventDate] = useState(initialDate || '');
-  const [eventTime, setEventTime] = useState('');
-  const [eventEndTime, setEventEndTime] = useState('');
-  const [description, setDescription] = useState('');
+  const [title, setTitle] = useState("");
+  const [eventDate, setEventDate] = useState(initialDate || "");
+  const [eventTime, setEventTime] = useState("");
+  const [eventEndTime, setEventEndTime] = useState("");
+  const [description, setDescription] = useState("");
   const [actionRequired, setActionRequired] = useState(false);
-  const [actionDetail, setActionDetail] = useState('');
-  const [error, setError] = useState('');
+  const [actionDetail, setActionDetail] = useState("");
+  const [error, setError] = useState("");
 
   // Pre-fill form if editing
   useEffect(() => {
     if (editingEvent) {
-      setTitle(editingEvent.title || '');
-      setEventDate(editingEvent.event_date || '');
-      setEventTime(editingEvent.event_time || '');
-      setEventEndTime(editingEvent.event_end_time || '');
-      setDescription(editingEvent.description || '');
+      setTitle(editingEvent.title || "");
+      setEventDate(editingEvent.event_date || "");
+      setEventTime(editingEvent.event_time || "");
+      setEventEndTime(editingEvent.event_end_time || "");
+      setDescription(editingEvent.description || "");
       setActionRequired(editingEvent.action_required || false);
-      setActionDetail(editingEvent.action_detail || '');
+      setActionDetail(editingEvent.action_detail || "");
     } else {
-      setTitle('');
-      setEventDate(initialDate || '');
-      setEventTime('');
-      setEventEndTime('');
-      setDescription('');
+      setTitle("");
+      setEventDate(initialDate || "");
+      setEventTime("");
+      setEventEndTime("");
+      setDescription("");
       setActionRequired(false);
-      setActionDetail('');
+      setActionDetail("");
     }
-    setError('');
+    setError("");
   }, [editingEvent, initialDate, isOpen]);
 
   const handleSubmit = async (e) => {
@@ -267,11 +277,11 @@ export default function EventModal({
 
     // Validation
     if (!title.trim()) {
-      setError('Title is required');
+      setError("Title is required");
       return;
     }
     if (!eventDate) {
-      setError('Date is required');
+      setError("Date is required");
       return;
     }
 
@@ -283,11 +293,11 @@ export default function EventModal({
         event_end_time: eventEndTime || null,
         description: description.trim() || null,
         action_required: actionRequired,
-        action_detail: actionDetail.trim() || null
+        action_detail: actionDetail.trim() || null,
       });
       // Form reset happens in parent on successful submission
     } catch (err) {
-      setError(err.message || 'Error saving event');
+      setError(err.message || "Error saving event");
     }
   };
 
@@ -297,7 +307,7 @@ export default function EventModal({
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal-content" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
-          <h2>{editingEvent ? 'Edit Event' : 'Create Event'}</h2>
+          <h2>{editingEvent ? "Edit Event" : "Create Event"}</h2>
           <button className="modal-close" onClick={onClose} aria-label="Close">
             &times;
           </button>
@@ -394,7 +404,7 @@ export default function EventModal({
               Cancel
             </button>
             <button type="submit" className="btn-submit">
-              {editingEvent ? 'Update Event' : 'Create Event'}
+              {editingEvent ? "Update Event" : "Create Event"}
             </button>
           </div>
         </form>
@@ -629,6 +639,7 @@ git commit -m "feat: add EventModal component for event creation and editing"
 ## Task 4: Update CalendarView to Support Manual Event Creation
 
 **Files:**
+
 - Modify: `src/components/CalendarView.jsx` (lines 1-20 and calendar grid rendering)
 
 **Step 1: Add state and props for event creation**
@@ -663,39 +674,39 @@ function CalendarView({
 In the calendar grid rendering section, find where month navigation buttons are and add:
 
 ```javascript
-  function handleCreateEventClick() {
-    setEditingEvent(null)
-    setSelectedDateForCreate(null)
-    setShowEventModal(true)
-  }
+function handleCreateEventClick() {
+  setEditingEvent(null);
+  setSelectedDateForCreate(null);
+  setShowEventModal(true);
+}
 
-  function handleDateClick(day) {
-    const dateStr = `${viewYear}-${String(viewMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`
-    setSelectedDateForCreate(dateStr)
-    setEditingEvent(null)
-    setShowEventModal(true)
-  }
+function handleDateClick(day) {
+  const dateStr = `${viewYear}-${String(viewMonth + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+  setSelectedDateForCreate(dateStr);
+  setEditingEvent(null);
+  setShowEventModal(true);
+}
 
-  function handleEditEvent(evt) {
-    setEditingEvent(evt)
-    setSelectedDateForCreate(null)
-    setShowEventModal(true)
-  }
+function handleEditEvent(evt) {
+  setEditingEvent(evt);
+  setSelectedDateForCreate(null);
+  setShowEventModal(true);
+}
 
-  async function handleModalSubmit(formData) {
-    try {
-      if (editingEvent) {
-        await onEditEvent(editingEvent.id, formData)
-      } else {
-        await onCreateEvent(formData)
-      }
-      setShowEventModal(false)
-      setEditingEvent(null)
-      setSelectedDateForCreate(null)
-    } catch (err) {
-      console.error('Error saving event:', err)
+async function handleModalSubmit(formData) {
+  try {
+    if (editingEvent) {
+      await onEditEvent(editingEvent.id, formData);
+    } else {
+      await onCreateEvent(formData);
     }
+    setShowEventModal(false);
+    setEditingEvent(null);
+    setSelectedDateForCreate(null);
+  } catch (err) {
+    console.error("Error saving event:", err);
   }
+}
 ```
 
 **Step 3: Add Create Event button to render output (before month grid)**
@@ -730,14 +741,15 @@ Find the JSX return statement and add button before calendar grid:
 In the calendar grid rendering, find where individual date cells are rendered and make them clickable:
 
 ```javascript
-  // In the calendar grid rendering loop:
-  // Replace static date cells with clickable ones
-  {cells.map((day, idx) => (
+// In the calendar grid rendering loop:
+// Replace static date cells with clickable ones
+{
+  cells.map((day, idx) => (
     <div
       key={idx}
-      className={`cal-date-cell ${day === null ? 'empty' : ''} ${
-        day && todayStr === dateStr(day) ? 'today' : ''
-      } ${day && selectedDate === dateStr(day) ? 'selected' : ''}`}
+      className={`cal-date-cell ${day === null ? "empty" : ""} ${
+        day && todayStr === dateStr(day) ? "today" : ""
+      } ${day && selectedDate === dateStr(day) ? "selected" : ""}`}
       onClick={() => day && handleDateClick(day)}
     >
       {day && (
@@ -745,15 +757,20 @@ In the calendar grid rendering, find where individual date cells are rendered an
           <div className="cal-date-number">{day}</div>
           {eventsByDate[dateStr(day)] && (
             <div className="cal-date-events">
-              {eventsByDate[dateStr(day)].map(evt => (
-                <div key={evt.id} className="cal-date-event-dot" title={evt.title} />
+              {eventsByDate[dateStr(day)].map((evt) => (
+                <div
+                  key={evt.id}
+                  className="cal-date-event-dot"
+                  title={evt.title}
+                />
               ))}
             </div>
           )}
         </div>
       )}
     </div>
-  ))}
+  ));
+}
 ```
 
 **Step 5: Add EventModal component to render output (end of CalendarView)**
@@ -761,28 +778,30 @@ In the calendar grid rendering, find where individual date cells are rendered an
 Add before closing div of CalendarView:
 
 ```javascript
-  // Import EventModal at top: import EventModal from './EventModal'
+// Import EventModal at top: import EventModal from './EventModal'
 
-  return (
-    <div className="calendar-container">
-      {/* ... calendar grid ... */}
+return (
+  <div className="calendar-container">
+    {/* ... calendar grid ... */}
 
-      <EventModal
-        isOpen={showEventModal}
-        onClose={() => {
-          setShowEventModal(false)
-          setEditingEvent(null)
-          setSelectedDateForCreate(null)
-        }}
-        onSubmit={handleModalSubmit}
-        initialDate={selectedDateForCreate}
-        editingEvent={editingEvent}
-        creatorName={editingEvent && profiles[editingEvent.created_by]
+    <EventModal
+      isOpen={showEventModal}
+      onClose={() => {
+        setShowEventModal(false);
+        setEditingEvent(null);
+        setSelectedDateForCreate(null);
+      }}
+      onSubmit={handleModalSubmit}
+      initialDate={selectedDateForCreate}
+      editingEvent={editingEvent}
+      creatorName={
+        editingEvent && profiles[editingEvent.created_by]
           ? profiles[editingEvent.created_by].display_name
-          : null}
-      />
-    </div>
-  )
+          : null
+      }
+    />
+  </div>
+);
 ```
 
 **Step 6: Update event cards to show creator and edit/delete buttons**
@@ -790,46 +809,63 @@ Add before closing div of CalendarView:
 In the `renderEventCard` function, update to show creator info and action buttons:
 
 ```javascript
-  function renderEventCard(evt, showDate) {
-    const isCreator = currentUserId && evt.created_by === currentUserId;
-    const creatorDisplayName = evt.created_by && profiles[evt.created_by]
+function renderEventCard(evt, showDate) {
+  const isCreator = currentUserId && evt.created_by === currentUserId;
+  const creatorDisplayName =
+    evt.created_by && profiles[evt.created_by]
       ? profiles[evt.created_by].display_name
-      : 'Unknown';
+      : "Unknown";
 
-    return (
-      <div key={evt.id} className={`cal-event-card ${expandedCalEvent === evt.id ? 'cal-event-expanded' : ''}`}>
-        <div className="cal-event-row" onClick={() => setExpandedCalEvent(expandedCalEvent === evt.id ? null : evt.id)}>
-          {/* ... existing date/title/time rendering ... */}
+  return (
+    <div
+      key={evt.id}
+      className={`cal-event-card ${expandedCalEvent === evt.id ? "cal-event-expanded" : ""}`}
+    >
+      <div
+        className="cal-event-row"
+        onClick={() =>
+          setExpandedCalEvent(expandedCalEvent === evt.id ? null : evt.id)
+        }
+      >
+        {/* ... existing date/title/time rendering ... */}
 
-          {/* Add creator info and actions */}
-          <div className="cal-event-footer">
-            {evt.source_type === 'manual' && (
-              <span className="event-creator">Created by: {creatorDisplayName}</span>
-            )}
-            {isCreator && evt.source_type === 'manual' && (
-              <div className="event-actions">
-                <button
-                  className="btn-event-edit"
-                  onClick={(e) => { e.stopPropagation(); handleEditEvent(evt); }}
-                  title="Edit event"
-                >
-                  Edit
-                </button>
-                <button
-                  className="btn-event-delete"
-                  onClick={(e) => { e.stopPropagation(); onDeleteEvent(evt.id); }}
-                  title="Delete event"
-                >
-                  Delete
-                </button>
-              </div>
-            )}
-          </div>
+        {/* Add creator info and actions */}
+        <div className="cal-event-footer">
+          {evt.source_type === "manual" && (
+            <span className="event-creator">
+              Created by: {creatorDisplayName}
+            </span>
+          )}
+          {isCreator && evt.source_type === "manual" && (
+            <div className="event-actions">
+              <button
+                className="btn-event-edit"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleEditEvent(evt);
+                }}
+                title="Edit event"
+              >
+                Edit
+              </button>
+              <button
+                className="btn-event-delete"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onDeleteEvent(evt.id);
+                }}
+                title="Delete event"
+              >
+                Delete
+              </button>
+            </div>
+          )}
         </div>
-        {/* ... rest of expanded content ... */}
       </div>
-    )
-  }
+      {/* ... rest of expanded content ... */}
+    </div>
+  );
+}
 ```
 
 **Step 7: Verify changes compile**
@@ -849,6 +885,7 @@ git commit -m "feat: add event creation UI to CalendarView with modal integratio
 ## Task 5: Update App Component to Wire Everything Together
 
 **Files:**
+
 - Modify: `src/App.jsx` (event loading and handlers)
 
 **Step 1: Import new functions and component**
@@ -856,8 +893,12 @@ git commit -m "feat: add event creation UI to CalendarView with modal integratio
 At top of App.jsx, add imports:
 
 ```javascript
-import EventModal from './components/EventModal';
-import { createManualEvent, updateManualEvent, deleteManualEvent } from './lib/supabase';
+import EventModal from "./components/EventModal";
+import {
+  createManualEvent,
+  updateManualEvent,
+  deleteManualEvent,
+} from "./lib/supabase";
 ```
 
 **Step 2: Add event creation handler**
@@ -865,41 +906,41 @@ import { createManualEvent, updateManualEvent, deleteManualEvent } from './lib/s
 Add to App function, alongside existing handlers:
 
 ```javascript
-  async function handleCreateEvent(formData) {
-    try {
-      const newEvent = await createManualEvent(formData);
-      // Add to local state immediately for instant feedback
-      setEvents([...events, newEvent]);
-      // Show toast
-      showToast('Event created successfully');
-    } catch (err) {
-      console.error('Error creating event:', err);
-      showToast('Failed to create event: ' + err.message, 'error');
-    }
+async function handleCreateEvent(formData) {
+  try {
+    const newEvent = await createManualEvent(formData);
+    // Add to local state immediately for instant feedback
+    setEvents([...events, newEvent]);
+    // Show toast
+    showToast("Event created successfully");
+  } catch (err) {
+    console.error("Error creating event:", err);
+    showToast("Failed to create event: " + err.message, "error");
   }
+}
 
-  async function handleUpdateEvent(eventId, formData) {
-    try {
-      const updatedEvent = await updateManualEvent(eventId, formData);
-      setEvents(events.map(e => e.id === eventId ? updatedEvent : e));
-      showToast('Event updated successfully');
-    } catch (err) {
-      console.error('Error updating event:', err);
-      showToast('Failed to update event: ' + err.message, 'error');
-    }
+async function handleUpdateEvent(eventId, formData) {
+  try {
+    const updatedEvent = await updateManualEvent(eventId, formData);
+    setEvents(events.map((e) => (e.id === eventId ? updatedEvent : e)));
+    showToast("Event updated successfully");
+  } catch (err) {
+    console.error("Error updating event:", err);
+    showToast("Failed to update event: " + err.message, "error");
   }
+}
 
-  async function handleDeleteEvent(eventId) {
-    if (!confirm('Delete this event?')) return;
-    try {
-      await deleteManualEvent(eventId);
-      setEvents(events.filter(e => e.id !== eventId));
-      showToast('Event deleted');
-    } catch (err) {
-      console.error('Error deleting event:', err);
-      showToast('Failed to delete event: ' + err.message, 'error');
-    }
+async function handleDeleteEvent(eventId) {
+  if (!confirm("Delete this event?")) return;
+  try {
+    await deleteManualEvent(eventId);
+    setEvents(events.filter((e) => e.id !== eventId));
+    showToast("Event deleted");
+  } catch (err) {
+    console.error("Error deleting event:", err);
+    showToast("Failed to delete event: " + err.message, "error");
   }
+}
 ```
 
 **Step 3: Update CalendarView component call**
@@ -907,7 +948,8 @@ Add to App function, alongside existing handlers:
 Find where CalendarView is rendered in the JSX and update:
 
 ```javascript
-  {activeTab === 'calendar' && (
+{
+  activeTab === "calendar" && (
     <CalendarView
       events={events}
       linkify={linkify}
@@ -919,7 +961,8 @@ Find where CalendarView is rendered in the JSX and update:
       currentUserId={user?.id}
       profiles={profiles}
     />
-  )}
+  );
+}
 ```
 
 **Step 4: Verify App component syntax**
@@ -944,6 +987,7 @@ git commit -m "feat: wire event creation handlers in App component"
 ## Task 6: Add Event CSS Styling
 
 **Files:**
+
 - Modify: `src/App.css` (add event-related styles)
 
 **Step 1: Add calendar date cell clickability styles**
@@ -1075,6 +1119,7 @@ git commit -m "feat: add styling for event creation UI"
 ## Task 7: Apply Database Migration to Supabase
 
 **Files:**
+
 - Use: `supabase/migrations/2026-03-17-manual-events.sql` (created in Task 1)
 
 **Step 1: Copy migration SQL**
@@ -1085,6 +1130,7 @@ Expected: Shows full migration with ALTER TABLE, constraints, and RLS policies
 **Step 2: Apply migration via Supabase dashboard**
 
 Manual steps:
+
 1. Go to Supabase project → SQL Editor
 2. Create new query
 3. Copy entire migration file contents
@@ -1094,6 +1140,7 @@ Manual steps:
 **Step 3: Verify RLS policies applied**
 
 In Supabase dashboard:
+
 1. Go to Authentication → Policies
 2. Check events table has:
    - "Authenticated users can read events" (SELECT)
@@ -1132,6 +1179,7 @@ Run: `git add supabase/migrations/2026-03-17-manual-events.sql && git commit -m 
 ## Task 8: Manual Testing and Verification
 
 **Files:**
+
 - Test manually via app UI (no automated tests, verification-based)
 
 **Step 1: Start dev server**
@@ -1197,6 +1245,7 @@ Expected: App starts on http://localhost:5173
 **Step 9: Test permission restrictions**
 
 If two users available:
+
 1. User 1 creates event
 2. User 2 logs in and views calendar
 3. Verify User 2 can see User 1's event but no Edit/Delete buttons
@@ -1218,6 +1267,7 @@ Expected: Shows commits from tasks 1-7
 ## Task 9: Code Review & Final Checks
 
 **Files:**
+
 - Review: All modified/created files for quality
 
 **Step 1: Verify no console errors**
@@ -1252,6 +1302,7 @@ Expected: Shows events_source_constraint
 **Step 4: Verify RLS policies protect data**
 
 Attempt as unauthenticated user:
+
 ```sql
 -- Should fail with permission denied
 SELECT * FROM events WHERE source_type = 'manual' LIMIT 1;
