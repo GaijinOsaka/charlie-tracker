@@ -15,6 +15,7 @@ import ChatDrawer from "./components/ChatDrawer";
 import NotificationBell from "./components/NotificationBell";
 import { AttachmentViewer } from "./components/AttachmentViewer";
 import SetPassword from "./components/SetPassword";
+import { ActionsBox } from "./components/ActionsBox";
 import { Agentation } from "agentation";
 import "./App.css";
 
@@ -71,6 +72,8 @@ function App() {
   const [eventsTagFilter, setEventsTagFilter] = useState("all");
   const [expandedMessages, setExpandedMessages] = useState(new Set());
   const [expandedEvents, setExpandedEvents] = useState(new Set());
+  const [expandedActionMessageId, setExpandedActionMessageId] =
+    useState(null);
   const [indexingMessages, setIndexingMessages] = useState(new Set());
   const [profiles, setProfiles] = useState({});
   const [viewerAttachment, setViewerAttachment] = useState(null);
@@ -944,51 +947,16 @@ function App() {
                 .filter((m) => m.action_status === "actioned")
                 .sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at));
 
-              if (actionsPending.length === 0 && actionsCompleted.length === 0)
-                return null;
-
               return (
-                <div className="actions-box">
-                  <h4 className="actions-box-title">Actions</h4>
-
-                  {actionsPending.length > 0 && (
-                    <div className="actions-section">
-                      <h5 className="actions-section-title">Pending</h5>
-                      <ul className="actions-list">
-                        {actionsPending.map((msg) => (
-                          <li key={msg.id} className="actions-item">
-                            <div className="actions-info">
-                              <span className="actions-subject">{msg.subject}</span>
-                              <span className="actions-meta">
-                                {(msg.source || "arbor").toUpperCase()} &middot;{" "}
-                                {new Date(msg.received_at).toLocaleString()}
-                              </span>
-                            </div>
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
-
-                  {actionsCompleted.length > 0 && (
-                    <div className="actions-section">
-                      <h5 className="actions-section-title">Actioned</h5>
-                      <ul className="actions-list">
-                        {actionsCompleted.map((msg) => (
-                          <li key={msg.id} className="actions-item">
-                            <div className="actions-info">
-                              <span className="actions-subject">{msg.subject}</span>
-                              <span className="actions-meta">
-                                {(msg.source || "arbor").toUpperCase()} &middot;{" "}
-                                {new Date(msg.received_at).toLocaleString()}
-                              </span>
-                            </div>
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
-                </div>
+                <ActionsBox
+                  pendingMessages={actionsPending}
+                  actionedMessages={actionsCompleted}
+                  onMessageClick={(msgId) => {
+                    setExpandedMessages(
+                      new Set([...expandedMessages, msgId])
+                    );
+                  }}
+                />
               );
             })()}
 
