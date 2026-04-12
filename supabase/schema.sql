@@ -166,9 +166,15 @@ CREATE POLICY "Authenticated users can read sync_log"
   ON sync_log FOR SELECT
   USING (auth.role() = 'authenticated');
 
-CREATE POLICY "Authenticated users can read events"
+CREATE POLICY "Authenticated users can read non-archived events"
   ON events FOR SELECT
-  USING (auth.role() = 'authenticated');
+  USING (
+    auth.role() = 'authenticated'
+    AND NOT EXISTS (
+      SELECT 1 FROM event_archives
+      WHERE user_id = auth.uid() AND event_id = events.id
+    )
+  );
 
 -- 10. Create storage bucket
 -- charlie-documents: all documents (web scraped PDFs under web_scrape/, email attachments under email/)
@@ -410,14 +416,3 @@ CREATE POLICY "Authenticated users can update events"
   USING (auth.role() = 'authenticated')
   WITH CHECK (auth.role() = 'authenticated');
 
--- Add new RLS policy on events to filter archived-by-current-user events
--- This policy allows users to see events they haven't archived
-CREATE POLICY "users_see_non_archived_events" ON events
-  FOR SELECT
-  USING (
-    auth.role() = 'authenticated'
-    AND NOT EXISTS (
-      SELECT 1 FROM event_archives
-      WHERE user_id = auth.uid() AND event_id = events.id
-    )
-  );
