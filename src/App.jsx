@@ -1082,12 +1082,40 @@ function App() {
                       >
                         {msg.is_read ? "Mark as Unread" : "Mark as Read"}
                       </button>
-                      <button
-                        className={`btn-action ${msg.actioned_at ? "btn-action-undo" : ""}`}
-                        onClick={() => openActionModal(msg)}
-                      >
-                        {msg.actioned_at ? "Undo Action" : "Mark Actioned"}
-                      </button>
+                      {msg.action_status === null && (
+                        <button
+                          className="btn-action"
+                          onClick={() => toggleActionStatus(msg, "pending")}
+                        >
+                          ✓ Needs Action
+                        </button>
+                      )}
+
+                      {msg.action_status === "pending" && (
+                        <>
+                          <button
+                            className="btn-action btn-action-active"
+                            onClick={() => toggleActionStatus(msg, null)}
+                          >
+                            ✓ Needs Action
+                          </button>
+                          <button
+                            className="btn-action btn-action-active"
+                            onClick={() => toggleActionStatus(msg, "actioned")}
+                          >
+                            ✓ Mark Actioned
+                          </button>
+                        </>
+                      )}
+
+                      {msg.action_status === "actioned" && (
+                        <button
+                          className="btn-action btn-action-active"
+                          onClick={() => toggleActionStatus(msg, "pending")}
+                        >
+                          ✓ Mark Actioned
+                        </button>
+                      )}
                       <button
                         className={`btn-rag-toggle ${msg.indexed_for_rag ? "btn-rag-remove" : "btn-rag-add"}`}
                         onClick={() => toggleMessageRag(msg)}
