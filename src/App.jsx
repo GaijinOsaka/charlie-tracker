@@ -16,6 +16,7 @@ import NotificationBell from "./components/NotificationBell";
 import { AttachmentViewer } from "./components/AttachmentViewer";
 import SetPassword from "./components/SetPassword";
 import { ActionsBox } from "./components/ActionsBox";
+import { ActionButton } from "./components/ActionButton";
 import { Agentation } from "agentation";
 import "./App.css";
 
@@ -977,7 +978,12 @@ function App() {
                   >
                     <div className="message-header">
                       <div className="message-info">
-                        <h3 className="message-subject">{msg.subject}</h3>
+                        <h3 className="message-subject">
+                          {msg.subject}
+                          {msg.action_status && (
+                            <span className={`message-action-indicator ${msg.action_status}`} />
+                          )}
+                        </h3>
                         <p className="message-sender">
                           {msg.sender_name || msg.sender_email}
                         </p>
@@ -990,13 +996,7 @@ function App() {
                           {(msg.source || "arbor").toUpperCase()}
                         </span>
                         {!msg.is_read && <span className="unread-dot"></span>}
-                        {msg.action_status && (
-                          <div className="action-status-badge">
-                            <span className={`action-status-label action-status-${msg.action_status}`}>
-                              {msg.action_status === "pending" ? "⏳ Needs Action" : "✓ Actioned"}
-                            </span>
-                          </div>
-                        )}
+                        <ActionButton message={msg} onStatusChange={toggleActionStatus} />
                         {msg.indexed_for_rag && (
                           <span className="indexed-badge">RAG Indexed</span>
                         )}
@@ -1063,40 +1063,6 @@ function App() {
                       >
                         {msg.is_read ? "Mark as Unread" : "Mark as Read"}
                       </button>
-                      {msg.action_status === null && (
-                        <button
-                          className="btn-action"
-                          onClick={() => toggleActionStatus(msg, "pending")}
-                        >
-                          ✓ Needs Action
-                        </button>
-                      )}
-
-                      {msg.action_status === "pending" && (
-                        <>
-                          <button
-                            className="btn-action btn-action-active"
-                            onClick={() => toggleActionStatus(msg, null)}
-                          >
-                            ✓ Needs Action
-                          </button>
-                          <button
-                            className="btn-action btn-action-active"
-                            onClick={() => toggleActionStatus(msg, "actioned")}
-                          >
-                            ✓ Mark Actioned
-                          </button>
-                        </>
-                      )}
-
-                      {msg.action_status === "actioned" && (
-                        <button
-                          className="btn-action btn-action-active"
-                          onClick={() => toggleActionStatus(msg, "pending")}
-                        >
-                          ✓ Mark Actioned
-                        </button>
-                      )}
                       <button
                         className={`btn-rag-toggle ${msg.indexed_for_rag ? "btn-rag-remove" : "btn-rag-add"}`}
                         onClick={() => toggleMessageRag(msg)}
