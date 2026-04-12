@@ -313,7 +313,7 @@ function App() {
     try {
       const { error } = await supabase
         .from("event_archives")
-        .insert({ event_id: eventId });
+        .insert({ user_id: user.id, event_id: eventId });
       if (error) throw error;
       setEvents((prev) => prev.filter((e) => e.id !== eventId));
       addToast("Event archived", "success");
