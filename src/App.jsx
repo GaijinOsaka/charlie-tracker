@@ -12,7 +12,6 @@ import DocumentBrowser from "./components/DocumentBrowser";
 import SettingsPanel from "./components/SettingsPanel";
 import CalendarView from "./components/CalendarView";
 import ChatDrawer from "./components/ChatDrawer";
-import ActionModal from "./components/ActionModal";
 import NotificationBell from "./components/NotificationBell";
 import { AttachmentViewer } from "./components/AttachmentViewer";
 import SetPassword from "./components/SetPassword";
@@ -73,7 +72,6 @@ function App() {
   const [expandedMessages, setExpandedMessages] = useState(new Set());
   const [expandedEvents, setExpandedEvents] = useState(new Set());
   const [indexingMessages, setIndexingMessages] = useState(new Set());
-  const [actionModalMessage, setActionModalMessage] = useState(null);
   const [profiles, setProfiles] = useState({});
   const [viewerAttachment, setViewerAttachment] = useState(null);
   const [viewerOpen, setViewerOpen] = useState(false);
@@ -1172,14 +1170,6 @@ function App() {
       </div>
 
       <ChatDrawer />
-
-      {actionModalMessage && (
-        <ActionModal
-          message={actionModalMessage}
-          onConfirm={confirmAction}
-          onCancel={() => setActionModalMessage(null)}
-        />
-      )}
 
       <AttachmentViewer
         attachment={viewerAttachment}
