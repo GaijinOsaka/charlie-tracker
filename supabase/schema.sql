@@ -10,6 +10,9 @@ CREATE TABLE categories (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- Action status enum type
+CREATE TYPE action_status_enum AS ENUM ('pending', 'actioned');
+
 -- 2. Create messages table
 CREATE TABLE messages (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -24,6 +27,7 @@ CREATE TABLE messages (
   actioned_at TIMESTAMPTZ,
   actioned_by UUID REFERENCES auth.users(id),
   action_note TEXT,
+  action_status action_status_enum DEFAULT NULL,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW(),
   indexed_for_rag BOOLEAN DEFAULT FALSE
@@ -41,6 +45,7 @@ CREATE TABLE attachments (
 );
 
 CREATE INDEX IF NOT EXISTS idx_attachments_message_id ON attachments(message_id);
+CREATE INDEX IF NOT EXISTS idx_messages_action_status ON messages(action_status);
 
 ALTER TABLE attachments ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Authenticated users can read attachments" ON attachments FOR SELECT

@@ -136,6 +136,12 @@ function App() {
             table: "messages",
           },
           (payload) => {
+            // Verify action_status is included in realtime updates
+            if (payload.new.action_status !== undefined) {
+              console.log(
+                `[Realtime] Message ${payload.new.id} action_status updated to: ${payload.new.action_status}`,
+              );
+            }
             setMessages((prev) =>
               prev.map((m) => (m.id === payload.new.id ? payload.new : m)),
             );
