@@ -66,6 +66,7 @@ function App() {
   const [toasts, setToasts] = useState([]);
   const [statusFilter, setStatusFilter] = useState("all");
   const [sourceFilter, setSourceFilter] = useState("all");
+  const [actionFilter, setActionFilter] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [eventsFilter, setEventsFilter] = useState("upcoming");
   const [eventsTagFilter, setEventsTagFilter] = useState("all");
@@ -477,6 +478,12 @@ function App() {
 
     if (sourceFilter !== "all") {
       filtered = filtered.filter((m) => m.source === sourceFilter);
+    }
+
+    if (actionFilter === "pending") {
+      filtered = filtered.filter((m) => m.action_status === "pending");
+    } else if (actionFilter === "actioned") {
+      filtered = filtered.filter((m) => m.action_status === "actioned");
     }
 
     if (searchQuery) {
