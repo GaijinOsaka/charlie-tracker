@@ -61,7 +61,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    const { question, history } = await req.json();
+    const { question, history, accessLevel } = await req.json();
 
     if (!question || typeof question !== "string") {
       return new Response(JSON.stringify({ error: "question is required" }), {
@@ -69,6 +69,14 @@ Deno.serve(async (req) => {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
+
+    // Default to 'private' if accessLevel not provided (safe default for authenticated users)
+    const level = (accessLevel === "public" || accessLevel === "private")
+      ? accessLevel
+      : "private";
+
+    // Log for debugging and audit
+    console.log(`RAG search with access_level: ${level} (requested: ${accessLevel || 'none'})`);
 
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const openaiKey = Deno.env.get("OPENAI_API_KEY");
@@ -113,6 +121,7 @@ Deno.serve(async (req) => {
           query_embedding: `[${queryEmbedding.join(",")}]`,
           match_threshold: 0.2,
           match_count: 5,
+          access_level: level,
         }),
       },
     );

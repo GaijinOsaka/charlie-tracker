@@ -25,13 +25,16 @@ export default function DocumentBrowser() {
   const [selected, setSelected] = useState(new Set());
   const [batchDeleting, setBatchDeleting] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [shareableDocuments, setShareableDocuments] = useState(new Set());
+  const [sharingLoading, setSharingLoading] = useState(new Set());
   const fileInputRef = useRef(null);
 
   useEffect(() => {
     loadDocuments();
+    loadShareableDocuments();
 
     // Subscribe to realtime updates on documents table
-    const channel = supabase
+    const documentsChannel = supabase
       .channel("public:documents")
       .on(
         "postgres_changes",
@@ -61,8 +64,36 @@ export default function DocumentBrowser() {
       )
       .subscribe();
 
+    // Subscribe to realtime updates on shareable_content table
+    const shareableChannel = supabase
+      .channel("public:shareable_content")
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "shareable_content",
+        },
+        (payload) => {
+          const { content_type, content_id, is_shareable } = payload.new;
+          if (content_type === "document") {
+            setShareableDocuments((prev) => {
+              const next = new Set(prev);
+              if (is_shareable) {
+                next.add(content_id);
+              } else {
+                next.delete(content_id);
+              }
+              return next;
+            });
+          }
+        },
+      )
+      .subscribe();
+
     return () => {
-      channel.unsubscribe();
+      documentsChannel.unsubscribe();
+      shareableChannel.unsubscribe();
     };
   }, []);
 
@@ -74,7 +105,7 @@ export default function DocumentBrowser() {
         .select(
           "id, filename, file_path, source_url, source_type, tags, category, indexed_for_rag, dates_extracted, created_at, rag_status, rag_error, last_rag_attempt",
         )
-        .order("filename", { ascending: true });
+        .order("created_at", { ascending: false });
 
       if (error) throw error;
       setDocuments(data || []);
@@ -82,6 +113,67 @@ export default function DocumentBrowser() {
       setError(err.message);
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function loadShareableDocuments() {
+    try {
+      const { data, error } = await supabase
+        .from("shareable_content")
+        .select("content_id")
+        .eq("content_type", "document")
+        .eq("is_shareable", true);
+
+      if (error) throw error;
+      const shareableIds = new Set((data || []).map((item) => item.content_id));
+      setShareableDocuments(shareableIds);
+    } catch (err) {
+      console.error("Error loading shareable documents:", err);
+    }
+  }
+
+  async function toggleDocumentShareable(docId, currentShareableState) {
+    setSharingLoading((prev) => new Set(prev).add(docId));
+    try {
+      if (currentShareableState) {
+        // Currently shareable, make it not shareable
+        const { error } = await supabase
+          .from("shareable_content")
+          .update({ is_shareable: false })
+          .eq("content_type", "document")
+          .eq("content_id", docId);
+
+        if (error) throw error;
+        setShareableDocuments((prev) => {
+          const next = new Set(prev);
+          next.delete(docId);
+          return next;
+        });
+      } else {
+        // Not shareable, make it shareable
+        const { error } = await supabase
+          .from("shareable_content")
+          .upsert(
+            {
+              content_type: "document",
+              content_id: docId,
+              is_shareable: true,
+            },
+            { onConflict: "content_type,content_id" },
+          );
+
+        if (error) throw error;
+        setShareableDocuments((prev) => new Set(prev).add(docId));
+      }
+    } catch (err) {
+      console.error("Error toggling document shareable state:", err);
+      alert("Failed to update sharing status: " + err.message);
+    } finally {
+      setSharingLoading((prev) => {
+        const next = new Set(prev);
+        next.delete(docId);
+        return next;
+      });
     }
   }
 
@@ -362,6 +454,9 @@ export default function DocumentBrowser() {
               onDelete={handleDocumentDelete}
               selected={selected.has(doc.id)}
               onToggleSelect={() => toggleSelect(doc.id)}
+              isShareable={shareableDocuments.has(doc.id)}
+              onShareableChange={toggleDocumentShareable}
+              sharingLoading={sharingLoading.has(doc.id)}
             />
           ))}
         </div>

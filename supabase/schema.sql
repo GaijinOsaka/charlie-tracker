@@ -10,6 +10,9 @@ CREATE TABLE categories (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- Action status enum type
+CREATE TYPE action_status_enum AS ENUM ('pending', 'actioned');
+
 -- 2. Create messages table
 CREATE TABLE messages (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -24,6 +27,7 @@ CREATE TABLE messages (
   actioned_at TIMESTAMPTZ,
   actioned_by UUID REFERENCES auth.users(id),
   action_note TEXT,
+  action_status action_status_enum DEFAULT NULL,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW(),
   indexed_for_rag BOOLEAN DEFAULT FALSE
@@ -41,6 +45,7 @@ CREATE TABLE attachments (
 );
 
 CREATE INDEX IF NOT EXISTS idx_attachments_message_id ON attachments(message_id);
+CREATE INDEX IF NOT EXISTS idx_messages_action_status ON messages(action_status);
 
 ALTER TABLE attachments ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Authenticated users can read attachments" ON attachments FOR SELECT
@@ -161,9 +166,15 @@ CREATE POLICY "Authenticated users can read sync_log"
   ON sync_log FOR SELECT
   USING (auth.role() = 'authenticated');
 
-CREATE POLICY "Authenticated users can read events"
+CREATE POLICY "Authenticated users can read non-archived events"
   ON events FOR SELECT
-  USING (auth.role() = 'authenticated');
+  USING (
+    auth.role() = 'authenticated'
+    AND NOT EXISTS (
+      SELECT 1 FROM event_archives
+      WHERE user_id = auth.uid() AND event_id = events.id
+    )
+  );
 
 -- 10. Create storage bucket
 -- charlie-documents: all documents (web scraped PDFs under web_scrape/, email attachments under email/)
@@ -242,7 +253,8 @@ CREATE POLICY "Authenticated users can read chunks" ON document_chunks FOR SELEC
 CREATE OR REPLACE FUNCTION search_knowledge_base(
   query_embedding vector(1536),
   match_threshold float DEFAULT 0.7,
-  match_count int DEFAULT 5
+  match_count int DEFAULT 5,
+  access_level text DEFAULT 'private'
 )
 RETURNS TABLE (
   chunk_id uuid, document_id uuid, content text,
@@ -254,8 +266,23 @@ BEGIN
     (1 - (dc.embedding <=> query_embedding))::float, d.filename, dc.page_number
   FROM document_chunks dc
   JOIN documents d ON d.id = dc.document_id
+  LEFT JOIN shareable_content sc
+    ON sc.content_type = 'document'
+    AND sc.content_id = d.id
+    AND sc.is_shareable = true
   WHERE (1 - (dc.embedding <=> query_embedding)) > match_threshold
   AND d.indexed_for_rag = true
+  AND CASE
+    WHEN access_level = 'public' THEN
+      EXISTS (
+        SELECT 1 FROM shareable_content
+        WHERE content_type = 'document'
+        AND content_id = d.id
+        AND is_shareable = true
+      )
+    ELSE
+      true
+  END
   ORDER BY dc.embedding <=> query_embedding
   LIMIT match_count;
 END;
@@ -360,3 +387,32 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 CREATE TRIGGER trg_action_notification
   AFTER UPDATE ON messages
   FOR EACH ROW EXECUTE FUNCTION create_action_notification();
+
+-- 19. Per-user event archival (not global archived flag)
+-- Users can archive events from their view without affecting other users
+CREATE TABLE event_archives (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  event_id UUID NOT NULL REFERENCES events(id) ON DELETE CASCADE,
+  archived_at TIMESTAMP DEFAULT NOW(),
+  UNIQUE(user_id, event_id)
+);
+
+CREATE INDEX idx_event_archives_user ON event_archives(user_id);
+CREATE INDEX idx_event_archives_event ON event_archives(event_id);
+
+-- Enable RLS on event_archives
+ALTER TABLE event_archives ENABLE ROW LEVEL SECURITY;
+
+-- RLS policy: users can only manage their own event archives
+CREATE POLICY "users_can_manage_own_event_archives" ON event_archives
+  FOR ALL
+  USING (auth.uid() = user_id)
+  WITH CHECK (auth.uid() = user_id);
+
+-- Add UPDATE policy to events to allow users to manage their own archives (via the new table)
+CREATE POLICY "Authenticated users can update events"
+  ON events FOR UPDATE
+  USING (auth.role() = 'authenticated')
+  WITH CHECK (auth.role() = 'authenticated');
+

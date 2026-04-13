@@ -4,6 +4,7 @@ import {
   createManualEvent,
   updateManualEvent,
   deleteManualEvent,
+  updateActionStatus,
 } from "./lib/supabase";
 import { useAuth } from "./lib/AuthContext";
 import LoginPage from "./components/LoginPage";
@@ -11,10 +12,11 @@ import DocumentBrowser from "./components/DocumentBrowser";
 import SettingsPanel from "./components/SettingsPanel";
 import CalendarView from "./components/CalendarView";
 import ChatDrawer from "./components/ChatDrawer";
-import ActionModal from "./components/ActionModal";
 import NotificationBell from "./components/NotificationBell";
 import { AttachmentViewer } from "./components/AttachmentViewer";
 import SetPassword from "./components/SetPassword";
+import { ActionsBox } from "./components/ActionsBox";
+import { ActionButton } from "./components/ActionButton";
 import { Agentation } from "agentation";
 import "./App.css";
 
@@ -65,13 +67,15 @@ function App() {
   const [toasts, setToasts] = useState([]);
   const [statusFilter, setStatusFilter] = useState("all");
   const [sourceFilter, setSourceFilter] = useState("all");
+  const [actionFilter, setActionFilter] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [eventsFilter, setEventsFilter] = useState("upcoming");
   const [eventsTagFilter, setEventsTagFilter] = useState("all");
   const [expandedMessages, setExpandedMessages] = useState(new Set());
   const [expandedEvents, setExpandedEvents] = useState(new Set());
+  const [expandedActionMessageId, setExpandedActionMessageId] =
+    useState(null);
   const [indexingMessages, setIndexingMessages] = useState(new Set());
-  const [actionModalMessage, setActionModalMessage] = useState(null);
   const [profiles, setProfiles] = useState({});
   const [viewerAttachment, setViewerAttachment] = useState(null);
   const [viewerOpen, setViewerOpen] = useState(false);
@@ -134,6 +138,12 @@ function App() {
             table: "messages",
           },
           (payload) => {
+            // Verify action_status is included in realtime updates
+            if (payload.new.action_status !== undefined) {
+              console.log(
+                `[Realtime] Message ${payload.new.id} action_status updated to: ${payload.new.action_status}`,
+              );
+            }
             setMessages((prev) =>
               prev.map((m) => (m.id === payload.new.id ? payload.new : m)),
             );
@@ -239,8 +249,7 @@ function App() {
         .select(
           "*, messages(id, subject, sender_name, sender_email, content, source, received_at, attachments(id, filename, file_path, mime_type, file_size)), documents(id, filename, file_path), event_tags(tag)",
         )
-        .order("event_date", { ascending: true })
-        .eq("archived", false);
+        .order("event_date", { ascending: true });
       if (error) throw error;
       setEvents(data || []);
     } catch (error) {
@@ -306,16 +315,19 @@ function App() {
 
   async function archiveEvent(eventId) {
     try {
+      console.log("Archiving event:", eventId, "for user:", user?.id);
       const { error } = await supabase
-        .from("events")
-        .update({ archived: true })
-        .eq("id", eventId);
-      if (error) throw error;
+        .from("event_archives")
+        .upsert({ user_id: user.id, event_id: eventId }, { onConflict: "user_id,event_id" });
+      if (error) {
+        console.error("Supabase error:", error.message, error);
+        throw error;
+      }
       setEvents((prev) => prev.filter((e) => e.id !== eventId));
       addToast("Event archived", "success");
     } catch (err) {
-      console.error("Error archiving event:", err);
-      addToast("Failed to archive event", "error");
+      console.error("Error archiving event:", err.message || err);
+      addToast("Failed to archive event: " + (err.message || "Unknown error"), "error");
     }
   }
 
@@ -382,60 +394,26 @@ function App() {
     setViewerOpen(true);
   }
 
-  function openActionModal(msg) {
-    if (msg.actioned_at) {
-      undoAction(msg);
-    } else {
-      setActionModalMessage(msg);
-    }
-  }
-
-  async function confirmAction(note) {
-    const msg = actionModalMessage;
-    setActionModalMessage(null);
+  async function toggleActionStatus(msg, targetStatus) {
     try {
-      // Append user name in bold if note exists
-      const noteWithUser = note?.trim()
-        ? `${note.trim()} — **${profile?.full_name || user.email}**`
-        : null;
+      await updateActionStatus(msg.id, targetStatus);
 
-      const updates = {
-        actioned_at: new Date().toISOString(),
-        actioned_by: user.id,
-        action_note: noteWithUser,
-      };
-      const { error } = await supabase
-        .from("messages")
-        .update(updates)
-        .eq("id", msg.id);
-      if (error) throw error;
+      // Update local state optimistically
       setMessages((prev) =>
-        prev.map((m) => (m.id === msg.id ? { ...m, ...updates } : m)),
+        prev.map((m) =>
+          m.id === msg.id ? { ...m, action_status: targetStatus } : m,
+        ),
       );
-      addToast("Message marked as actioned", "success");
-    } catch (err) {
-      addToast("Failed to action message", "error");
-    }
-  }
 
-  async function undoAction(msg) {
-    try {
-      const updates = {
-        actioned_at: null,
-        actioned_by: null,
-        action_note: null,
+      const statusLabels = {
+        pending: "marked as needing action",
+        actioned: "marked as actioned",
+        null: "cleared action status",
       };
-      const { error } = await supabase
-        .from("messages")
-        .update(updates)
-        .eq("id", msg.id);
-      if (error) throw error;
-      setMessages((prev) =>
-        prev.map((m) => (m.id === msg.id ? { ...m, ...updates } : m)),
-      );
-      addToast("Action undone", "info");
+      addToast(`Message ${statusLabels[targetStatus]}`, "success");
     } catch (err) {
-      addToast("Failed to undo action", "error");
+      console.error("Failed to update action status:", err);
+      addToast("Failed to update action status", "error");
     }
   }
 
@@ -512,6 +490,12 @@ function App() {
 
     if (sourceFilter !== "all") {
       filtered = filtered.filter((m) => m.source === sourceFilter);
+    }
+
+    if (actionFilter === "pending") {
+      filtered = filtered.filter((m) => m.action_status === "pending");
+    } else if (actionFilter === "actioned") {
+      filtered = filtered.filter((m) => m.action_status === "actioned");
     }
 
     if (searchQuery) {
@@ -956,52 +940,24 @@ function App() {
             </div>
 
             {(() => {
-              const actioned = messages
-                .filter((m) => m.actioned_at)
-                .sort(
-                  (a, b) => new Date(b.actioned_at) - new Date(a.actioned_at),
-                )
-                .slice(0, 5);
-              if (actioned.length === 0) return null;
+              const actionsPending = messages
+                .filter((m) => m.action_status === "pending")
+                .sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at));
+
+              const actionsCompleted = messages
+                .filter((m) => m.action_status === "actioned")
+                .sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at));
+
               return (
-                <div className="actioned-box">
-                  <h4 className="actioned-box-title">Recently Actioned</h4>
-                  <ul className="actioned-list">
-                    {actioned.map((msg) => (
-                      <li key={msg.id} className="actioned-item">
-                        <div className="actioned-info">
-                          <span className="actioned-subject">
-                            {msg.subject}
-                          </span>
-                          <span className="actioned-meta">
-                            {profiles[msg.actioned_by]?.display_name ||
-                              msg.actioned_by}{" "}
-                            &middot;{" "}
-                            {new Date(msg.actioned_at).toLocaleString()}
-                          </span>
-                          {msg.action_note && (
-                            <div className="actioned-note">
-                              <span className="actioned-note-label">NOTES</span>
-                              <span className="actioned-note-text">
-                                {renderMarkdown(msg.action_note)}
-                              </span>
-                            </div>
-                          )}
-                        </div>
-                        <span
-                          className={`source-badge source-${msg.source}`}
-                          style={{
-                            fontSize: "10px",
-                            padding: "2px 6px",
-                            flexShrink: 0,
-                          }}
-                        >
-                          {(msg.source || "arbor").toUpperCase()}
-                        </span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
+                <ActionsBox
+                  pendingMessages={actionsPending}
+                  actionedMessages={actionsCompleted}
+                  onMessageClick={(msgId) => {
+                    setExpandedMessages(
+                      new Set([...expandedMessages, msgId])
+                    );
+                  }}
+                />
               );
             })()}
 
@@ -1022,7 +978,12 @@ function App() {
                   >
                     <div className="message-header">
                       <div className="message-info">
-                        <h3 className="message-subject">{msg.subject}</h3>
+                        <h3 className="message-subject">
+                          {msg.subject}
+                          {msg.action_status && (
+                            <span className={`message-action-indicator ${msg.action_status}`} />
+                          )}
+                        </h3>
                         <p className="message-sender">
                           {msg.sender_name || msg.sender_email}
                         </p>
@@ -1035,22 +996,7 @@ function App() {
                           {(msg.source || "arbor").toUpperCase()}
                         </span>
                         {!msg.is_read && <span className="unread-dot"></span>}
-                        {msg.actioned_at && (
-                          <div className="actioned-info">
-                            <span className="actioned-badge">Actioned</span>
-                            <span className="actioned-detail">
-                              by{" "}
-                              {profiles[msg.actioned_by]?.display_name ||
-                                "Unknown"}
-                              {msg.action_note && (
-                                <>
-                                  {" — "}
-                                  {renderMarkdown(msg.action_note)}
-                                </>
-                              )}
-                            </span>
-                          </div>
-                        )}
+                        <ActionButton message={msg} onStatusChange={toggleActionStatus} />
                         {msg.indexed_for_rag && (
                           <span className="indexed-badge">RAG Indexed</span>
                         )}
@@ -1118,12 +1064,6 @@ function App() {
                         {msg.is_read ? "Mark as Unread" : "Mark as Read"}
                       </button>
                       <button
-                        className={`btn-action ${msg.actioned_at ? "btn-action-undo" : ""}`}
-                        onClick={() => openActionModal(msg)}
-                      >
-                        {msg.actioned_at ? "Undo Action" : "Mark Actioned"}
-                      </button>
-                      <button
                         className={`btn-rag-toggle ${msg.indexed_for_rag ? "btn-rag-remove" : "btn-rag-add"}`}
                         onClick={() => toggleMessageRag(msg)}
                         disabled={indexingMessages.has(msg.id)}
@@ -1168,14 +1108,6 @@ function App() {
       </div>
 
       <ChatDrawer />
-
-      {actionModalMessage && (
-        <ActionModal
-          message={actionModalMessage}
-          onConfirm={confirmAction}
-          onCancel={() => setActionModalMessage(null)}
-        />
-      )}
 
       <AttachmentViewer
         attachment={viewerAttachment}

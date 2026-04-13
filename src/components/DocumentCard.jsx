@@ -19,6 +19,9 @@ export default function DocumentCard({
   onDelete,
   selected,
   onToggleSelect,
+  isShareable,
+  onShareableChange,
+  sharingLoading,
 }) {
   const [downloading, setDownloading] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -26,6 +29,15 @@ export default function DocumentCard({
   const [viewerOpen, setViewerOpen] = useState(false);
   const tags = doc.tags || [];
   const categoryStyle = CATEGORY_COLORS[doc.category] || CATEGORY_COLORS.other;
+
+  function formatDate(dateString) {
+    const date = new Date(dateString);
+    return new Intl.DateTimeFormat("en-US", {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+    }).format(date);
+  }
 
   async function handleDownload() {
     setDownloading(true);
@@ -158,6 +170,12 @@ export default function DocumentCard({
     }
   }
 
+  async function handleToggleShareable() {
+    if (onShareableChange) {
+      await onShareableChange(doc.id, isShareable);
+    }
+  }
+
   return (
     <div className={`doc-card ${selected ? "doc-card-selected" : ""}`}>
       <div className="doc-card-header">
@@ -170,13 +188,20 @@ export default function DocumentCard({
         <span className="doc-icon">
           {doc.filename?.endsWith(".pdf") ? "\u{1F4C4}" : "\u{1F4CE}"}
         </span>
-        <h4
-          className="doc-filename doc-filename-link"
-          title={doc.filename}
-          onClick={() => setViewerOpen(true)}
-        >
-          {doc.filename}
-        </h4>
+        <div className="doc-header-text">
+          <h4
+            className="doc-filename doc-filename-link"
+            title={doc.filename}
+            onClick={() => setViewerOpen(true)}
+          >
+            {doc.filename}
+          </h4>
+          {doc.created_at && (
+            <span className="doc-upload-date">
+              {formatDate(doc.created_at)}
+            </span>
+          )}
+        </div>
       </div>
 
       <div className="doc-card-meta">
@@ -211,6 +236,16 @@ export default function DocumentCard({
         {doc.dates_extracted && (
           <span className="doc-dates-badge">Dates Extracted</span>
         )}
+
+        {/* Shareable Badge */}
+        {isShareable && (
+          <span
+            className="doc-shareable-badge"
+            title="Shareable via WhatsApp"
+          >
+            💬 Shareable
+          </span>
+        )}
       </div>
 
       {/* RAG Error Message */}
@@ -240,6 +275,14 @@ export default function DocumentCard({
           disabled={downloading}
         >
           {downloading ? "Opening..." : "Download"}
+        </button>
+        <button
+          className={`btn-doc ${isShareable ? "btn-shareable-active" : "btn-shareable"}`}
+          onClick={handleToggleShareable}
+          disabled={sharingLoading}
+          title={isShareable ? "Click to remove from WhatsApp sharing" : "Click to share via WhatsApp"}
+        >
+          {sharingLoading ? "Updating..." : isShareable ? "Unshare" : "Share"}
         </button>
         {doc.rag_status === "failed" ? (
           <button
