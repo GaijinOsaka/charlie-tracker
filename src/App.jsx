@@ -35,6 +35,13 @@ async function subscribeToPushNotifications(user) {
     return;
   }
 
+  // Validate VAPID key is configured
+  const vapidKey = import.meta.env.VITE_VAPID_PUBLIC_KEY?.trim();
+  if (!vapidKey) {
+    console.warn('VITE_VAPID_PUBLIC_KEY is not configured. Push notifications disabled.');
+    return;
+  }
+
   try {
     // Get permission if not already granted
     if (Notification.permission === 'default') {
@@ -45,7 +52,7 @@ async function subscribeToPushNotifications(user) {
       }
     }
 
-    // Skip if permission not granted
+    // If user denied permission, abort
     if (Notification.permission !== 'granted') {
       return;
     }
@@ -62,7 +69,7 @@ async function subscribeToPushNotifications(user) {
     // Subscribe to push
     const subscription = await registration.pushManager.subscribe({
       userVisibleOnly: true,
-      applicationServerKey: urlBase64ToUint8Array(process.env.VITE_VAPID_PUBLIC_KEY),
+      applicationServerKey: urlBase64ToUint8Array(vapidKey),
     });
 
     // Send subscription to Supabase
@@ -72,7 +79,7 @@ async function subscribeToPushNotifications(user) {
         {
           user_id: user.id,
           subscription: subscription.toJSON(),
-          device_name: `${navigator.userAgent.split('/')[0]} ${new Date().toLocaleDateString()}`,
+          device_name: `${getBrowserName()} ${new Date().toLocaleDateString()}`,
         },
         { onConflict: 'user_id,subscription' }
       );
@@ -87,15 +94,40 @@ async function subscribeToPushNotifications(user) {
   }
 }
 
-// Helper function to convert VAPID key
+// Helper function to convert VAPID key from URL-safe base64 to Uint8Array
 function urlBase64ToUint8Array(base64String) {
+  if (typeof base64String !== 'string' || !base64String) {
+    throw new Error('VAPID key must be a non-empty string');
+  }
+
   const padding = '='.repeat((4 - base64String.length % 4) % 4);
   const base64 = (base64String + padding)
     .replace(/\-/g, '+')
     .replace(/_/g, '/');
 
-  const rawData = window.atob(base64);
-  return new Uint8Array([...rawData].map((char) => char.charCodeAt(0)));
+  try {
+    const rawData = window.atob(base64);
+    return new Uint8Array([...rawData].map((char) => char.charCodeAt(0)));
+  } catch (error) {
+    throw new Error(`Failed to decode VAPID key: ${error.message}`);
+  }
+}
+
+// Helper function to extract browser name from user agent
+function getBrowserName() {
+  const ua = navigator.userAgent;
+  if (ua.includes('Chrome') && !ua.includes('Chromium')) {
+    return 'Chrome';
+  } else if (ua.includes('Safari') && !ua.includes('Chrome')) {
+    return 'Safari';
+  } else if (ua.includes('Firefox')) {
+    return 'Firefox';
+  } else if (ua.includes('Edge') || ua.includes('Edg')) {
+    return 'Edge';
+  } else if (ua.includes('Chromium')) {
+    return 'Chromium';
+  }
+  return 'Unknown';
 }
 
 function linkify(text) {
