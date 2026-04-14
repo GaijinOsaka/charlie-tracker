@@ -2,7 +2,12 @@
 
 // Handle incoming push notifications
 self.addEventListener('push', (event) => {
-  const data = event.data ? event.data.json() : {};
+  let data = {};
+  try {
+    data = event.data ? event.data.json() : {};
+  } catch (e) {
+    console.error('Failed to parse push notification data:', e);
+  }
 
   const notificationOptions = {
     body: data.body || 'New notification',
