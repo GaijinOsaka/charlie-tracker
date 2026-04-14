@@ -6,8 +6,8 @@ self.addEventListener('push', (event) => {
 
   const notificationOptions = {
     body: data.body || 'New notification',
-    icon: data.icon || '/icons/icon-192.png',
-    badge: data.badge || '/icons/icon-192.png',
+    icon: data.icon || '/icon-192.png',
+    badge: data.badge || '/badge-72.png',
     tag: data.tag || 'default', // Prevents duplicate notifications for same tag
     data: data.data || {},
     actions: [
