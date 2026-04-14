@@ -119,6 +119,38 @@ header h1 {
   overflow: hidden;
 }
 
+.pagination-controls {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+
+.pagination-btn {
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  background: var(--bg-surface);
+  color: var(--text);
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.2s;
+  min-width: 40px;
+}
+
+.pagination-btn:hover {
+  background: var(--bg-hover);
+  border-color: var(--primary);
+}
+
+.pagination-btn.active {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: white;
+}
+
 .message-item {
   background: var(--bg-surface);
   border: 1px solid var(--border);
@@ -254,6 +286,46 @@ header h1 {
   color: var(--primary);
 }
 
+.action-note-display {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  margin-bottom: 12px;
+  border-left: 3px solid var(--primary);
+  background: rgba(59, 130, 246, 0.1);
+  border-radius: 4px;
+  font-size: 13px;
+  flex-wrap: wrap;
+}
+
+.action-icon {
+  flex-shrink: 0;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.action-text {
+  color: var(--text);
+  flex: 1;
+  min-width: 0;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+}
+
+.action-time {
+  color: var(--text-secondary);
+  font-size: 12px;
+  flex-shrink: 0;
+}
+
+.action-meta {
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-style: italic;
+  padding-left: 24px;
+}
+
 .message-attachments {
   display: flex;
   flex-wrap: wrap;
@@ -309,6 +381,33 @@ header h1 {
 .attachment-size {
   color: var(--text-secondary);
   font-size: 11px;
+}
+
+.message-action-note {
+  padding: 12px;
+  background: rgba(59, 130, 246, 0.1);
+  border-left: 3px solid var(--primary);
+  border-radius: 4px;
+  margin-bottom: 12px;
+}
+
+.action-note-label {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--primary);
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  margin-bottom: 6px;
+}
+
+.action-note-text {
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--text);
+  margin: 0;
+  white-space: pre-wrap;
+  word-wrap: break-word;
 }
 
 .btn-mark-read {
@@ -506,12 +605,12 @@ header h1 {
 
 .action-status-pending {
   background-color: rgba(245, 158, 11, 0.2);
-  color: #F59E0B;
+  color: #f59e0b;
 }
 
 .action-status-actioned {
   background-color: rgba(16, 185, 129, 0.2);
-  color: #10B981;
+  color: #10b981;
 }
 
 .loading,
@@ -2561,6 +2660,11 @@ header h1 {
   color: var(--text);
 }
 
+.user-item-name::after {
+  content: " •";
+  margin-right: 0.5rem;
+}
+
 .user-item-email {
   color: var(--text-secondary);
   font-size: 0.85rem;
@@ -2916,7 +3020,7 @@ header h1 {
 
 .number-display code {
   display: block;
-  font-family: 'Courier New', monospace;
+  font-family: "Courier New", monospace;
   font-size: 18px;
   color: var(--primary);
   word-break: break-all;

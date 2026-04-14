@@ -42,7 +42,7 @@ class MockDatabase {
     accessLevel: "public" | "private",
     query: string,
     response: string,
-    createdAt: Date
+    createdAt: Date,
   ) {
     this.whatsappInteractions.push({
       id: crypto.randomUUID(),
@@ -65,7 +65,7 @@ class MockDatabase {
     cutoffDate.setDate(cutoffDate.getDate() - retentionDays);
 
     const toDelete = this.whatsappInteractions.filter(
-      (i) => i.access_level === "public" && i.created_at < cutoffDate
+      (i) => i.access_level === "public" && i.created_at < cutoffDate,
     );
 
     const affected = new Set(toDelete.map((i) => i.phone_number_hash)).size;
@@ -73,15 +73,14 @@ class MockDatabase {
 
     // Remove records
     this.whatsappInteractions = this.whatsappInteractions.filter(
-      (i) => !toDelete.includes(i)
+      (i) => !toDelete.includes(i),
     );
 
     // Log deletion
     if (deleted > 0) {
       this.gdprLogs.push({
         id: crypto.randomUUID(),
-        deletion_reason:
-          `Automatic retention policy: public interactions older than ${retentionDays} days`,
+        deletion_reason: `Automatic retention policy: public interactions older than ${retentionDays} days`,
         records_deleted: deleted,
         affected_phone_hashes: affected,
         execution_timestamp: new Date(),
@@ -97,19 +96,19 @@ class MockDatabase {
   deleteManual(
     phoneHash?: string,
     accessLevel?: "public" | "private",
-    reason?: string
+    reason?: string,
   ): number {
     const toDelete = this.whatsappInteractions.filter(
       (i) =>
         (!phoneHash || i.phone_number_hash === phoneHash) &&
-        (!accessLevel || i.access_level === accessLevel)
+        (!accessLevel || i.access_level === accessLevel),
     );
 
     const deleted = toDelete.length;
 
     // Remove records
     this.whatsappInteractions = this.whatsappInteractions.filter(
-      (i) => !toDelete.includes(i)
+      (i) => !toDelete.includes(i),
     );
 
     // Log deletion
@@ -136,14 +135,13 @@ class MockDatabase {
 
     return {
       publicTotal: this.whatsappInteractions.filter(
-        (i) => i.access_level === "public"
+        (i) => i.access_level === "public",
       ).length,
       publicEligibleForDeletion: this.whatsappInteractions.filter(
-        (i) =>
-          i.access_level === "public" && i.created_at < cutoffDate
+        (i) => i.access_level === "public" && i.created_at < cutoffDate,
       ).length,
       privateTotal: this.whatsappInteractions.filter(
-        (i) => i.access_level === "private"
+        (i) => i.access_level === "private",
       ).length,
     };
   }
@@ -166,14 +164,14 @@ Deno.test("Retention Policy: 90-day threshold for public interactions", () => {
     "public",
     "old query 1",
     "old response 1",
-    days91
+    days91,
   );
   db.insertInteraction(
     "hash2",
     "public",
     "old query 2",
     "old response 2",
-    days91
+    days91,
   );
 
   // Public interaction (not yet eligible)
@@ -182,7 +180,7 @@ Deno.test("Retention Policy: 90-day threshold for public interactions", () => {
     "public",
     "recent query",
     "recent response",
-    days89
+    days89,
   );
 
   // Private interaction (never deleted)
@@ -191,7 +189,7 @@ Deno.test("Retention Policy: 90-day threshold for public interactions", () => {
     "private",
     "private query",
     "private response",
-    days91
+    days91,
   );
 
   // Verify initial state
@@ -229,7 +227,7 @@ Deno.test(
       "private",
       "very old private query",
       "very old response",
-      veryOld
+      veryOld,
     );
 
     // Execute retention policy
@@ -241,7 +239,7 @@ Deno.test(
     // Private interaction should still exist
     const status = db.getStatus(90);
     assertEquals(status.privateTotal, 1);
-  }
+  },
 );
 
 /**
@@ -259,7 +257,7 @@ Deno.test("Retention Policy: Manual deletion logs reason", () => {
   const deleted = db.deleteManual(
     "hash1",
     undefined,
-    "User requested data deletion (GDPR right to be forgotten)"
+    "User requested data deletion (GDPR right to be forgotten)",
   );
 
   assertEquals(deleted, 1);
@@ -270,31 +268,34 @@ Deno.test("Retention Policy: Manual deletion logs reason", () => {
   assertEquals(log.records_deleted, 1);
   assertEquals(
     log.deletion_reason,
-    "User requested data deletion (GDPR right to be forgotten)"
+    "User requested data deletion (GDPR right to be forgotten)",
   );
 });
 
 /**
  * Test Suite 4: Status Reporting
  */
-Deno.test("Retention Policy: Status accurately reports eligible deletions", () => {
-  const db = new MockDatabase();
+Deno.test(
+  "Retention Policy: Status accurately reports eligible deletions",
+  () => {
+    const db = new MockDatabase();
 
-  const now = new Date();
-  const days91 = new Date(now.getTime() - 91 * 24 * 60 * 60 * 1000);
-  const days89 = new Date(now.getTime() - 89 * 24 * 60 * 60 * 1000);
+    const now = new Date();
+    const days91 = new Date(now.getTime() - 91 * 24 * 60 * 60 * 1000);
+    const days89 = new Date(now.getTime() - 89 * 24 * 60 * 60 * 1000);
 
-  // Add mixed interactions
-  db.insertInteraction("hash1", "public", "q1", "r1", days91);
-  db.insertInteraction("hash2", "public", "q2", "r2", days89);
-  db.insertInteraction("hash3", "private", "q3", "r3", days91);
+    // Add mixed interactions
+    db.insertInteraction("hash1", "public", "q1", "r1", days91);
+    db.insertInteraction("hash2", "public", "q2", "r2", days89);
+    db.insertInteraction("hash3", "private", "q3", "r3", days91);
 
-  const status = db.getStatus(90);
+    const status = db.getStatus(90);
 
-  assertEquals(status.publicTotal, 2);
-  assertEquals(status.publicEligibleForDeletion, 1); // Only hash1 is 91+ days
-  assertEquals(status.privateTotal, 1);
-});
+    assertEquals(status.publicTotal, 2);
+    assertEquals(status.publicEligibleForDeletion, 1); // Only hash1 is 91+ days
+    assertEquals(status.privateTotal, 1);
+  },
+);
 
 /**
  * Test Suite 5: Multiple Users Tracking
@@ -321,7 +322,7 @@ Deno.test(
     // 4 records deleted, but only 2 unique phone hashes affected
     assertEquals(result.deleted, 4);
     assertEquals(result.affected, 2);
-  }
+  },
 );
 
 /**
@@ -356,7 +357,7 @@ Deno.test("Retention Policy: Every deletion is logged for compliance", () => {
   const log = db.gdprLogs[0];
   assertEquals(
     log.deletion_reason.includes("Automatic retention policy"),
-    true
+    true,
   );
   assertEquals(log.records_deleted, 1);
   assertEquals(log.execution_timestamp > now, false); // Logged after execution
@@ -383,7 +384,7 @@ Deno.test(
 
     // Both should be deleted (both > 30 days old)
     assertEquals(result.deleted, 2);
-  }
+  },
 );
 
 /**
@@ -398,13 +399,7 @@ Deno.test(
     const days91 = new Date(now.getTime() - 91 * 24 * 60 * 60 * 1000);
 
     // Insert with hash (no plain phone numbers)
-    db.insertInteraction(
-      "abc123def456",
-      "public",
-      "query",
-      "response",
-      days91
-    );
+    db.insertInteraction("abc123def456", "public", "query", "response", days91);
 
     db.executeRetentionPolicy(90);
 
@@ -412,7 +407,7 @@ Deno.test(
     const log = db.gdprLogs[0];
     assertEquals(log.deletion_reason.includes("+"), false); // No phone numbers
     assertEquals(log.deletion_reason.includes("hash"), true); // References policy, not PII
-  }
+  },
 );
 
 /**
@@ -443,30 +438,27 @@ Deno.test("Retention Policy: Can safely handle multiple deletion runs", () => {
 /**
  * Test Suite 11: Error Case - Invalid Retention Period
  */
-Deno.test(
-  "Retention Policy: Validates retention period is positive",
-  () => {
-    const db = new MockDatabase();
+Deno.test("Retention Policy: Validates retention period is positive", () => {
+  const db = new MockDatabase();
 
-    const now = new Date();
-    db.insertInteraction("hash1", "public", "q1", "r1", now);
+  const now = new Date();
+  db.insertInteraction("hash1", "public", "q1", "r1", now);
 
-    // Should not process negative retention period
-    // In production, the database constraint would reject this
-    // For MockDatabase, we validate before execution
-    const retentionDays = -90;
+  // Should not process negative retention period
+  // In production, the database constraint would reject this
+  // For MockDatabase, we validate before execution
+  const retentionDays = -90;
 
-    // Validation: retention_days must be positive
-    if (retentionDays <= 0) {
-      assertEquals(true, true); // Validation caught invalid input
-      return;
-    }
-
-    const result = db.executeRetentionPolicy(retentionDays);
-    // Should not reach here with invalid input
-    assertEquals(result.deleted, 0);
+  // Validation: retention_days must be positive
+  if (retentionDays <= 0) {
+    assertEquals(true, true); // Validation caught invalid input
+    return;
   }
-);
+
+  const result = db.executeRetentionPolicy(retentionDays);
+  // Should not reach here with invalid input
+  assertEquals(result.deleted, 0);
+});
 
 /**
  * Test Suite 12: Error Case - Zero Retention Period
@@ -522,7 +514,7 @@ Deno.test(
 
     // Verify: Only 1 log entry from first run
     assertEquals(db.gdprLogs.length, 1);
-  }
+  },
 );
 
 /**

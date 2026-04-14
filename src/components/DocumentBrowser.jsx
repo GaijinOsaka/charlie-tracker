@@ -151,16 +151,14 @@ export default function DocumentBrowser() {
         });
       } else {
         // Not shareable, make it shareable
-        const { error } = await supabase
-          .from("shareable_content")
-          .upsert(
-            {
-              content_type: "document",
-              content_id: docId,
-              is_shareable: true,
-            },
-            { onConflict: "content_type,content_id" },
-          );
+        const { error } = await supabase.from("shareable_content").upsert(
+          {
+            content_type: "document",
+            content_id: docId,
+            is_shareable: true,
+          },
+          { onConflict: "content_type,content_id" },
+        );
 
         if (error) throw error;
         setShareableDocuments((prev) => new Set(prev).add(docId));

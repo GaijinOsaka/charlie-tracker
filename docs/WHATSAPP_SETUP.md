@@ -5,6 +5,7 @@ This guide covers everything needed to deploy and operate the Charlie Tracker Wh
 ## Overview
 
 The WhatsApp Bot uses Twilio's WhatsApp Business API to:
+
 - **Public Number**: Answer parent questions about homework, events, and documents (anonymized)
 - **Private Number**: Provide admins full access to all Charlie Tracker content (identified)
 - **RAG Search**: Intelligent responses powered by document embeddings and Claude AI
@@ -55,6 +56,7 @@ The WhatsApp Bot uses Twilio's WhatsApp Business API to:
 #### 1.2 Verify Business Account
 
 WhatsApp may require:
+
 - Business phone number verification
 - Official documentation
 - Website verification
@@ -63,6 +65,7 @@ WhatsApp may require:
 #### 1.3 Request Phone Numbers
 
 Once verified:
+
 ```
 1. In Twilio → WhatsApp → Phone Numbers
 2. Click "Request Phone Numbers"
@@ -101,6 +104,7 @@ Supabase Dashboard → Edge Functions
 ```
 
 If not deployed:
+
 ```bash
 supabase functions deploy whatsapp-webhook
 supabase functions deploy rag-chat
@@ -135,12 +139,14 @@ Repeat Step 4.1 for your private number.
 #### 5.1 Send Test Message to Public Number
 
 From any WhatsApp account:
+
 ```
 Send to public number: "test"
 Expected response: Falls back message or RAG response
 ```
 
 Check Supabase logs:
+
 ```sql
 -- Verify webhook received the message
 SELECT * FROM whatsapp_interactions
@@ -151,12 +157,14 @@ ORDER BY created_at DESC LIMIT 1;
 #### 5.2 Send Test Message to Private Number
 
 From an authorized admin account:
+
 ```
 Send to private number: "test"
 Expected response: Full RAG response
 ```
 
 Check audit log:
+
 ```sql
 -- Verify interaction logged with private access
 SELECT * FROM whatsapp_interactions
@@ -167,6 +175,7 @@ ORDER BY created_at DESC LIMIT 1;
 #### 5.3 Verify RAG Responses
 
 Test with real queries:
+
 ```
 Public:  "What's the homework?"
          → Should search documents, respond based on public content
@@ -182,6 +191,7 @@ Private: "Show me all events"
 #### Changing Phone Numbers
 
 To use different numbers:
+
 ```bash
 # Update Supabase environment variables
 TWILIO_PUBLIC_NUMBER=+new_public_number
@@ -278,6 +288,7 @@ LIMIT 10;
 ### Monitor Edge Function Logs
 
 In **Supabase Dashboard → Edge Functions → whatsapp-webhook**:
+
 - Check error logs for webhook failures
 - Monitor response times (should be < 2 seconds)
 - Look for rate limiting or timeout errors
@@ -285,15 +296,18 @@ In **Supabase Dashboard → Edge Functions → whatsapp-webhook**:
 ### Monitor Costs
 
 #### Twilio Costs
+
 - Inbound message: $0.0075
 - Outbound message: $0.005
 - Estimated for 10-20 users, 50-100 messages/day: **$2-5/month**
 
 Track in:
+
 - Twilio Console → Account → Billing
 - Set up alerts at $10/month to catch spikes
 
 #### Supabase Costs
+
 - WhatsApp integration uses negligible compute
 - Included in existing Supabase plan
 
@@ -337,17 +351,20 @@ Solution:
 ### For Parents (Public Number)
 
 **How to use:**
+
 1. Save public number to contacts: "Charlie Tracker Bot"
 2. Send WhatsApp message with question
 3. Receive response within 30 seconds
 
 **Example queries:**
+
 - "What's next week's homework?"
 - "When's the next school event?"
 - "How do I report a concern?"
 - "What documents are available?"
 
 **Limitations:**
+
 - Only sees shareable content marked by admins
 - Responses anonymized in audit log
 - No conversation history (stateless)
@@ -355,17 +372,20 @@ Solution:
 ### For Admins (Private Number)
 
 **How to use:**
+
 1. Save private number to contacts: "Charlie Tracker Admin"
 2. Send WhatsApp message with query
 3. Receive response with full access
 
 **Example queries:**
+
 - "List all events this month"
 - "Show me Mrs. Smith's messages"
 - "Export attendance records"
 - "Who hasn't responded to the survey?"
 
 **Capabilities:**
+
 - Full document and message access
 - Identified in audit log
 - Ideal for admin-to-admin queries
@@ -373,11 +393,13 @@ Solution:
 ### Privacy & Data
 
 **Public messages:**
+
 - Anonymized (phone number hashed)
 - Deleted after 90 days automatically
 - Shared only with RAG system for response
 
 **Private messages:**
+
 - Identified by phone number
 - Retained indefinitely (audit purposes)
 - Only visible to Charlie Tracker admins
@@ -396,13 +418,15 @@ deno test --allow-env integration-tests.ts
 ### Enable Debug Logging
 
 In `whatsapp-webhook/index.ts`, uncomment:
+
 ```typescript
-console.log('[WhatsApp]', 'message received:', phoneHash, accessLevel);
+console.log("[WhatsApp]", "message received:", phoneHash, accessLevel);
 ```
 
 ### Reset to Sandbox
 
 To test without real WhatsApp:
+
 ```
 1. Twilio Console → WhatsApp → Sandbox
 2. Copy public/private numbers from sandbox

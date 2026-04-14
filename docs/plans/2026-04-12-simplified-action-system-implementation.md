@@ -13,6 +13,7 @@
 ## Task 1: Create ActionButton Component
 
 **Files:**
+
 - Create: `src/components/ActionButton.jsx`
 
 **Step 1: Write the ActionButton component**
@@ -188,6 +189,7 @@ git commit -m "feat: add ActionButton component with popover menu"
 ## Task 2: Create ActionsBox Component
 
 **Files:**
+
 - Create: `src/components/ActionsBox.jsx`
 - Create: `src/components/ActionsBox.css`
 
@@ -197,21 +199,25 @@ git commit -m "feat: add ActionButton component with popover menu"
 import React, { useState } from "react";
 import "./ActionsBox.css";
 
-export function ActionsBox({ pendingMessages, actionedMessages, onMessageClick }) {
+export function ActionsBox({
+  pendingMessages,
+  actionedMessages,
+  onMessageClick,
+}) {
   const [expandedId, setExpandedId] = useState(null);
 
   const renderCompactRow = (msg, status) => (
     <div
       key={msg.id}
       className={`action-row action-row-${status}`}
-      onClick={() =>
-        setExpandedId(expandedId === msg.id ? null : msg.id)
-      }
+      onClick={() => setExpandedId(expandedId === msg.id ? null : msg.id)}
     >
       <div className="action-row-header">
         <div className="action-row-status-dot" />
         <div className="action-row-info">
-          <div className="action-row-subject">{msg.subject || "(No subject)"}</div>
+          <div className="action-row-subject">
+            {msg.subject || "(No subject)"}
+          </div>
           <div className="action-row-meta">
             <span className="action-row-source">{msg.source}</span>
             <span className="action-row-date">
@@ -438,6 +444,7 @@ git commit -m "feat: add ActionsBox component showing pending and actioned items
 ## Task 3: Add Action Status Indicator Dot to Messages
 
 **Files:**
+
 - Modify: `src/App.css`
 
 **Step 1: Add CSS for action status dot**
@@ -479,6 +486,7 @@ git commit -m "style: add CSS for action status indicator dots"
 ## Task 4: Integrate ActionButton into Message List
 
 **Files:**
+
 - Modify: `src/App.jsx` (around lines 1000–1140 where messages are rendered)
 
 **Step 1: Import ActionButton**
@@ -494,14 +502,18 @@ import { ActionButton } from "./components/ActionButton";
 Locate the code around line 1020–1025 where the message subject and action badge are shown. You'll see code like:
 
 ```jsx
-<span className="message-subject">{msg.subject}</span>
-{msg.action_status && (
-  <div className="action-status-badge">
-    <span className={`action-status-label action-status-${msg.action_status}`}>
-      ...
-    </span>
-  </div>
-)}
+<span className="message-subject">{msg.subject}</span>;
+{
+  msg.action_status && (
+    <div className="action-status-badge">
+      <span
+        className={`action-status-label action-status-${msg.action_status}`}
+      >
+        ...
+      </span>
+    </div>
+  );
+}
 ```
 
 **Step 3: Replace action badge with indicator dot and button**
@@ -521,6 +533,7 @@ Replace that section with:
 **Step 4: Remove old inline action buttons**
 
 Find and **delete** the following buttons (around lines 1098–1135):
+
 - `{msg.action_status === null && <button ... "Mark as Pending" ...}`
 - `{msg.action_status === "pending" && <button ... "Mark as Actioned" ...}`
 - `{msg.action_status === "actioned" && <button ... "Clear Status" ...}`
@@ -541,6 +554,7 @@ git commit -m "feat: integrate ActionButton into message list, remove old inline
 ## Task 5: Integrate ActionsBox at Top of Message List
 
 **Files:**
+
 - Modify: `src/App.jsx` (top of message list rendering)
 
 **Step 1: Import ActionsBox**
@@ -578,21 +592,23 @@ const actionsCompleted = messages
 Find the messages section in the render (around line 937 where "activeTab === messages"). Add `<ActionsBox />` **right before** the messages list:
 
 ```jsx
-{activeTab === "messages" && (
-  <div className="messages-container">
-    <ActionsBox
-      pendingMessages={actionsPending}
-      actionedMessages={actionsCompleted}
-      onMessageClick={(msgId) => {
-        setExpandedMessages(new Set([...expandedMessages, msgId]));
-      }}
-    />
+{
+  activeTab === "messages" && (
+    <div className="messages-container">
+      <ActionsBox
+        pendingMessages={actionsPending}
+        actionedMessages={actionsCompleted}
+        onMessageClick={(msgId) => {
+          setExpandedMessages(new Set([...expandedMessages, msgId]));
+        }}
+      />
 
-    <div className="messages-list">
-      {/* ... existing message list rendering ... */}
+      <div className="messages-list">
+        {/* ... existing message list rendering ... */}
+      </div>
     </div>
-  </div>
-)}
+  );
+}
 ```
 
 **Step 5: Test in browser**
@@ -611,6 +627,7 @@ git commit -m "feat: add ActionsBox at top of messages section"
 ## Task 6: Remove ActionFilter UI Control (Optional Cleanup)
 
 **Files:**
+
 - Modify: `src/App.jsx`
 
 **Step 1: Identify actionFilter UI**
@@ -641,6 +658,7 @@ git commit -m "refactor: remove actionFilter dropdown UI, ActionsBox replaces it
 ## Task 7: Final Testing & Visual Polish
 
 **Files:**
+
 - Verify: `src/App.css` (if needed, adjust spacing/colors)
 
 **Step 1: Test the complete flow**
@@ -677,6 +695,7 @@ git commit -m "style: final polish for simplified action system"
 ## Task 8: Build & Verify
 
 **Files:**
+
 - None (verification step)
 
 **Step 1: Run production build**
@@ -703,6 +722,7 @@ git commit -m "build: verify simplified action system builds cleanly" || echo "N
 ## Summary
 
 This plan replaces the scattered, busy action UI with:
+
 1. ✅ One-click ActionButton (⚡) on each message
 2. ✅ Clean popover with two options + clear
 3. ✅ Dedicated ActionsBox at the top (amber pending, green actioned)

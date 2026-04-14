@@ -7,7 +7,10 @@
  * Run with: deno test --allow-env integration-tests.ts
  */
 
-import { assertEquals, assertObjectMatch } from "https://deno.land/std@0.208.0/assert/mod.ts";
+import {
+  assertEquals,
+  assertObjectMatch,
+} from "https://deno.land/std@0.208.0/assert/mod.ts";
 
 // Mock types matching the actual implementation
 interface MockSupabaseUser {
@@ -158,7 +161,8 @@ Deno.test("DB Query: Authorized user lookup", async () => {
  * Test Suite 6: Response Message Logic
  */
 Deno.test("Response: Construct denial message for unauthorized", () => {
-  const denialMessage = "You don't have access to this WhatsApp number. Please contact your administrator.";
+  const denialMessage =
+    "You don't have access to this WhatsApp number. Please contact your administrator.";
 
   assertEquals(denialMessage.length > 0, true);
   assertEquals(denialMessage.includes("access"), true);
@@ -240,7 +244,8 @@ Deno.test("Form Data: Encode parameters for Twilio", () => {
  */
 Deno.test("Cascade: Continue if RAG chat fails", () => {
   const ragError = new Error("RAG service unavailable");
-  const fallbackMessage = "I encountered an error processing your request. Please try again.";
+  const fallbackMessage =
+    "I encountered an error processing your request. Please try again.";
 
   const handleRagError = (error: Error): string => {
     console.error("RAG error:", error);

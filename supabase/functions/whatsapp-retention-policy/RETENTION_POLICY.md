@@ -7,18 +7,21 @@ This Edge Function implements automatic data retention and deletion for WhatsApp
 ## What Gets Deleted?
 
 ### ✓ Deleted (Public Interactions)
+
 - WhatsApp interactions with `access_level = 'public'`
 - Interactions older than **90 days** from creation date
 - Query text, response text, and interaction records
 - Phone number hashes are removed from logs (anonymization)
 
 ### ✓ Retained (Private Interactions)
+
 - WhatsApp interactions with `access_level = 'private'`
 - Retained indefinitely (no automatic deletion)
 - Useful for audit trails and compliance verification
 - Only deleted on explicit admin request with reason logging
 
 ### ✓ Always Retained
+
 - GDPR compliance logs (never deleted - for audit purposes)
 - Whatsapp user profiles (authorization data)
 - All other application data (messages, documents, events, etc.)
@@ -28,6 +31,7 @@ This Edge Function implements automatic data retention and deletion for WhatsApp
 ### Database Objects
 
 #### 1. **gdpr_deletion_log** Table
+
 Audit trail of all retention policy executions.
 
 ```sql
@@ -45,6 +49,7 @@ Fields:
 #### 2. **PostgreSQL Functions**
 
 ##### `delete_expired_whatsapp_interactions(retention_days INT)`
+
 Automatic retention policy execution.
 
 ```typescript
@@ -63,6 +68,7 @@ Behavior:
 ```
 
 ##### `delete_whatsapp_interactions_manual(phone_hash, access_level, reason)`
+
 Manual deletion with admin audit trail.
 
 ```typescript
@@ -82,6 +88,7 @@ Use Cases:
 ```
 
 ##### `get_gdpr_compliance_report(days INT)`
+
 Compliance audit report.
 
 ```typescript
@@ -95,6 +102,7 @@ Returns:
 ```
 
 ##### `get_retention_policy_status(retention_days INT)`
+
 Current data retention status.
 
 ```typescript
@@ -127,6 +135,7 @@ curl -X POST https://your-project.supabase.co/functions/v1/whatsapp-retention-po
 ```
 
 **Response (Success):**
+
 ```json
 {
   "success": true,
@@ -141,6 +150,7 @@ curl -X POST https://your-project.supabase.co/functions/v1/whatsapp-retention-po
 ```
 
 **Response (No Data to Delete):**
+
 ```json
 {
   "success": true,
@@ -164,6 +174,7 @@ curl https://your-project.supabase.co/functions/v1/whatsapp-retention-policy?act
 ```
 
 **Response:**
+
 ```json
 {
   "success": true,
@@ -180,6 +191,7 @@ curl https://your-project.supabase.co/functions/v1/whatsapp-retention-policy?act
 ## Deployment
 
 ### Prerequisites
+
 - Supabase project with WhatsApp tables
 - Migration 20260411_whatsapp_retention_policy.sql applied
 - Environment variables configured
@@ -213,6 +225,7 @@ Option A: **Using n8n Webhook** (Recommended)
 4. Add error handling and notification
 
 Example n8n workflow:
+
 ```yaml
 Trigger: Schedule (Daily, 2 AM)
 → HTTP Request POST to whatsapp-retention-policy
@@ -299,28 +312,33 @@ FROM status;
 ## GDPR Compliance Features
 
 ### ✓ Data Minimization
+
 - Only stores phone number **hashes** (SHA-256), not plain numbers
 - Hashes are one-way - cannot be reversed to phone numbers
 - Public interactions deleted after 90 days
 - Private interactions retained for audit trail only
 
 ### ✓ Purpose Limitation
+
 - Deletion only occurs for public interactions (shared data)
 - Private interactions retained for authorization audit
 - All deletions logged with timestamp and reason
 
 ### ✓ Storage Limitation
+
 - Automatic 90-day deletion for public data
 - Never stores unnecessary PII
 - Separate audit log never deleted (compliance requirement)
 
 ### ✓ Accountability
+
 - Complete audit trail in gdpr_deletion_log
 - Timestamp of each deletion event
 - Count of affected users and records
 - Reason for each deletion (automatic or manual)
 
 ### ✓ Right to be Forgotten
+
 - Admin can manually delete specific user's data
 - Use: `SELECT delete_whatsapp_interactions_manual('+1234567890', NULL, 'User right to be forgotten')`
 - Deletion is logged for compliance proof
@@ -410,16 +428,19 @@ curl -X POST https://your-project.supabase.co/functions/v1/whatsapp-retention-po
 ### Authorization Requirements
 
 **Function-Level Authorization:**
+
 - Both `delete_expired_whatsapp_interactions()` and `delete_whatsapp_interactions_manual()` use `SECURITY DEFINER` with session user validation
 - Only `service_role` can execute these functions directly
 - Attempting to call as another user will raise an exception with helpful error message
 
 **Edge Function Authorization:**
+
 - All requests to POST `/whatsapp-retention-policy` MUST include valid Authorization header with Bearer token
 - Token is validated before any database operations
 - Invalid or missing authorization returns HTTP 401 (Unauthorized)
 
 **Setting Authorization in n8n Workflow:**
+
 ```javascript
 // In n8n HTTP Request node:
 Headers:
@@ -430,12 +451,14 @@ Headers:
 ### Phone Number Hash Encryption
 
 **Current Implementation:**
+
 - Phone numbers are stored as **SHA-256 hashes** (one-way cryptographic function)
 - Hashes cannot be reversed to original phone numbers
 - Compliance logs reference hashes only, never plain numbers
 
 **Future Enhancement (Recommended):**
 For additional security, consider encryption at rest:
+
 ```sql
 -- Add encrypted backup column (not yet implemented)
 ALTER TABLE gdpr_deletion_log
@@ -452,16 +475,19 @@ UPDATE gdpr_deletion_log
 ### GDPR Article 17 (Right to Erasure) - Implementation Notes
 
 **What's Implemented:**
+
 - ✓ Manual deletion function with admin audit trail
 - ✓ Deletion logging and compliance reporting
 - ✓ Retention period enforcement (90 days for public data)
 
 **Gaps (Future Implementation):**
+
 - ⏳ User notification upon erasure (email alert when data is deleted)
 - ⏳ Erasure confirmation (return deletion confirmation to requestor)
 - ⏳ Timeline compliance ("without undue delay" = 30 days max per GDPR)
 
 **Recommended Enhancement:**
+
 ```sql
 -- Add user notification table
 CREATE TABLE gdpr_erasure_notifications (
@@ -482,17 +508,22 @@ EXECUTE FUNCTION send_gdpr_erasure_notification();
 ## Troubleshooting
 
 ### Issue: Function not found
+
 **Solution**: Ensure migration 20260411_whatsapp_retention_policy.sql was applied.
 
 ### Issue: Permission denied
+
 **Solution**: Ensure service role key has execute permissions on retention functions. Verify Bearer token is included in Authorization header.
 
 ### Issue: "Only service_role can execute..." error
+
 **Cause**: Function was called with non-service credentials.
 **Solution**: Verify the Edge Function is using SUPABASE_SERVICE_ROLE_KEY environment variable, not the anon key.
 
 ### Issue: No records deleted
+
 **Check**:
+
 ```sql
 -- Verify eligible records exist
 SELECT COUNT(*) as eligible FROM whatsapp_interactions
@@ -501,7 +532,9 @@ AND created_at < NOW() - INTERVAL '90 days';
 ```
 
 ### Issue: Retention policy running too slowly
+
 **Solution**: Performance index is included in migration:
+
 ```sql
 -- Composite index on (access_level, created_at) for efficient deletion
 CREATE INDEX idx_whatsapp_interactions_access_created
@@ -522,6 +555,7 @@ This index significantly improves deletion query performance by avoiding full ta
 ## Support
 
 For questions or issues:
+
 1. Check troubleshooting section above
 2. Review gdpr_deletion_log for deletion history
 3. Verify migration was applied: `SELECT COUNT(*) FROM gdpr_deletion_log;`

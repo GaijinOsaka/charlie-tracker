@@ -100,7 +100,9 @@ export default function WhatsAppSharing() {
       setPublicLoading(true);
       const { data, error } = await supabase
         .from("whatsapp_interactions")
-        .select("id, access_level, query_text, response_text, phone_number_hash, created_at")
+        .select(
+          "id, access_level, query_text, response_text, phone_number_hash, created_at",
+        )
         .eq("access_level", "public")
         .order("created_at", { ascending: false })
         .limit(5);
@@ -462,9 +464,22 @@ export default function WhatsAppSharing() {
 
             <div className="qr-code-placeholder">
               <label>QR Code</label>
-              <svg width="150" height="150" viewBox="0 0 150 150" style={{ border: "2px solid #ccc", borderRadius: "4px" }}>
+              <svg
+                width="150"
+                height="150"
+                viewBox="0 0 150 150"
+                style={{ border: "2px solid #ccc", borderRadius: "4px" }}
+              >
                 <rect width="150" height="150" fill="#f0f0f0" />
-                <text x="75" y="75" textAnchor="middle" dy="0.3em" fill="#999" fontSize="12" fontFamily="sans-serif">
+                <text
+                  x="75"
+                  y="75"
+                  textAnchor="middle"
+                  dy="0.3em"
+                  fill="#999"
+                  fontSize="12"
+                  fontFamily="sans-serif"
+                >
                   QR Code
                 </text>
               </svg>
@@ -482,12 +497,17 @@ export default function WhatsAppSharing() {
                 {publicQueries.map((q) => (
                   <li key={q.id} className="query-item">
                     <div className="query-meta">
-                      <span className="query-date">{formatDate(q.created_at)}</span>
-                      <span className="query-type">{q.access_level || "unknown"}</span>
+                      <span className="query-date">
+                        {formatDate(q.created_at)}
+                      </span>
+                      <span className="query-type">
+                        {q.access_level || "unknown"}
+                      </span>
                     </div>
                     {q.query_text && (
                       <p className="query-text">
-                        <strong>Query:</strong> {truncateText(q.query_text, 150)}
+                        <strong>Query:</strong>{" "}
+                        {truncateText(q.query_text, 150)}
                       </p>
                     )}
                   </li>
@@ -529,11 +549,7 @@ export default function WhatsAppSharing() {
                                 placeholder="Add description for sharing"
                                 defaultValue={shareInfo?.description || ""}
                                 onChange={(e) =>
-                                  handleDescriptionChange(
-                                    e,
-                                    "document",
-                                    doc.id,
-                                  )
+                                  handleDescriptionChange(e, "document", doc.id)
                                 }
                                 disabled={isSaving}
                                 className="content-description"
@@ -590,11 +606,7 @@ export default function WhatsAppSharing() {
                                 placeholder="Add description for sharing"
                                 defaultValue={shareInfo?.description || ""}
                                 onChange={(e) =>
-                                  handleDescriptionChange(
-                                    e,
-                                    "event",
-                                    evt.id,
-                                  )
+                                  handleDescriptionChange(e, "event", evt.id)
                                 }
                                 disabled={isSaving}
                                 className="content-description"
@@ -604,7 +616,9 @@ export default function WhatsAppSharing() {
                               <input
                                 type="checkbox"
                                 checked={isSharing}
-                                onChange={() => toggleShareable("event", evt.id)}
+                                onChange={() =>
+                                  toggleShareable("event", evt.id)
+                                }
                                 disabled={isSaving}
                               />
                               <span>{isSharing ? "Shareable" : "Private"}</span>
@@ -673,9 +687,7 @@ export default function WhatsAppSharing() {
                         checked={wu.is_active}
                         onChange={() => toggleUserActive(wu.id, wu.is_active)}
                       />
-                      <span>
-                        {wu.is_active ? "Active" : "Inactive"}
-                      </span>
+                      <span>{wu.is_active ? "Active" : "Inactive"}</span>
                     </label>
                   </li>
                 ))}
@@ -738,7 +750,9 @@ export default function WhatsAppSharing() {
               {auditLogs.map((log) => (
                 <div key={log.id} className="audit-entry">
                   <div className="entry-header">
-                    <span className="entry-date">{formatDate(log.created_at)}</span>
+                    <span className="entry-date">
+                      {formatDate(log.created_at)}
+                    </span>
                     <span
                       className={`entry-type ${
                         log.access_level === "private" ? "private" : "public"
@@ -749,7 +763,8 @@ export default function WhatsAppSharing() {
                   </div>
                   {log.query_text && (
                     <p className="entry-query">
-                      <strong>Query:</strong> {truncateText(log.query_text, 150)}
+                      <strong>Query:</strong>{" "}
+                      {truncateText(log.query_text, 150)}
                     </p>
                   )}
                   {log.response_text && (

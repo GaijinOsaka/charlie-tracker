@@ -77,3 +77,13 @@
   background-color: var(--bg-muted);
   color: var(--text);
 }
+
+.action-option-cancel {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.action-option-cancel:hover {
+  background-color: var(--bg-muted);
+  color: var(--text);
+}

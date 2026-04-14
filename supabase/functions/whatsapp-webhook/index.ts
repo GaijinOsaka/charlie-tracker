@@ -54,21 +54,18 @@ async function callRagChat(
   const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
   const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
-  const resp = await fetch(
-    `${supabaseUrl}/functions/v1/rag-chat`,
-    {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${serviceRoleKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        question: message,
-        history: [],
-        accessLevel: accessLevel,
-      }),
+  const resp = await fetch(`${supabaseUrl}/functions/v1/rag-chat`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${serviceRoleKey}`,
+      "Content-Type": "application/json",
     },
-  );
+    body: JSON.stringify({
+      question: message,
+      history: [],
+      accessLevel: accessLevel,
+    }),
+  });
 
   if (!resp.ok) {
     const err = await resp.text();

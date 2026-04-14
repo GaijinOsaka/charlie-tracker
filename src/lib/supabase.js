@@ -114,15 +114,55 @@ export async function deleteManualEvent(eventId) {
 }
 
 // Message action status functions
-export async function updateActionStatus(messageId, newStatus) {
+export async function updateActionStatus(messageId, newStatus, note) {
   // newStatus can be: 'pending', 'actioned', or null
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) throw new Error("User not authenticated");
+
+  const updateData = {
+    action_status: newStatus,
+    action_note: note || null,
+  };
+
+  // Add actioned timestamp and user ID for 'actioned' status
+  if (newStatus === "actioned") {
+    updateData.actioned_at = new Date().toISOString();
+    updateData.actioned_by = user.id;
+  } else if (newStatus === null) {
+    // Clear both status and note when clearing
+    updateData.actioned_at = null;
+    updateData.actioned_by = null;
+  }
+
   const { error } = await supabase
     .from("messages")
-    .update({ action_status: newStatus })
+    .update(updateData)
     .eq("id", messageId);
 
   if (error) {
     console.error("Failed to update action status:", error);
+    throw error;
+  }
+}
+
+// Update user profile display name
+export async function updateDisplayName(displayName) {
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) throw new Error("User not authenticated");
+
+  const { error } = await supabase
+    .from("profiles")
+    .update({ display_name: displayName })
+    .eq("id", user.id);
+
+  if (error) {
+    console.error("Failed to update display name:", error);
     throw error;
   }
 }

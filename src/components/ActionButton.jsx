@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import "./ActionButton.css";
 
-export function ActionButton({ message, onStatusChange }) {
+export function ActionButton({ message, onStatusChange, onShowActionModal }) {
   const [isOpen, setIsOpen] = useState(false);
   const popoverRef = useRef(null);
 
@@ -19,12 +19,12 @@ export function ActionButton({ message, onStatusChange }) {
     }
   }, [isOpen]);
 
-  const handleActionClick = (status) => {
-    onStatusChange(message, status);
+  const handleActionClick = (type) => {
+    onShowActionModal(message, type);
     setIsOpen(false);
   };
 
-  const handleClear = () => {
+  const handleCancel = () => {
     onStatusChange(message, null);
     setIsOpen(false);
   };
@@ -55,8 +55,8 @@ export function ActionButton({ message, onStatusChange }) {
           </button>
           {message.action_status && (
             <button
-              className="action-option action-option-clear"
-              onClick={handleClear}
+              className="action-option action-option-cancel"
+              onClick={handleCancel}
             >
               Clear Status
             </button>

@@ -63,11 +63,13 @@ npx vite build       # Production build to dist/
 ## Infrastructure & Deployment
 
 ### DigitalOcean Setup
+
 - **n8n Droplet:** 1GB, IP 144.126.200.83, private network 10.114.0.3
 - **Skyvern Droplet:** 4GB, IP 139.59.165.79, private network 10.106.0.5
 - **Private VPC:** Droplets communicate via private network (<1ms latency)
 
 ### Skyvern Configuration
+
 - **Endpoint:** `http://10.106.0.5:8000` (from n8n droplet via private network)
 - **API Routes:** POST `/v1/run/tasks`, GET `/v1/runs/{run_id}`, GET `/v1/workflows`
 - **Engine:** `skyvern-2.0` (headless Chromium in server mode)
@@ -75,6 +77,7 @@ npx vite build       # Production build to dist/
 - **Workflows:** Arbor portal scraping via Skyvern workflow ID `wpid_501572503217945790`
 
 ### n8n Workflows
+
 - **Gmail Monitor:** gBJb0RH6dfvpLi21 (detects Arbor notifications, routes to Skyvern)
 - **Arbor Scraper:** y6vFVjpnwzr4qGMo (orchestrates Skyvern tasks)
 

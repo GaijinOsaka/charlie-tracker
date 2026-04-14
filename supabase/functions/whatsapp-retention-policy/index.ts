@@ -30,7 +30,7 @@ interface RetentionResponse {
  * Execute the retention policy
  */
 async function executeRetentionPolicy(
-  retentionDays: number = 90
+  retentionDays: number = 90,
 ): Promise<RetentionResponse> {
   try {
     // Get environment variables
@@ -41,8 +41,7 @@ async function executeRetentionPolicy(
       return {
         success: false,
         message: "Missing required environment variables",
-        error:
-          "SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY must be configured",
+        error: "SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY must be configured",
         timestamp: new Date().toISOString(),
       };
     }
@@ -51,12 +50,9 @@ async function executeRetentionPolicy(
     const supabase = createClient(supabaseUrl, supabaseServiceRoleKey);
 
     // Get pre-deletion status
-    const statusResponse = await supabase.rpc(
-      "get_retention_policy_status",
-      {
-        retention_days: retentionDays,
-      }
-    );
+    const statusResponse = await supabase.rpc("get_retention_policy_status", {
+      retention_days: retentionDays,
+    });
 
     if (statusResponse.error) {
       return {
@@ -97,7 +93,7 @@ async function executeRetentionPolicy(
       "delete_expired_whatsapp_interactions",
       {
         retention_days: retentionDays,
-      }
+      },
     );
 
     if (deleteResponse.error) {
@@ -146,8 +142,7 @@ async function getComplianceStatus(): Promise<RetentionResponse> {
       return {
         success: false,
         message: "Missing required environment variables",
-        error:
-          "SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY must be configured",
+        error: "SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY must be configured",
         timestamp: new Date().toISOString(),
       };
     }
@@ -155,9 +150,7 @@ async function getComplianceStatus(): Promise<RetentionResponse> {
     const supabase = createClient(supabaseUrl, supabaseServiceRoleKey);
 
     // Get current status
-    const statusResponse = await supabase.rpc(
-      "get_retention_policy_status"
-    );
+    const statusResponse = await supabase.rpc("get_retention_policy_status");
 
     // Get compliance report
     const reportResponse = await supabase.rpc("get_gdpr_compliance_report");
@@ -178,8 +171,7 @@ async function getComplianceStatus(): Promise<RetentionResponse> {
         recordsDeleted: reportResponse.data?.[0]?.total_records_deleted || 0,
         affectedUsers: reportResponse.data?.[0]?.total_users_affected || 0,
         executionTime:
-          reportResponse.data?.[0]?.last_execution ||
-          new Date().toISOString(),
+          reportResponse.data?.[0]?.last_execution || new Date().toISOString(),
       },
       timestamp: new Date().toISOString(),
     };
@@ -223,7 +215,7 @@ Deno.serve(async (req) => {
       {
         status: 401,
         headers: corsHeaders,
-      }
+      },
     );
   }
 
@@ -239,9 +231,7 @@ Deno.serve(async (req) => {
     } else if (req.method === "GET") {
       const url = new URL(req.url);
       action = url.searchParams.get("action") || "execute";
-      retentionDays = parseInt(
-        url.searchParams.get("retention_days") || "90"
-      );
+      retentionDays = parseInt(url.searchParams.get("retention_days") || "90");
     }
 
     let response: RetentionResponse;
@@ -269,7 +259,7 @@ Deno.serve(async (req) => {
       {
         status: 500,
         headers: corsHeaders,
-      }
+      },
     );
   }
 });

@@ -239,10 +239,7 @@ export default function DocumentCard({
 
         {/* Shareable Badge */}
         {isShareable && (
-          <span
-            className="doc-shareable-badge"
-            title="Shareable via WhatsApp"
-          >
+          <span className="doc-shareable-badge" title="Shareable via WhatsApp">
             💬 Shareable
           </span>
         )}
@@ -280,7 +277,11 @@ export default function DocumentCard({
           className={`btn-doc ${isShareable ? "btn-shareable-active" : "btn-shareable"}`}
           onClick={handleToggleShareable}
           disabled={sharingLoading}
-          title={isShareable ? "Click to remove from WhatsApp sharing" : "Click to share via WhatsApp"}
+          title={
+            isShareable
+              ? "Click to remove from WhatsApp sharing"
+              : "Click to share via WhatsApp"
+          }
         >
           {sharingLoading ? "Updating..." : isShareable ? "Unshare" : "Share"}
         </button>

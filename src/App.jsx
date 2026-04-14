@@ -17,7 +17,9 @@ import { AttachmentViewer } from "./components/AttachmentViewer";
 import SetPassword from "./components/SetPassword";
 import { ActionsBox } from "./components/ActionsBox";
 import { ActionButton } from "./components/ActionButton";
+import ActionModal from "./components/ActionModal";
 import { Agentation } from "agentation";
+import { getPaginatedMessages, calculateTotalPages } from "./lib/pagination";
 import "./App.css";
 
 function linkify(text) {
@@ -73,12 +75,15 @@ function App() {
   const [eventsTagFilter, setEventsTagFilter] = useState("all");
   const [expandedMessages, setExpandedMessages] = useState(new Set());
   const [expandedEvents, setExpandedEvents] = useState(new Set());
-  const [expandedActionMessageId, setExpandedActionMessageId] =
-    useState(null);
+  const [expandedActionMessageId, setExpandedActionMessageId] = useState(null);
   const [indexingMessages, setIndexingMessages] = useState(new Set());
   const [profiles, setProfiles] = useState({});
   const [viewerAttachment, setViewerAttachment] = useState(null);
   const [viewerOpen, setViewerOpen] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [actionModalOpen, setActionModalOpen] = useState(false);
+  const [actionModalMessage, setActionModalMessage] = useState(null);
+  const [actionModalType, setActionModalType] = useState(null);
 
   async function loadProfiles() {
     try {
@@ -138,12 +143,6 @@ function App() {
             table: "messages",
           },
           (payload) => {
-            // Verify action_status is included in realtime updates
-            if (payload.new.action_status !== undefined) {
-              console.log(
-                `[Realtime] Message ${payload.new.id} action_status updated to: ${payload.new.action_status}`,
-              );
-            }
             setMessages((prev) =>
               prev.map((m) => (m.id === payload.new.id ? payload.new : m)),
             );
@@ -194,6 +193,11 @@ function App() {
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
+
+  // Reset page when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [statusFilter, sourceFilter, actionFilter, searchQuery]);
 
   async function loadMessages() {
     try {
@@ -318,7 +322,10 @@ function App() {
       console.log("Archiving event:", eventId, "for user:", user?.id);
       const { error } = await supabase
         .from("event_archives")
-        .upsert({ user_id: user.id, event_id: eventId }, { onConflict: "user_id,event_id" });
+        .upsert(
+          { user_id: user.id, event_id: eventId },
+          { onConflict: "user_id,event_id" },
+        );
       if (error) {
         console.error("Supabase error:", error.message, error);
         throw error;
@@ -327,7 +334,10 @@ function App() {
       addToast("Event archived", "success");
     } catch (err) {
       console.error("Error archiving event:", err.message || err);
-      addToast("Failed to archive event: " + (err.message || "Unknown error"), "error");
+      addToast(
+        "Failed to archive event: " + (err.message || "Unknown error"),
+        "error",
+      );
     }
   }
 
@@ -394,14 +404,16 @@ function App() {
     setViewerOpen(true);
   }
 
-  async function toggleActionStatus(msg, targetStatus) {
+  async function toggleActionStatus(msg, targetStatus, note = null) {
     try {
-      await updateActionStatus(msg.id, targetStatus);
+      await updateActionStatus(msg.id, targetStatus, note);
 
       // Update local state optimistically
       setMessages((prev) =>
         prev.map((m) =>
-          m.id === msg.id ? { ...m, action_status: targetStatus } : m,
+          m.id === msg.id
+            ? { ...m, action_status: targetStatus, action_note: note }
+            : m,
         ),
       );
 
@@ -415,6 +427,36 @@ function App() {
       console.error("Failed to update action status:", err);
       addToast("Failed to update action status", "error");
     }
+  }
+
+  function handleShowActionModal(message, type) {
+    setActionModalMessage(message);
+    setActionModalType(type);
+    setActionModalOpen(true);
+  }
+
+  function handleActionModalConfirm(note) {
+    if (actionModalMessage && actionModalType) {
+      // Append user name, date, and time to the note
+      const now = new Date();
+      const userName =
+        profiles[user?.id]?.display_name || user?.email || "Unknown";
+      const formattedDate = now.toLocaleDateString();
+      const formattedTime = now.toLocaleTimeString([], {
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+      const noteWithMetadata = `${note} — ${userName} • ${formattedDate} ${formattedTime}`;
+
+      toggleActionStatus(actionModalMessage, actionModalType, noteWithMetadata);
+    }
+    setActionModalOpen(false);
+  }
+
+  function handleActionModalCancel() {
+    setActionModalOpen(false);
+    setActionModalMessage(null);
+    setActionModalType(null);
   }
 
   async function toggleMessageRag(msg) {
@@ -567,6 +609,8 @@ function App() {
 
   const filteredMessages = getFilteredMessages();
   const filteredEvents = getFilteredEvents();
+  const totalPages = calculateTotalPages(filteredMessages.length);
+  const paginatedMessages = getPaginatedMessages(filteredMessages, currentPage);
   const unreadCount = messages.filter((m) => !m.is_read).length;
 
   if (authLoading) {
@@ -624,6 +668,12 @@ function App() {
           onClick={() => setActiveTab("documents")}
         >
           Documents
+        </button>
+        <button
+          className={`tab-btn ${activeTab === "actions" ? "active" : ""}`}
+          onClick={() => setActiveTab("actions")}
+        >
+          Actions
         </button>
         <button
           className={`tab-btn ${activeTab === "settings" ? "active" : ""}`}
@@ -899,6 +949,25 @@ function App() {
 
         {activeTab === "documents" && <DocumentBrowser />}
 
+        {activeTab === "actions" && (
+          <ActionsBox
+            pendingMessages={messages
+              .filter((m) => m.action_status === "pending")
+              .sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at))}
+            actionedMessages={messages
+              .filter((m) => m.action_status === "actioned")
+              .sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at))}
+            profiles={profiles}
+            onMessageClick={(msgId) => {
+              setExpandedMessages(new Set([...expandedMessages, msgId]));
+              setActiveTab("messages");
+              navigateToMessage(msgId);
+            }}
+            onStatusChange={toggleActionStatus}
+            onShowActionModal={handleShowActionModal}
+          />
+        )}
+
         {activeTab === "settings" && <SettingsPanel />}
 
         {activeTab === "messages" && (
@@ -942,21 +1011,26 @@ function App() {
             {(() => {
               const actionsPending = messages
                 .filter((m) => m.action_status === "pending")
-                .sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at));
+                .sort(
+                  (a, b) => new Date(b.updated_at) - new Date(a.updated_at),
+                );
 
               const actionsCompleted = messages
                 .filter((m) => m.action_status === "actioned")
-                .sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at));
+                .sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at))
+                .slice(0, 3);
 
               return (
                 <ActionsBox
                   pendingMessages={actionsPending}
                   actionedMessages={actionsCompleted}
+                  profiles={profiles}
+                  showRecentlyActioned={true}
                   onMessageClick={(msgId) => {
-                    setExpandedMessages(
-                      new Set([...expandedMessages, msgId])
-                    );
+                    setExpandedMessages(new Set([...expandedMessages, msgId]));
                   }}
+                  onStatusChange={toggleActionStatus}
+                  onShowActionModal={handleShowActionModal}
                 />
               );
             })()}
@@ -969,123 +1043,165 @@ function App() {
             )}
 
             {!loading && !error && filteredMessages.length > 0 && (
-              <ul className="message-list">
-                {filteredMessages.map((msg) => (
-                  <li
-                    key={msg.id}
-                    id={`message-${msg.id}`}
-                    className={`message-item ${msg.is_read ? "read" : "unread"}`}
-                  >
-                    <div className="message-header">
-                      <div className="message-info">
-                        <h3 className="message-subject">
-                          {msg.subject}
-                          {msg.action_status && (
-                            <span className={`message-action-indicator ${msg.action_status}`} />
+              <>
+                <ul className="message-list">
+                  {paginatedMessages.map((msg) => (
+                    <li
+                      key={msg.id}
+                      id={`message-${msg.id}`}
+                      className={`message-item ${msg.is_read ? "read" : "unread"}`}
+                    >
+                      <div className="message-header">
+                        <div className="message-info">
+                          <h3 className="message-subject">
+                            {msg.subject}
+                            {msg.action_status && (
+                              <span
+                                className={`message-action-indicator ${msg.action_status}`}
+                              />
+                            )}
+                          </h3>
+                          <p className="message-sender">
+                            {msg.sender_name || msg.sender_email}
+                          </p>
+                          <p className="message-time">
+                            {new Date(msg.received_at).toLocaleString()}
+                          </p>
+                        </div>
+                        <div className="message-meta">
+                          <span className={`source-badge source-${msg.source}`}>
+                            {(msg.source || "arbor").toUpperCase()}
+                          </span>
+                          {!msg.is_read && <span className="unread-dot"></span>}
+                          <ActionButton
+                            message={msg}
+                            onStatusChange={toggleActionStatus}
+                            onShowActionModal={handleShowActionModal}
+                          />
+                          {msg.indexed_for_rag && (
+                            <span className="indexed-badge">RAG Indexed</span>
                           )}
-                        </h3>
-                        <p className="message-sender">
-                          {msg.sender_name || msg.sender_email}
-                        </p>
-                        <p className="message-time">
-                          {new Date(msg.received_at).toLocaleString()}
-                        </p>
+                        </div>
                       </div>
-                      <div className="message-meta">
-                        <span className={`source-badge source-${msg.source}`}>
-                          {(msg.source || "arbor").toUpperCase()}
-                        </span>
-                        {!msg.is_read && <span className="unread-dot"></span>}
-                        <ActionButton message={msg} onStatusChange={toggleActionStatus} />
-                        {msg.indexed_for_rag && (
-                          <span className="indexed-badge">RAG Indexed</span>
+
+                      <div
+                        className={`message-content ${msg.content && msg.content.length > 200 ? "expandable" : ""}`}
+                        onClick={() =>
+                          msg.content &&
+                          msg.content.length > 200 &&
+                          toggleExpanded(msg.id)
+                        }
+                      >
+                        {expandedMessages.has(msg.id) ? (
+                          linkify(msg.content)
+                        ) : (
+                          <>
+                            {linkify(msg.content?.substring(0, 200))}
+                            {msg.content && msg.content.length > 200
+                              ? "..."
+                              : ""}
+                          </>
+                        )}
+                        {msg.content && msg.content.length > 200 && (
+                          <span className="expand-toggle">
+                            {expandedMessages.has(msg.id)
+                              ? "Show less"
+                              : "Show more"}
+                          </span>
                         )}
                       </div>
-                    </div>
 
-                    <div
-                      className={`message-content ${msg.content && msg.content.length > 200 ? "expandable" : ""}`}
-                      onClick={() =>
-                        msg.content &&
-                        msg.content.length > 200 &&
-                        toggleExpanded(msg.id)
-                      }
-                    >
-                      {expandedMessages.has(msg.id) ? (
-                        linkify(msg.content)
-                      ) : (
-                        <>
-                          {linkify(msg.content?.substring(0, 200))}
-                          {msg.content && msg.content.length > 200 ? "..." : ""}
-                        </>
-                      )}
-                      {msg.content && msg.content.length > 200 && (
-                        <span className="expand-toggle">
-                          {expandedMessages.has(msg.id)
-                            ? "Show less"
-                            : "Show more"}
-                        </span>
-                      )}
-                    </div>
-
-                    {msg.attachments && msg.attachments.length > 0 && (
-                      <div className="message-attachments">
-                        <span className="attachments-label">Attachments:</span>
-                        {msg.attachments.map((att) => (
-                          <button
-                            key={att.id}
-                            className="attachment-link"
-                            onClick={() => openAttachmentViewer(att)}
-                            title={att.filename}
-                          >
-                            <span className="attachment-icon">
-                              {att.mime_type?.includes("pdf")
-                                ? "\u{1F4C4}"
-                                : "\u{1F4CE}"}
-                            </span>
-                            <span className="attachment-name">
-                              {att.filename}
-                            </span>
-                            {att.file_size && (
-                              <span className="attachment-size">
-                                ({Math.round(att.file_size / 1024)}KB)
+                      {msg.attachments && msg.attachments.length > 0 && (
+                        <div className="message-attachments">
+                          <span className="attachments-label">
+                            Attachments:
+                          </span>
+                          {msg.attachments.map((att) => (
+                            <button
+                              key={att.id}
+                              className="attachment-link"
+                              onClick={() => openAttachmentViewer(att)}
+                              title={att.filename}
+                            >
+                              <span className="attachment-icon">
+                                {att.mime_type?.includes("pdf")
+                                  ? "\u{1F4C4}"
+                                  : "\u{1F4CE}"}
                               </span>
-                            )}
-                          </button>
-                        ))}
-                      </div>
-                    )}
+                              <span className="attachment-name">
+                                {att.filename}
+                              </span>
+                              {att.file_size && (
+                                <span className="attachment-size">
+                                  ({Math.round(att.file_size / 1024)}KB)
+                                </span>
+                              )}
+                            </button>
+                          ))}
+                        </div>
+                      )}
 
-                    <div className="message-actions">
-                      <button
-                        className="btn-mark-read"
-                        onClick={() => toggleReadStatus(msg)}
-                      >
-                        {msg.is_read ? "Mark as Unread" : "Mark as Read"}
-                      </button>
-                      <button
-                        className={`btn-rag-toggle ${msg.indexed_for_rag ? "btn-rag-remove" : "btn-rag-add"}`}
-                        onClick={() => toggleMessageRag(msg)}
-                        disabled={indexingMessages.has(msg.id)}
-                      >
-                        {indexingMessages.has(msg.id)
-                          ? msg.indexed_for_rag
-                            ? "Removing..."
-                            : "Indexing..."
-                          : msg.indexed_for_rag
-                            ? "Remove from RAG"
-                            : "Add to RAG"}
-                      </button>
-                      <button
-                        className="btn-msg-delete"
-                        onClick={() => deleteMessage(msg.id)}
-                      >
-                        Delete
-                      </button>
-                    </div>
-                  </li>
-                ))}
-              </ul>
+                      {msg.action_note && (
+                        <div className="message-action-note">
+                          <span className="action-note-label">
+                            {msg.action_status === "pending"
+                              ? "Action Required:"
+                              : "Action Taken:"}
+                          </span>
+                          <p className="action-note-text">{msg.action_note}</p>
+                        </div>
+                      )}
+
+                      <div className="message-actions">
+                        <button
+                          className="btn-mark-read"
+                          onClick={() => toggleReadStatus(msg)}
+                        >
+                          {msg.is_read ? "Mark as Unread" : "Mark as Read"}
+                        </button>
+                        <button
+                          className={`btn-rag-toggle ${msg.indexed_for_rag ? "btn-rag-remove" : "btn-rag-add"}`}
+                          onClick={() => toggleMessageRag(msg)}
+                          disabled={indexingMessages.has(msg.id)}
+                        >
+                          {indexingMessages.has(msg.id)
+                            ? msg.indexed_for_rag
+                              ? "Removing..."
+                              : "Indexing..."
+                            : msg.indexed_for_rag
+                              ? "Remove from RAG"
+                              : "Add to RAG"}
+                        </button>
+                        <button
+                          className="btn-msg-delete"
+                          onClick={() => deleteMessage(msg.id)}
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+                {totalPages > 1 && (
+                  <div className="pagination-controls">
+                    {Array.from({ length: totalPages }, (_, i) => i + 1).map(
+                      (page) => {
+                        return (
+                          <button
+                            key={page}
+                            className={`pagination-btn ${
+                              currentPage === page ? "active" : ""
+                            }`}
+                            onClick={() => setCurrentPage(page)}
+                          >
+                            {page}
+                          </button>
+                        );
+                      },
+                    )}
+                  </div>
+                )}
+              </>
             )}
           </>
         )}
@@ -1114,6 +1230,15 @@ function App() {
         isOpen={viewerOpen}
         onClose={() => setViewerOpen(false)}
       />
+
+      {actionModalOpen && actionModalMessage && actionModalType && (
+        <ActionModal
+          message={actionModalMessage}
+          type={actionModalType}
+          onConfirm={handleActionModalConfirm}
+          onCancel={handleActionModalCancel}
+        />
+      )}
 
       {import.meta.env.DEV && <Agentation />}
     </div>

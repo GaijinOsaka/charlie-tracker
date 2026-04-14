@@ -1,7 +1,9 @@
 # Action Status Feature - Testing Checklist
+
 **Date:** 2026-04-12 | **Feature:** Message action status (pending/actioned/null)
 
 ## Pre-Test Setup
+
 - [ ] Dev server running (`npm run dev`)
 - [ ] Signed into Supabase with valid auth
 - [ ] Browser console open (F12) to verify realtime logging
@@ -10,6 +12,7 @@
 ## Unit Test Scenarios
 
 ### 1. Single Message State Transitions
+
 - [ ] **From null → pending:** Click "✓ Needs Action" on unactioned message
   - Expected: Button toggles to show both "Needs Action" and "Mark Actioned"
   - Verify: action_status badge appears as "Pending"
@@ -27,6 +30,7 @@
   - Expected: Action status clears, message returns to default state
 
 ### 2. Actions Box Display
+
 - [ ] **Pending section:**
   - Shows only messages with `action_status = 'pending'`
   - Sorted by `updated_at DESC` (newest first)
@@ -42,12 +46,14 @@
   - Sections hide when empty (or show empty state)
 
 ### 3. Action Status Badge
+
 - [ ] **Badge appearance on message rows:**
   - Displays for messages with `action_status = 'pending'` (warning color/icon)
   - Displays for messages with `action_status = 'actioned'` (success color/icon)
   - Does NOT display for messages with `action_status = null`
 
 ### 4. Filtering & Search
+
 - [ ] **Action filter dropdown:**
   - "All" — shows all messages regardless of action status
   - "Pending" — shows only pending messages
@@ -59,6 +65,7 @@
   - Example: Search for "math" with "Pending" filter only shows pending math-related messages
 
 ### 5. Realtime Multi-User Sync
+
 - [ ] **Two browser tabs/windows (simulating different users):**
   - Update action status in Tab A
   - Observe status change appears immediately in Tab B without page refresh
@@ -69,6 +76,7 @@
   - Correct message text for different state transitions
 
 ### 6. Edge Cases
+
 - [ ] **Soft-deleted messages:**
   - Action status buttons don't appear for soft-deleted messages
   - Messages in Actions box don't appear if user deleted them
@@ -82,6 +90,7 @@
   - State reverts to previous value on error
 
 ### 7. Mobile Responsiveness (768px breakpoint)
+
 - [ ] **Actions box on mobile:**
   - Sections stack vertically
   - Buttons are touch-friendly
@@ -90,6 +99,7 @@
 ## Integration Test Scenarios
 
 ### 8. Database Integrity
+
 - [ ] **Migrations applied:**
   - `action_status_enum` type exists in database
   - `messages.action_status` column has DEFAULT NULL
@@ -100,6 +110,7 @@
   - Close app → action statuses preserved in database
 
 ### 9. Realtime Subscription Verification
+
 - [ ] **Schema compatibility:**
   - UPDATE payloads include `action_status` field
   - Logging confirms field is present in realtime events
@@ -118,11 +129,14 @@ grep -n "action_status" supabase/schema.sql
 ```
 
 ## Known Limitations
+
 - Multi-user testing requires 2+ authenticated users (invite a second user to test)
 - Realtime subscription auto-unsubscribes when app backgrounded (PWA feature)
 
 ## Pass/Fail Criteria
+
 ✅ **PASS** if:
+
 - All single user state transitions work
 - Actions box displays pending/actioned sections correctly
 - Action badges appear on message rows
@@ -131,6 +145,7 @@ grep -n "action_status" supabase/schema.sql
 - Mobile layout is responsive
 
 ❌ **FAIL** if:
+
 - Any state transition doesn't update UI
 - Actions box shows incorrect messages
 - Realtime updates don't sync to other tabs

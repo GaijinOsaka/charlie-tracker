@@ -107,9 +107,14 @@ export default function ChatDrawer() {
         content: m.content,
       }));
 
-      // Force token refresh if expired
-      const { error: userError } = await supabase.auth.getUser();
-      if (userError) throw new Error("Not authenticated. Please log in.");
+      // Explicitly refresh session to ensure valid JWT
+      const {
+        data: { session },
+        error: refreshError,
+      } = await supabase.auth.refreshSession();
+      if (refreshError || !session) {
+        throw new Error("Failed to refresh session. Please log in again.");
+      }
 
       // Let supabase.functions.invoke() handle the Authorization header automatically
       const { data, error } = await supabase.functions.invoke("rag-chat", {

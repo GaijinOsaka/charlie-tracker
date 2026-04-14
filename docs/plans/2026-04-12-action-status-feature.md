@@ -13,6 +13,7 @@
 ## Task 1: Create Database Migration
 
 **Files:**
+
 - Create: `supabase/migrations/20260412_add_action_status.sql`
 
 **Step 1: Write migration file**
@@ -34,6 +35,7 @@ UPDATE messages SET action_status = 'actioned' WHERE actioned_at IS NOT NULL;
 **Step 2: Verify migration syntax**
 
 Open `supabase/migrations/20260412_add_action_status.sql` and check:
+
 - ENUM type created ✓
 - Column added ✓
 - Index created ✓
@@ -42,6 +44,7 @@ Open `supabase/migrations/20260412_add_action_status.sql` and check:
 **Step 3: Apply migration to Supabase**
 
 Run in Supabase SQL Editor (copy entire contents of the migration file):
+
 ```
 Expected result: "Success. No rows returned"
 ```
@@ -49,12 +52,14 @@ Expected result: "Success. No rows returned"
 **Step 4: Verify schema change**
 
 Run in Supabase SQL Editor:
+
 ```sql
 SELECT column_name, data_type FROM information_schema.columns
 WHERE table_name = 'messages' AND column_name = 'action_status';
 ```
 
 Expected output:
+
 ```
 action_status | USER-DEFINED (action_status_enum)
 ```
@@ -71,6 +76,7 @@ git commit -m "feat: add action_status enum and column to messages table"
 ## Task 2: Update Supabase Client to Handle Action Status
 
 **Files:**
+
 - Modify: `src/lib/supabase.js`
 
 **Step 1: Add action status update functions**
@@ -114,6 +120,7 @@ git commit -m "feat: add updateActionStatus function to supabase client"
 ## Task 3: Update App.jsx Message Action Handlers
 
 **Files:**
+
 - Modify: `src/App.jsx` (around lines 383-430, the openActionModal and related functions)
 
 **Step 1: Replace openActionModal and undoAction functions**
@@ -181,6 +188,7 @@ git commit -m "feat: replace action modal functions with toggleActionStatus"
 ## Task 4: Update Message Button Rendering (Conditional Button Display)
 
 **Files:**
+
 - Modify: `src/App.jsx` (around lines 1118-1123, the button rendering logic)
 
 **Step 1: Replace button logic**
@@ -188,40 +196,46 @@ git commit -m "feat: replace action modal functions with toggleActionStatus"
 Find the section with "Mark as Unread" and "Mark Actioned" buttons (~line 1116-1123). Replace with:
 
 ```javascript
-{msg.action_status === null && (
-  <button
-    className="btn-action"
-    onClick={() => toggleActionStatus(msg, "pending")}
-  >
-    ✓ Needs Action
-  </button>
-)}
-
-{msg.action_status === "pending" && (
-  <>
+{
+  msg.action_status === null && (
     <button
-      className="btn-action btn-action-active"
-      onClick={() => toggleActionStatus(msg, null)}
+      className="btn-action"
+      onClick={() => toggleActionStatus(msg, "pending")}
     >
       ✓ Needs Action
     </button>
+  );
+}
+
+{
+  msg.action_status === "pending" && (
+    <>
+      <button
+        className="btn-action btn-action-active"
+        onClick={() => toggleActionStatus(msg, null)}
+      >
+        ✓ Needs Action
+      </button>
+      <button
+        className="btn-action btn-action-active"
+        onClick={() => toggleActionStatus(msg, "actioned")}
+      >
+        ✓ Mark Actioned
+      </button>
+    </>
+  );
+}
+
+{
+  msg.action_status === "actioned" && (
     <button
       className="btn-action btn-action-active"
-      onClick={() => toggleActionStatus(msg, "actioned")}
+      onClick={() => toggleActionStatus(msg, "pending")}
     >
       ✓ Mark Actioned
     </button>
-  </>
-)}
-
-{msg.action_status === "actioned" && (
-  <button
-    className="btn-action btn-action-active"
-    onClick={() => toggleActionStatus(msg, "pending")}
-  >
-    ✓ Mark Actioned
-  </button>
-)}
+  );
+}
 ```
 
 **Step 2: Verify conditional rendering**
@@ -240,6 +254,7 @@ git commit -m "feat: add conditional action status buttons based on state"
 ## Task 5: Update "Recently Actioned" Box to "Actions" Box
 
 **Files:**
+
 - Modify: `src/App.jsx` (around lines 956-990, the actioned-box section)
 - Modify: `src/App.css` (styling for the new actions box)
 
@@ -256,8 +271,7 @@ const actionsCompleted = messages
   .filter((m) => m.action_status === "actioned")
   .sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at));
 
-if (actionsPending.length === 0 && actionsCompleted.length === 0)
-  return null;
+if (actionsPending.length === 0 && actionsCompleted.length === 0) return null;
 
 return (
   <div className="actions-box">
@@ -307,6 +321,7 @@ return (
 **Step 2: Verify JSX structure**
 
 Check the returned JSX:
+
 - Has `.actions-box` outer container ✓
 - Title "Actions" ✓
 - Two sections: Pending and Actioned ✓
@@ -325,6 +340,7 @@ git commit -m "feat: replace 'Recently Actioned' with 'Actions' box showing pend
 ## Task 6: Update CSS for New Actions Box
 
 **Files:**
+
 - Modify: `src/App.css` (find and replace `.actioned-box` styles)
 
 **Step 1: Find existing actioned box styles**
@@ -441,6 +457,7 @@ git commit -m "feat: add CSS styling for new actions box with pending/actioned s
 ## Task 7: Update Message Display to Show Action Status Badge
 
 **Files:**
+
 - Modify: `src/App.jsx` (around lines 1036-1044, the message row display)
 
 **Step 1: Replace action status badge**
@@ -448,13 +465,17 @@ git commit -m "feat: add CSS styling for new actions box with pending/actioned s
 Find the section with `.actioned-info` and `.actioned-badge` (~line 1036-1044). Replace with:
 
 ```javascript
-{msg.action_status && (
-  <div className="action-status-badge">
-    <span className={`action-status-label action-status-${msg.action_status}`}>
-      {msg.action_status === "pending" ? "⏳ Needs Action" : "✓ Actioned"}
-    </span>
-  </div>
-)}
+{
+  msg.action_status && (
+    <div className="action-status-badge">
+      <span
+        className={`action-status-label action-status-${msg.action_status}`}
+      >
+        {msg.action_status === "pending" ? "⏳ Needs Action" : "✓ Actioned"}
+      </span>
+    </div>
+  );
+}
 ```
 
 **Step 2: Verify placement in message row**
@@ -483,12 +504,12 @@ Add to `src/App.css`:
 
 .action-status-pending {
   background-color: rgba(245, 158, 11, 0.2);
-  color: #F59E0B;
+  color: #f59e0b;
 }
 
 .action-status-actioned {
   background-color: rgba(16, 185, 129, 0.2);
-  color: #10B981;
+  color: #10b981;
 }
 ```
 
@@ -504,6 +525,7 @@ git commit -m "feat: add action status badge to message rows"
 ## Task 8: Update Message Filtering to Include Action Status
 
 **Files:**
+
 - Modify: `src/App.jsx` (the getFilteredMessages function, around lines 502-530)
 
 **Step 1: Add action status filter state**
@@ -542,6 +564,7 @@ git commit -m "feat: add action status filtering to message list"
 ## Task 9: Update Realtime Subscription to Include action_status
 
 **Files:**
+
 - Modify: `src/App.jsx` (the loadMessages function and subscription setup)
 
 **Step 1: Find realtime subscription setup**
@@ -592,6 +615,7 @@ git commit --allow-empty -m "chore: verify realtime subscription includes action
 ## Task 10: Testing Checklist
 
 **Files:**
+
 - Reference: Manual testing checklist
 
 **Manual Tests:**
@@ -652,6 +676,7 @@ git commit --allow-empty -m "test: manual testing of action status feature compl
 ## Task 11: Clean Up Old Code (Optional)
 
 **Files:**
+
 - Modify: `src/App.jsx`
 
 **Step 1: Remove unused openActionModal/undoAction references**
@@ -676,6 +701,7 @@ git commit -m "chore: remove unused action modal functions"
 ## Implementation Order
 
 Follow tasks in sequence:
+
 1. Database migration (Task 1)
 2. Supabase client update (Task 2)
 3. App handler functions (Task 3)
@@ -701,4 +727,3 @@ Follow tasks in sequence:
 ✓ Realtime updates propagate across users
 ✓ Mobile responsive
 ✓ All old "actioned_at" code removed or refactored
-

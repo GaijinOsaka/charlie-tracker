@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from "react";
-import { supabase } from "../lib/supabase";
+import { supabase, updateDisplayName } from "../lib/supabase";
 import { useAuth } from "../lib/AuthContext";
 import WhatsAppSharing from "./WhatsAppSharing";
 
-export default function SettingsPanel() {
+export default function SettingsPanel({ onProfileUpdated }) {
   const { user, profile } = useAuth();
   const [profiles, setProfiles] = useState([]);
   const [inviteEmail, setInviteEmail] = useState("");
@@ -13,6 +13,9 @@ export default function SettingsPanel() {
   const [passwordUserId, setPasswordUserId] = useState(null);
   const [newPassword, setNewPassword] = useState("");
   const [settingPassword, setSettingPassword] = useState(false);
+  const [editingDisplayName, setEditingDisplayName] = useState(false);
+  const [newDisplayName, setNewDisplayName] = useState("");
+  const [savingDisplayName, setSavingDisplayName] = useState(false);
 
   useEffect(() => {
     loadProfiles();
@@ -102,6 +105,31 @@ export default function SettingsPanel() {
     }
   }
 
+  async function handleUpdateDisplayName(e) {
+    e.preventDefault();
+    setSavingDisplayName(true);
+    setMessage(null);
+
+    try {
+      await updateDisplayName(newDisplayName);
+      setMessage({ type: "success", text: "Display name updated" });
+      setEditingDisplayName(false);
+      setNewDisplayName("");
+      // Reload profiles in SettingsPanel
+      loadProfiles();
+      // Reload profiles in App.jsx (parent component) to update ActionsBox and message list
+      if (onProfileUpdated) {
+        onProfileUpdated();
+        // Also reload again after a slight delay to ensure database sync
+        setTimeout(() => onProfileUpdated(), 300);
+      }
+    } catch (err) {
+      setMessage({ type: "error", text: err.message });
+    } finally {
+      setSavingDisplayName(false);
+    }
+  }
+
   const canInvite = profiles.length < 2;
 
   return (
@@ -120,6 +148,52 @@ export default function SettingsPanel() {
                   <span className="user-item-you">(you)</span>
                 )}
               </div>
+              {p.id === user.id && !editingDisplayName && (
+                <button
+                  className="set-password-btn"
+                  onClick={() => {
+                    setNewDisplayName(p.display_name);
+                    setEditingDisplayName(true);
+                    setMessage(null);
+                  }}
+                >
+                  Edit Name
+                </button>
+              )}
+              {p.id === user.id && editingDisplayName && (
+                <form
+                  onSubmit={handleUpdateDisplayName}
+                  className="set-password-form"
+                >
+                  <input
+                    type="text"
+                    value={newDisplayName}
+                    onChange={(e) => setNewDisplayName(e.target.value)}
+                    placeholder="e.g. David"
+                    required
+                    autoFocus
+                  />
+                  <div className="set-password-actions">
+                    <button
+                      type="submit"
+                      className="invite-btn"
+                      disabled={savingDisplayName}
+                    >
+                      {savingDisplayName ? "Saving..." : "Save"}
+                    </button>
+                    <button
+                      type="button"
+                      className="cancel-btn"
+                      onClick={() => {
+                        setEditingDisplayName(false);
+                        setNewDisplayName("");
+                      }}
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </form>
+              )}
               {p.id !== user.id && passwordUserId !== p.id && (
                 <button
                   className="set-password-btn"
@@ -210,7 +284,9 @@ export default function SettingsPanel() {
 
       <section className="settings-section whatsapp-config">
         <h3>WhatsApp Bot Configuration</h3>
-        <p className="section-description">Manage WhatsApp sharing and access for public/private numbers</p>
+        <p className="section-description">
+          Manage WhatsApp sharing and access for public/private numbers
+        </p>
         <WhatsAppSharing />
       </section>
     </div>

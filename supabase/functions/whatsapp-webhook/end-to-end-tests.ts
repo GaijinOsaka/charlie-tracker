@@ -21,7 +21,11 @@
  * deno test --allow-env --allow-net end-to-end-tests.ts
  */
 
-import { assertEquals, assertExists, assertStringIncludes } from "https://deno.land/std@0.208.0/assert/mod.ts";
+import {
+  assertEquals,
+  assertExists,
+  assertStringIncludes,
+} from "https://deno.land/std@0.208.0/assert/mod.ts";
 
 interface TestConfig {
   webhookUrl: string;
@@ -46,7 +50,12 @@ function loadTestConfig(): TestConfig {
   const twilioPublicNumber = Deno.env.get("TWILIO_PUBLIC_NUMBER");
   const twilioPrivateNumber = Deno.env.get("TWILIO_PRIVATE_NUMBER");
 
-  if (!supabaseUrl || !serviceRoleKey || !twilioPublicNumber || !twilioPrivateNumber) {
+  if (
+    !supabaseUrl ||
+    !serviceRoleKey ||
+    !twilioPublicNumber ||
+    !twilioPrivateNumber
+  ) {
     throw new Error("Missing required environment variables");
   }
 
@@ -318,10 +327,20 @@ Deno.test("E2E: Long message - Handled gracefully", async () => {
 Deno.test("E2E: Rapid succession - Multiple requests handled", async () => {
   const config = loadTestConfig();
 
-  const response1 = await sendMessage(config, "+1234567890", config.twilioPublicNumber, "First");
+  const response1 = await sendMessage(
+    config,
+    "+1234567890",
+    config.twilioPublicNumber,
+    "First",
+  );
   assertEquals(response1.status, 200);
 
-  const response2 = await sendMessage(config, "+1234567890", config.twilioPublicNumber, "Second");
+  const response2 = await sendMessage(
+    config,
+    "+1234567890",
+    config.twilioPublicNumber,
+    "Second",
+  );
   assertEquals(response2.status, 200);
 
   // Should complete without errors or rate limiting

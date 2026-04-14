@@ -11,6 +11,7 @@ Two-tier WhatsApp system allowing parents to query shareable content (newsletter
 ## Architecture
 
 **Components:**
+
 - **Public WhatsApp Number** — Parents query shareable content only (anonymized interactions)
 - **Private WhatsApp Number** — You & mum have full Charlie Tracker access (identified)
 - **Edge Function (`whatsapp-webhook`)** — Routes messages, filters content by access level, generates responses via RAG
@@ -18,6 +19,7 @@ Two-tier WhatsApp system allowing parents to query shareable content (newsletter
 - **Supabase tables** — Content marking, user access, interaction logs
 
 **Message flow:**
+
 1. Parent/user messages WhatsApp number
 2. Twilio webhooks to Edge Function
 3. Function identifies public vs private number
@@ -29,6 +31,7 @@ Two-tier WhatsApp system allowing parents to query shareable content (newsletter
 ## Data Model
 
 ### `shareable_content`
+
 - `id` (UUID, PK)
 - `content_type` ('document' | 'event' | 'note')
 - `content_id` (reference to documents/events/notes)
@@ -37,6 +40,7 @@ Two-tier WhatsApp system allowing parents to query shareable content (newsletter
 - `created_at`, `updated_at`
 
 ### `whatsapp_users`
+
 - `id` (UUID, PK)
 - `phone_number_hash` (SHA-256)
 - `role` ('parent' | 'admin') — 'admin' for you/mum only
@@ -44,6 +48,7 @@ Two-tier WhatsApp system allowing parents to query shareable content (newsletter
 - `created_at`
 
 ### `whatsapp_interactions`
+
 - `id` (UUID, PK)
 - `phone_number_hash` (SHA-256, always)
 - `access_level` ('public' | 'private')
@@ -79,12 +84,14 @@ Two-tier WhatsApp system allowing parents to query shareable content (newsletter
 ## Role-Based Content Filtering
 
 **Public Users (Parents):**
+
 - RAG searches only `shareable_content=true` documents
 - Cannot access private notes, messages, personal data
 - Interactions logged anonymously (phone hash only)
 - No user identification
 
 **Private Users (You & Mum):**
+
 - Full Charlie Tracker access via RAG
 - Can query all documents, messages, events
 - Phone number identified (with consent)
@@ -93,6 +100,7 @@ Two-tier WhatsApp system allowing parents to query shareable content (newsletter
 ## Implementation Components
 
 ### Edge Function: `whatsapp-webhook`
+
 - Receive Twilio message
 - Parse phone number (public or private)
 - If private: check against `whatsapp_users` table
@@ -102,17 +110,20 @@ Two-tier WhatsApp system allowing parents to query shareable content (newsletter
 - Error handling: timeouts, invalid queries, rate limiting (~5 queries/min per user)
 
 ### React Admin UI (Settings)
+
 - New "WhatsApp Sharing" tab in Settings panel
 - Integrate shareable toggles into Document Browser
 - Simple log viewer
 - Role/user management interface
 
 ### Database Schema
+
 - 3 new tables (shareable_content, whatsapp_users, whatsapp_interactions)
 - Foreign keys to existing documents table
 - RLS policies to ensure private content never leaks
 
 ### Twilio Setup
+
 - Two WhatsApp Business Account numbers
 - Both route to same Edge Function webhook
 - Function routes based on `to` phone number
@@ -128,13 +139,13 @@ Two-tier WhatsApp system allowing parents to query shareable content (newsletter
 
 ## Risks & Mitigations
 
-| Risk | Mitigation |
-|------|-----------|
-| Accidentally sharing private data | Two separate numbers + strict RLS policies + content filter layer |
-| Phone number privacy | Always hash phone numbers; no plain numbers in logs |
-| High message volume | Rate limiting per user (5 queries/min) |
+| Risk                                     | Mitigation                                                                  |
+| ---------------------------------------- | --------------------------------------------------------------------------- |
+| Accidentally sharing private data        | Two separate numbers + strict RLS policies + content filter layer           |
+| Phone number privacy                     | Always hash phone numbers; no plain numbers in logs                         |
+| High message volume                      | Rate limiting per user (5 queries/min)                                      |
 | Bot responses leaking non-shareable data | RAG query filtered at Edge Function layer; RLS on `shareable_content` table |
-| Parent confusion | Clear bot name/greeting for public number |
+| Parent confusion                         | Clear bot name/greeting for public number                                   |
 
 ## Success Criteria
 

@@ -11,6 +11,7 @@ The current action marking system is scattered and cluttered. Users struggle to 
 ## Solution Overview
 
 Replace the complex action UI with a simplified two-step flow:
+
 1. Click action button on a message
 2. Choose "Action Required" (amber) or "Actioned" (green)
 3. Item moves to a compact actions box at the top
@@ -18,6 +19,7 @@ Replace the complex action UI with a simplified two-step flow:
 ## Components
 
 ### Actions Box (Top of Page)
+
 - **Location:** Above the main message list, dedicated section
 - **Display:** Compact list showing:
   - Subject (truncated if long)
@@ -30,6 +32,7 @@ Replace the complex action UI with a simplified two-step flow:
   - Ability to change status or clear it
 
 ### Action Button
+
 - **Location:** On each message in the main list (hover or always visible)
 - **Behavior:** Click opens a small popover with two options:
   - **Action Required** (amber)
@@ -42,6 +45,7 @@ Replace the complex action UI with a simplified two-step flow:
   - Can be clicked again to change status or clear it entirely
 
 ### Visual Indicator in Message List
+
 - **Colored dot** next to messages with action status
 - Amber = action required
 - Green = actioned
@@ -50,6 +54,7 @@ Replace the complex action UI with a simplified two-step flow:
 ## Data Model
 
 No schema changes needed. Uses existing `action_status` field on messages:
+
 - `null` — no action status
 - `"pending"` — action required
 - `"actioned"` — already handled

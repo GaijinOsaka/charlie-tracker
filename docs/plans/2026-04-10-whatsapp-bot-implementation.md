@@ -13,6 +13,7 @@
 ## Task 1: Create Supabase Migration for WhatsApp Tables
 
 **Files:**
+
 - Create: `supabase/migrations/20260410_whatsapp_tables.sql`
 
 **Step 1: Write migration file**
@@ -94,6 +95,7 @@ git commit -m "feat: add WhatsApp tables (shareable_content, whatsapp_users, wha
 ## Task 2: Create Supabase Edge Function - `whatsapp-webhook`
 
 **Files:**
+
 - Create: `supabase/functions/whatsapp-webhook/index.ts`
 
 **Step 1: Write the Edge Function**
@@ -107,7 +109,8 @@ const TWILIO_AUTH_TOKEN = Deno.env.get("TWILIO_AUTH_TOKEN") || "";
 const TWILIO_PUBLIC_NUMBER = Deno.env.get("TWILIO_PUBLIC_NUMBER") || "";
 const TWILIO_PRIVATE_NUMBER = Deno.env.get("TWILIO_PRIVATE_NUMBER") || "";
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") || "";
-const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
+const SUPABASE_SERVICE_ROLE_KEY =
+  Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
 
 // Helper: Hash phone number for privacy
 function hashPhoneNumber(phone: string): string {
@@ -119,10 +122,7 @@ function hashPhoneNumber(phone: string): string {
 }
 
 // Helper: Send Twilio message
-async function sendTwilioMessage(
-  to: string,
-  text: string
-): Promise<void> {
+async function sendTwilioMessage(to: string, text: string): Promise<void> {
   const auth = btoa(`${TWILIO_ACCOUNT_SID}:${TWILIO_AUTH_TOKEN}`);
   const response = await fetch(
     `https://api.twilio.com/2010-04-01/Accounts/${TWILIO_ACCOUNT_SID}/Messages.json`,
@@ -137,7 +137,7 @@ async function sendTwilioMessage(
         To: `whatsapp:${to}`,
         Body: text,
       }).toString(),
-    }
+    },
   );
 
   if (!response.ok) {
@@ -181,7 +181,7 @@ Deno.serve(async (req) => {
       if (!user) {
         await sendTwilioMessage(
           senderPhone,
-          "Sorry, you don't have access to this number. Contact your admin."
+          "Sorry, you don't have access to this number. Contact your admin.",
         );
         return new Response("Unauthorized", { status: 401 });
       }
@@ -196,28 +196,26 @@ Deno.serve(async (req) => {
         .select("description, content_type")
         .eq("is_shareable", true);
 
-      shareableContent = data
-        ?.map((item) => `${item.content_type}: ${item.description}`)
-        .join("\n") || "";
+      shareableContent =
+        data
+          ?.map((item) => `${item.content_type}: ${item.description}`)
+          .join("\n") || "";
     }
     // For private, rag-chat will have full access via RLS
 
     // Call existing rag-chat function
-    const ragResponse = await fetch(
-      `${SUPABASE_URL}/functions/v1/rag-chat`,
-      {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          message: body,
-          context: isPrivate ? "full" : shareableContent,
-          accessLevel: isPrivate ? "private" : "public",
-        }),
-      }
-    );
+    const ragResponse = await fetch(`${SUPABASE_URL}/functions/v1/rag-chat`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        message: body,
+        context: isPrivate ? "full" : shareableContent,
+        accessLevel: isPrivate ? "private" : "public",
+      }),
+    });
 
     const ragData = await ragResponse.json();
     const responseText =
@@ -260,6 +258,7 @@ Create: `supabase/functions/whatsapp-webhook/deno.json`
 **Step 3: Set environment variables in Supabase**
 
 Run in Supabase dashboard:
+
 - `TWILIO_ACCOUNT_SID` = your Twilio account SID
 - `TWILIO_AUTH_TOKEN` = your Twilio auth token
 - `TWILIO_PUBLIC_NUMBER` = your public WhatsApp number
@@ -285,6 +284,7 @@ git commit -m "feat: add whatsapp-webhook Edge Function with role-based access c
 ## Task 3: Update `rag-chat` Edge Function to Accept Access Level
 
 **Files:**
+
 - Modify: `supabase/functions/rag-chat/index.ts` (lines where it fetches shareable content)
 
 **Step 1: Update rag-chat to filter by access level**
@@ -322,6 +322,7 @@ git commit -m "feat: add accessLevel parameter to rag-chat for content filtering
 ## Task 4: Create React Component - `WhatsAppSharing` (Admin Panel)
 
 **Files:**
+
 - Create: `src/components/WhatsAppSharing.jsx`
 
 **Step 1: Write the component**
@@ -396,7 +397,9 @@ export default function WhatsAppSharing() {
             {isPublicActive ? "Active" : "Inactive"}
           </button>
         </div>
-        <p className="hint">Share this number with parents. They can only query shareable content.</p>
+        <p className="hint">
+          Share this number with parents. They can only query shareable content.
+        </p>
       </section>
 
       {/* Private Number Section */}
@@ -405,7 +408,9 @@ export default function WhatsAppSharing() {
         <div className="number-display">
           <code>{privateNumber}</code>
         </div>
-        <p className="hint">Keep this private. Only you and designated users can access full data.</p>
+        <p className="hint">
+          Keep this private. Only you and designated users can access full data.
+        </p>
 
         <div className="users-list">
           <h4>Allocated Users</h4>
@@ -418,7 +423,9 @@ export default function WhatsAppSharing() {
                 <input
                   type="checkbox"
                   checked={user.is_active}
-                  onChange={(e) => toggleWhatsappUser(user.id, e.target.checked)}
+                  onChange={(e) =>
+                    toggleWhatsappUser(user.id, e.target.checked)
+                  }
                 />
                 Active
               </label>
@@ -602,6 +609,7 @@ git commit -m "feat: add WhatsAppSharing admin component for managing public/pri
 ## Task 5: Integrate WhatsAppSharing into Settings Panel
 
 **Files:**
+
 - Modify: `src/components/Settings.jsx` (or relevant settings file)
 
 **Step 1: Add WhatsAppSharing tab to Settings**
@@ -616,7 +624,9 @@ import WhatsAppSharing from "./WhatsAppSharing";
 const tabs = ["Profile", "Notifications", "WhatsApp Sharing", "Invite Users"];
 
 // Add to tab content
-{activeTab === "WhatsApp Sharing" && <WhatsAppSharing />}
+{
+  activeTab === "WhatsApp Sharing" && <WhatsAppSharing />;
+}
 ```
 
 **Step 2: Test navigation to WhatsApp Sharing**
@@ -637,6 +647,7 @@ git commit -m "feat: add WhatsApp Sharing tab to Settings panel"
 ## Task 6: Add Shareable Toggle to Document Browser
 
 **Files:**
+
 - Modify: `src/components/DocumentBrowser.jsx`
 
 **Step 1: Add is_shareable toggle to document item**
@@ -678,7 +689,7 @@ async function toggleShareable(docId, newState) {
     onChange={(e) => toggleShareable(doc.id, e.target.checked)}
   />
   Share via WhatsApp
-</label>
+</label>;
 ```
 
 **Step 2: Test toggling shareable flag**
@@ -699,6 +710,7 @@ git commit -m "feat: add shareable toggle to document items for WhatsApp visibil
 ## Task 7: Deploy Edge Function to Supabase
 
 **Files:**
+
 - Deploy: `supabase/functions/whatsapp-webhook/`
 
 **Step 1: Push function to Supabase**
@@ -710,6 +722,7 @@ Expected: Function deployed successfully, logs show webhook URL.
 **Step 2: Configure Twilio webhook**
 
 In Twilio console:
+
 - WhatsApp Settings → Sandbox or Production
 - Set webhook URL to: `https://<your-project>.supabase.co/functions/v1/whatsapp-webhook`
 - Set HTTP method to POST
@@ -732,6 +745,7 @@ git commit -m "feat: deploy whatsapp-webhook Edge Function to Supabase"
 ## Task 8: Write Integration Tests
 
 **Files:**
+
 - Create: `tests/whatsapp-webhook.test.ts`
 
 **Step 1: Write test for public access**
@@ -745,15 +759,18 @@ Deno.test("Public WhatsApp query returns only shareable content", async () => {
   // Send message to public number
   // Verify response contains only shareable data
 
-  const response = await fetch("http://localhost:54321/functions/v1/whatsapp-webhook", {
-    method: "POST",
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body: new URLSearchParams({
-      From: "whatsapp:+1234567890",
-      To: `whatsapp:${PUBLIC_NUMBER}`,
-      Body: "What's this week's homework?",
-    }).toString(),
-  });
+  const response = await fetch(
+    "http://localhost:54321/functions/v1/whatsapp-webhook",
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({
+        From: "whatsapp:+1234567890",
+        To: `whatsapp:${PUBLIC_NUMBER}`,
+        Body: "What's this week's homework?",
+      }).toString(),
+    },
+  );
 
   assertEquals(response.status, 200);
 });
@@ -763,29 +780,35 @@ Deno.test("Private WhatsApp query returns full data", async () => {
   // Send message to private number
   // Verify response contains full data
 
-  const response = await fetch("http://localhost:54321/functions/v1/whatsapp-webhook", {
-    method: "POST",
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body: new URLSearchParams({
-      From: `whatsapp:${ADMIN_PHONE}`,
-      To: `whatsapp:${PRIVATE_NUMBER}`,
-      Body: "Show me all messages from school",
-    }).toString(),
-  });
+  const response = await fetch(
+    "http://localhost:54321/functions/v1/whatsapp-webhook",
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({
+        From: `whatsapp:${ADMIN_PHONE}`,
+        To: `whatsapp:${PRIVATE_NUMBER}`,
+        Body: "Show me all messages from school",
+      }).toString(),
+    },
+  );
 
   assertEquals(response.status, 200);
 });
 
 Deno.test("Unauthorized user on private number is rejected", async () => {
-  const response = await fetch("http://localhost:54321/functions/v1/whatsapp-webhook", {
-    method: "POST",
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body: new URLSearchParams({
-      From: "whatsapp:+9999999999",
-      To: `whatsapp:${PRIVATE_NUMBER}`,
-      Body: "Hello",
-    }).toString(),
-  });
+  const response = await fetch(
+    "http://localhost:54321/functions/v1/whatsapp-webhook",
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({
+        From: "whatsapp:+9999999999",
+        To: `whatsapp:${PRIVATE_NUMBER}`,
+        Body: "Hello",
+      }).toString(),
+    },
+  );
 
   assertEquals(response.status, 401);
 });
@@ -809,6 +832,7 @@ git commit -m "test: add integration tests for WhatsApp webhook access control"
 ## Task 9: Add Data Retention Policy (GDPR Compliance)
 
 **Files:**
+
 - Create: `supabase/migrations/20260410_whatsapp_retention_policy.sql`
 
 **Step 1: Create retention policy**
@@ -852,6 +876,7 @@ git commit -m "feat: add GDPR data retention policy for WhatsApp interactions (9
 ## Task 10: End-to-End Testing & Documentation
 
 **Files:**
+
 - Create: `docs/WHATSAPP_SETUP.md`
 
 **Step 1: Write setup guide**
@@ -870,14 +895,15 @@ git commit -m "feat: add GDPR data retention policy for WhatsApp interactions (9
 ### Supabase Edge Function Environment Variables
 
 Set these in Supabase dashboard (Settings → Edge Functions → Environment):
-
 ```
+
 TWILIO_ACCOUNT_SID=your_sid
 TWILIO_AUTH_TOKEN=your_token
 TWILIO_PUBLIC_NUMBER=+1234567890
 TWILIO_PRIVATE_NUMBER=+0987654321
 SUPABASE_URL=https://your-project.supabase.co
 SUPABASE_SERVICE_ROLE_KEY=your_key
+
 ```
 
 ### Twilio Webhook Configuration
@@ -946,6 +972,7 @@ git commit -m "docs: add WhatsApp bot setup and usage guide"
 ## Summary
 
 **Total tasks: 10**
+
 - 3 Database tasks (migration + retention policy)
 - 2 Edge Function tasks (whatsapp-webhook + rag-chat update)
 - 3 React UI tasks (WhatsAppSharing component, Settings integration, Document Browser toggle)
@@ -953,6 +980,7 @@ git commit -m "docs: add WhatsApp bot setup and usage guide"
 - 1 Testing task
 
 **Key commits:**
+
 1. Database schema
 2. Edge Function implementation
 3. React components
@@ -960,6 +988,7 @@ git commit -m "docs: add WhatsApp bot setup and usage guide"
 5. Documentation
 
 **Post-implementation:**
+
 - Monitor Twilio costs
 - Review audit logs weekly
 - Gather parent feedback on bot accuracy
