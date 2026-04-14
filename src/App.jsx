@@ -144,7 +144,7 @@ function App() {
           },
           (payload) => {
             setMessages((prev) =>
-              prev.map((m) => (m.id === payload.new.id ? payload.new : m)),
+              prev.map((m) => (m.id === payload.new.id ? { ...m, ...payload.new } : m)),
             );
           },
         )
@@ -162,6 +162,29 @@ function App() {
                 prev.filter((m) => m.id !== payload.new.message_id),
               );
             }
+          },
+        )
+        .on(
+          "postgres_changes",
+          {
+            event: "INSERT",
+            schema: "public",
+            table: "attachments",
+          },
+          (payload) => {
+            // When a new attachment is added, update the message with it
+            const newAttachment = payload.new;
+            setMessages((prev) =>
+              prev.map((m) => {
+                if (m.id === newAttachment.message_id) {
+                  return {
+                    ...m,
+                    attachments: [...(m.attachments || []), newAttachment],
+                  };
+                }
+                return m;
+              }),
+            );
           },
         )
         .subscribe((status) => {
@@ -206,7 +229,22 @@ function App() {
         .from("messages")
         .select(
           `
-          *,
+          id,
+          source_message_id,
+          source,
+          subject,
+          content,
+          sender_name,
+          sender_email,
+          received_at,
+          category_id,
+          action_status,
+          actioned_at,
+          actioned_by,
+          action_note,
+          indexed_for_rag,
+          created_at,
+          updated_at,
           attachments(id, filename, file_path, mime_type, file_size),
           message_read_status!left(user_id, read_at)
         `,
@@ -994,6 +1032,18 @@ function App() {
                   <option value="all">All Sources</option>
                   <option value="arbor">Arbor</option>
                   <option value="gmail">Gmail</option>
+                </select>
+              </div>
+
+              <div className="filter-group">
+                <label>Action</label>
+                <select
+                  value={actionFilter}
+                  onChange={(e) => setActionFilter(e.target.value)}
+                >
+                  <option value="all">All Messages</option>
+                  <option value="pending">Needs Action</option>
+                  <option value="actioned">Actioned</option>
                 </select>
               </div>
 
