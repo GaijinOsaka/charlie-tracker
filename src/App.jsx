@@ -222,6 +222,33 @@ function App() {
     }
   }, [user]);
 
+  // Handle navigation from push notification clicks
+  useEffect(() => {
+    if (!navigator.serviceWorker) return;
+
+    // Listen for navigation messages from service worker
+    const handleMessage = (event) => {
+      if (event.data.type === 'NAVIGATE_TO_MESSAGE' && event.data.messageId) {
+        // Expand the message to show details
+        setExpandedMessages(new Set([event.data.messageId]));
+        // Close any open modals
+        setActionModalOpen(false);
+        // Scroll to the message
+        setTimeout(() => {
+          const messageElement = document.getElementById(`message-${event.data.messageId}`);
+          if (messageElement) {
+            messageElement.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+          }
+        }, 100);
+      }
+    };
+
+    navigator.serviceWorker.addEventListener('message', handleMessage);
+    return () => {
+      navigator.serviceWorker.removeEventListener('message', handleMessage);
+    };
+  }, []);
+
   // Subscribe to realtime updates
   useEffect(() => {
     if (!user) return;
