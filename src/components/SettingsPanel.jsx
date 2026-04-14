@@ -16,6 +16,9 @@ export default function SettingsPanel({ onProfileUpdated }) {
   const [editingDisplayName, setEditingDisplayName] = useState(false);
   const [newDisplayName, setNewDisplayName] = useState("");
   const [savingDisplayName, setSavingDisplayName] = useState(false);
+  const [notificationPermission, setNotificationPermission] = useState(
+    typeof Notification !== "undefined" ? Notification.permission : "denied"
+  );
 
   useEffect(() => {
     loadProfiles();
@@ -127,6 +130,59 @@ export default function SettingsPanel({ onProfileUpdated }) {
       setMessage({ type: "error", text: err.message });
     } finally {
       setSavingDisplayName(false);
+    }
+  }
+
+  async function handleNotificationToggle() {
+    if (notificationPermission === "granted") {
+      // Remove subscription
+      try {
+        const registration = await navigator.serviceWorker.ready;
+        const subscription = await registration.pushManager.getSubscription();
+        if (subscription) {
+          await supabase
+            .from("push_subscriptions")
+            .delete()
+            .match({ user_id: user.id, subscription: subscription.toJSON() });
+          await subscription.unsubscribe();
+          setNotificationPermission("denied");
+        }
+      } catch (err) {
+        console.error("Error disabling notifications:", err);
+      }
+    } else {
+      // Request permission and subscribe
+      try {
+        const permission = await Notification.requestPermission();
+        if (permission === "granted") {
+          // Get service worker registration and subscribe to push
+          const registration = await navigator.serviceWorker.ready;
+          const vapidKey = import.meta.env.VITE_VAPID_PUBLIC_KEY?.trim();
+
+          if (!vapidKey) {
+            throw new Error("Push notifications not configured");
+          }
+
+          const subscription = await registration.pushManager.subscribe({
+            userVisibleOnly: true,
+            applicationServerKey: vapidKey,
+          });
+
+          // Save subscription to database
+          await supabase.from("push_subscriptions").insert({
+            user_id: user.id,
+            subscription: subscription.toJSON(),
+          });
+
+          setNotificationPermission("granted");
+        }
+      } catch (err) {
+        console.error("Error enabling notifications:", err);
+        setMessage({
+          type: "error",
+          text: "Failed to enable notifications: " + err.message,
+        });
+      }
     }
   }
 
@@ -288,6 +344,23 @@ export default function SettingsPanel({ onProfileUpdated }) {
           Manage WhatsApp sharing and access for public/private numbers
         </p>
         <WhatsAppSharing />
+      </section>
+
+      <section className="settings-section">
+        <h3>Notifications</h3>
+        <label className="notification-toggle">
+          <input
+            type="checkbox"
+            checked={notificationPermission === "granted"}
+            onChange={handleNotificationToggle}
+          />
+          <span>Enable push notifications for action items</span>
+        </label>
+        {notificationPermission === "denied" && (
+          <p className="text-secondary">
+            Notifications blocked. Enable in browser settings to receive alerts.
+          </p>
+        )}
       </section>
     </div>
   );
