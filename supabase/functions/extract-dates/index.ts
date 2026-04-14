@@ -187,10 +187,11 @@ ${contentText}`;
 
       const { error: insertErr } = await supabase.from("events").insert(rows);
 
-      if (insertErr) {
+      if (insertErr && !insertErr.message.includes("23505")) {
         throw new Error(`Failed to insert events: ${insertErr.message}`);
       }
 
+      // If unique constraint violation (23505), some events already existed—still a partial success
       eventsCreated = rows.length;
     }
 
