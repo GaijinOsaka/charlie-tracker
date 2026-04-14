@@ -22,6 +22,82 @@ import { Agentation } from "agentation";
 import { getPaginatedMessages, calculateTotalPages } from "./lib/pagination";
 import "./App.css";
 
+async function subscribeToPushNotifications(user) {
+  // Check if browser supports notifications
+  if (!('Notification' in window)) {
+    console.log('Notifications not supported');
+    return;
+  }
+
+  // Check if service worker is available
+  if (!navigator.serviceWorker) {
+    console.log('Service workers not supported');
+    return;
+  }
+
+  try {
+    // Get permission if not already granted
+    if (Notification.permission === 'default') {
+      const permission = await Notification.requestPermission();
+      if (permission !== 'granted') {
+        console.log('Notification permission denied');
+        return;
+      }
+    }
+
+    // Skip if permission not granted
+    if (Notification.permission !== 'granted') {
+      return;
+    }
+
+    // Get service worker registration
+    const registration = await navigator.serviceWorker.ready;
+
+    // Check if push is supported
+    if (!registration.pushManager) {
+      console.log('Push notifications not supported');
+      return;
+    }
+
+    // Subscribe to push
+    const subscription = await registration.pushManager.subscribe({
+      userVisibleOnly: true,
+      applicationServerKey: urlBase64ToUint8Array(process.env.VITE_VAPID_PUBLIC_KEY),
+    });
+
+    // Send subscription to Supabase
+    const { error } = await supabase
+      .from('push_subscriptions')
+      .upsert(
+        {
+          user_id: user.id,
+          subscription: subscription.toJSON(),
+          device_name: `${navigator.userAgent.split('/')[0]} ${new Date().toLocaleDateString()}`,
+        },
+        { onConflict: 'user_id,subscription' }
+      );
+
+    if (error) {
+      console.error('Failed to save subscription:', error);
+    } else {
+      console.log('Push subscription saved');
+    }
+  } catch (error) {
+    console.error('Failed to subscribe to push:', error);
+  }
+}
+
+// Helper function to convert VAPID key
+function urlBase64ToUint8Array(base64String) {
+  const padding = '='.repeat((4 - base64String.length % 4) % 4);
+  const base64 = (base64String + padding)
+    .replace(/\-/g, '+')
+    .replace(/_/g, '/');
+
+  const rawData = window.atob(base64);
+  return new Uint8Array([...rawData].map((char) => char.charCodeAt(0)));
+}
+
 function linkify(text) {
   if (!text) return text;
   const urlRegex = /(https?:\/\/[^\s<>"{}|\\^`[\]]+)/g;
@@ -105,6 +181,13 @@ function App() {
     loadEvents();
     loadProfiles();
     // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user]);
+
+  // Subscribe to push notifications when user authenticates
+  useEffect(() => {
+    if (user) {
+      subscribeToPushNotifications(user);
+    }
   }, [user]);
 
   // Subscribe to realtime updates
