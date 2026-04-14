@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { unstable_batchedUpdates } from "react-dom";
 import {
   supabase,
   createManualEvent,
@@ -228,18 +229,30 @@ function App() {
 
     // Listen for navigation messages from service worker
     const handleMessage = (event) => {
-      if (event.data.type === 'NAVIGATE_TO_MESSAGE' && event.data.messageId) {
-        // Expand the message to show details
-        setExpandedMessages(new Set([event.data.messageId]));
-        // Close any open modals
-        setActionModalOpen(false);
-        // Scroll to the message
-        setTimeout(() => {
-          const messageElement = document.getElementById(`message-${event.data.messageId}`);
-          if (messageElement) {
-            messageElement.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-          }
-        }, 100);
+      try {
+        if (event.data?.type === 'NAVIGATE_TO_MESSAGE' && event.data?.messageId != null) {
+          // Batch state updates to avoid double re-render
+          unstable_batchedUpdates(() => {
+            setExpandedMessages(new Set([event.data.messageId]));
+            setActionModalOpen(false);
+          });
+
+          // Scroll to the message after DOM updates
+          setTimeout(() => {
+            try {
+              const messageElement = document.getElementById(`message-${event.data.messageId}`);
+              if (messageElement) {
+                messageElement.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+              } else {
+                console.warn(`Message element not found: message-${event.data.messageId}`);
+              }
+            } catch (scrollError) {
+              console.error('Error scrolling to message:', scrollError);
+            }
+          }, 100);
+        }
+      } catch (error) {
+        console.error('Error handling push notification navigation:', error);
       }
     };
 
