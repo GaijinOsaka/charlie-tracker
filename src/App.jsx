@@ -740,7 +740,11 @@ function App() {
     }
 
     if (actionFilter === "pending") {
-      filtered = filtered.filter((m) => m.action_status === "action_required");
+      filtered = filtered.filter(
+        (m) =>
+          m.action_status === "action_required" ||
+          m.action_status === "pending",
+      );
     } else if (actionFilter === "actioned") {
       filtered = filtered.filter((m) => m.action_status === "actioned");
     }
@@ -1227,7 +1231,11 @@ function App() {
 
             {(() => {
               const actionsPending = messages
-                .filter((m) => m.action_status === "action_required")
+                .filter(
+                  (m) =>
+                    m.action_status === "action_required" ||
+                    m.action_status === "pending",
+                )
                 .sort(
                   (a, b) => new Date(b.updated_at) - new Date(a.updated_at),
                 );

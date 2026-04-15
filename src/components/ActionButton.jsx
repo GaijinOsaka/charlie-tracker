@@ -43,7 +43,7 @@ export function ActionButton({ message, onStatusChange, onShowActionModal }) {
         <div className="action-popover">
           <button
             className="action-option action-option-pending"
-            onClick={() => handleActionClick("pending")}
+            onClick={() => handleActionClick("action_required")}
           >
             Action Required
           </button>

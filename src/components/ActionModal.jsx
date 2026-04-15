@@ -13,7 +13,7 @@ export default function ActionModal({ message, type, onConfirm, onCancel }) {
     onConfirm(note.trim());
   }
 
-  const isPending = type === "pending";
+  const isPending = type === "action_required";
   const isActioned = type === "actioned";
 
   const labelText = isPending ? "What action is required?" : "What did you do?";
