@@ -7,6 +7,7 @@
 **Architecture:** When a message's status changes to "action_required", a PostgreSQL trigger fires an Edge Function that sends Web Push notifications to all subscribed devices. Frontend captures push subscriptions on first app load and Service Worker handles notification display and clicks. Works on Android (full support) and iOS 16.4+ (PWA only).
 
 **Tech Stack:**
+
 - Supabase (PostgreSQL, Realtime, Edge Functions)
 - Web Push API (browser standard)
 - Service Worker (PWA)
@@ -17,6 +18,7 @@
 ## Task 1: Create push_subscriptions Table
 
 **Files:**
+
 - Modify: `supabase/schema.sql` (add table definition)
 - Create: `supabase/migrations/20260414_create_push_subscriptions.sql` (migration file)
 
@@ -76,6 +78,7 @@ git commit -m "feat: add push_subscriptions table and RLS policies"
 ## Task 2: Write notify-action-required Edge Function
 
 **Files:**
+
 - Create: `supabase/functions/notify-action-required/index.ts`
 
 **Step 1: Create Edge Function file**
@@ -109,10 +112,13 @@ Deno.serve(async (req) => {
     const payload: MessagePayload = await req.json();
 
     // Only trigger if status changed TO "action_required"
-    if (payload.status !== "action_required" || payload.old_status === "action_required") {
+    if (
+      payload.status !== "action_required" ||
+      payload.old_status === "action_required"
+    ) {
       return new Response(
         JSON.stringify({ message: "No notification triggered" }),
-        { status: 200 }
+        { status: 200 },
       );
     }
 
@@ -128,9 +134,12 @@ Deno.serve(async (req) => {
     }
 
     if (!subscriptions || subscriptions.length === 0) {
-      return new Response(JSON.stringify({ message: "No subscriptions found" }), {
-        status: 200,
-      });
+      return new Response(
+        JSON.stringify({ message: "No subscriptions found" }),
+        {
+          status: 200,
+        },
+      );
     }
 
     // Prepare notification payload
@@ -158,7 +167,7 @@ Deno.serve(async (req) => {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            "Authorization": `key=${Deno.env.get("FCM_SERVER_KEY")}`,
+            Authorization: `key=${Deno.env.get("FCM_SERVER_KEY")}`,
           },
           body: JSON.stringify({
             to: sub.subscription.endpoint,
@@ -210,7 +219,7 @@ Deno.serve(async (req) => {
         failed: pushResults.filter((r) => !r.success).length,
         results: pushResults,
       }),
-      { status: 200, headers: { "Content-Type": "application/json" } }
+      { status: 200, headers: { "Content-Type": "application/json" } },
     );
   } catch (error) {
     console.error("Error in notify-action-required:", error);
@@ -219,7 +228,7 @@ Deno.serve(async (req) => {
         error: "Failed to process notifications",
         details: error.message,
       }),
-      { status: 500, headers: { "Content-Type": "application/json" } }
+      { status: 500, headers: { "Content-Type": "application/json" } },
     );
   }
 });
@@ -242,6 +251,7 @@ git commit -m "feat: add notify-action-required edge function for web push"
 ## Task 3: Add PostgreSQL Trigger for Status Changes
 
 **Files:**
+
 - Modify: `supabase/schema.sql` (add trigger)
 - Create: `supabase/migrations/20260414_add_message_status_trigger.sql`
 
@@ -287,6 +297,7 @@ CREATE TRIGGER message_status_change_notify
 **Step 2: Enable pgsql-http extension**
 
 In Supabase dashboard, go to SQL Editor and run:
+
 ```sql
 CREATE EXTENSION IF NOT EXISTS http;
 ```
@@ -312,6 +323,7 @@ git commit -m "feat: add database trigger for action-required notifications"
 ## Task 4: Update Service Worker to Handle Push Events
 
 **Files:**
+
 - Modify: `public/service-worker.js`
 
 **Step 1: Add push event handler**
@@ -320,60 +332,65 @@ In `public/service-worker.js`, add this after existing event listeners:
 
 ```javascript
 // Handle incoming push notifications
-self.addEventListener('push', (event) => {
+self.addEventListener("push", (event) => {
   const data = event.data ? event.data.json() : {};
 
   const notificationOptions = {
-    body: data.body || 'New notification',
-    icon: data.icon || '/icon-192.png',
-    badge: data.badge || '/badge-72.png',
-    tag: data.tag || 'default', // Prevents duplicate notifications for same tag
+    body: data.body || "New notification",
+    icon: data.icon || "/icon-192.png",
+    badge: data.badge || "/badge-72.png",
+    tag: data.tag || "default", // Prevents duplicate notifications for same tag
     data: data.data || {},
     actions: [
       {
-        action: 'open',
-        title: 'Open',
+        action: "open",
+        title: "Open",
       },
       {
-        action: 'close',
-        title: 'Dismiss',
+        action: "close",
+        title: "Dismiss",
       },
     ],
   };
 
   event.waitUntil(
-    self.registration.showNotification(data.title || 'Charlie Tracker', notificationOptions)
+    self.registration.showNotification(
+      data.title || "Charlie Tracker",
+      notificationOptions,
+    ),
   );
 });
 
 // Handle notification clicks
-self.addEventListener('notificationclick', (event) => {
+self.addEventListener("notificationclick", (event) => {
   event.notification.close();
 
-  if (event.action === 'close') {
+  if (event.action === "close") {
     return;
   }
 
   const messageId = event.notification.data.messageId;
-  const url = messageId ? `/messages/${messageId}` : '/';
+  const url = messageId ? `/messages/${messageId}` : "/";
 
   event.waitUntil(
-    clients.matchAll({ type: 'window', includeUncontrolled: true }).then((windowClients) => {
-      // Check if app is already open
-      for (let i = 0; i < windowClients.length; i++) {
-        const client = windowClients[i];
-        if (client.url === '/' && 'focus' in client) {
-          return client.focus().then(() => {
-            // Post message to app to navigate to message
-            client.postMessage({ type: 'NAVIGATE_TO_MESSAGE', messageId });
-          });
+    clients
+      .matchAll({ type: "window", includeUncontrolled: true })
+      .then((windowClients) => {
+        // Check if app is already open
+        for (let i = 0; i < windowClients.length; i++) {
+          const client = windowClients[i];
+          if (client.url === "/" && "focus" in client) {
+            return client.focus().then(() => {
+              // Post message to app to navigate to message
+              client.postMessage({ type: "NAVIGATE_TO_MESSAGE", messageId });
+            });
+          }
         }
-      }
-      // App not open, open it
-      if (clients.openWindow) {
-        return clients.openWindow(url);
-      }
-    })
+        // App not open, open it
+        if (clients.openWindow) {
+          return clients.openWindow(url);
+        }
+      }),
   );
 });
 ```
@@ -390,6 +407,7 @@ git commit -m "feat: handle push notifications in service worker"
 ## Task 5: Add Push Subscription Management to App.jsx
 
 **Files:**
+
 - Modify: `src/App.jsx` (add subscription logic in useEffect)
 
 **Step 1: Add subscription function**
@@ -399,29 +417,29 @@ Add this function at the top of `src/App.jsx` (before the App component):
 ```javascript
 async function subscribeToPushNotifications() {
   // Check if browser supports notifications
-  if (!('Notification' in window)) {
-    console.log('Notifications not supported');
+  if (!("Notification" in window)) {
+    console.log("Notifications not supported");
     return;
   }
 
   // Check if service worker is available
   if (!navigator.serviceWorker) {
-    console.log('Service workers not supported');
+    console.log("Service workers not supported");
     return;
   }
 
   try {
     // Get permission if not already granted
-    if (Notification.permission === 'default') {
+    if (Notification.permission === "default") {
       const permission = await Notification.requestPermission();
-      if (permission !== 'granted') {
-        console.log('Notification permission denied');
+      if (permission !== "granted") {
+        console.log("Notification permission denied");
         return;
       }
     }
 
     // Skip if permission not granted
-    if (Notification.permission !== 'granted') {
+    if (Notification.permission !== "granted") {
       return;
     }
 
@@ -430,44 +448,44 @@ async function subscribeToPushNotifications() {
 
     // Check if push is supported
     if (!registration.pushManager) {
-      console.log('Push notifications not supported');
+      console.log("Push notifications not supported");
       return;
     }
 
     // Subscribe to push
     const subscription = await registration.pushManager.subscribe({
       userVisibleOnly: true,
-      applicationServerKey: urlBase64ToUint8Array(process.env.VITE_VAPID_PUBLIC_KEY),
+      applicationServerKey: urlBase64ToUint8Array(
+        process.env.VITE_VAPID_PUBLIC_KEY,
+      ),
     });
 
     // Send subscription to Supabase
-    const { error } = await supabase
-      .from('push_subscriptions')
-      .upsert(
-        {
-          user_id: user.id,
-          subscription: subscription.toJSON(),
-          device_name: `${navigator.userAgent.split('/')[0]} ${new Date().toLocaleDateString()}`,
-        },
-        { onConflict: 'user_id,subscription' }
-      );
+    const { error } = await supabase.from("push_subscriptions").upsert(
+      {
+        user_id: user.id,
+        subscription: subscription.toJSON(),
+        device_name: `${navigator.userAgent.split("/")[0]} ${new Date().toLocaleDateString()}`,
+      },
+      { onConflict: "user_id,subscription" },
+    );
 
     if (error) {
-      console.error('Failed to save subscription:', error);
+      console.error("Failed to save subscription:", error);
     } else {
-      console.log('Push subscription saved');
+      console.log("Push subscription saved");
     }
   } catch (error) {
-    console.error('Failed to subscribe to push:', error);
+    console.error("Failed to subscribe to push:", error);
   }
 }
 
 // Helper function to convert VAPID key
 function urlBase64ToUint8Array(base64String) {
-  const padding = '='.repeat((4 - base64String.length % 4) % 4);
+  const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
   const base64 = (base64String + padding)
-    .replace(/\-/g, '+')
-    .replace(/_/g, '/');
+    .replace(/\-/g, "+")
+    .replace(/_/g, "/");
 
   const rawData = window.atob(base64);
   return new Uint8Array([...rawData].map((char) => char.charCodeAt(0)));
@@ -500,6 +518,7 @@ git commit -m "feat: subscribe to push notifications on app load"
 ## Task 6: Handle Navigation from Push Notification
 
 **Files:**
+
 - Modify: `src/App.jsx` (add message listener in useEffect)
 
 **Step 1: Add message listener**
@@ -512,7 +531,7 @@ useEffect(() => {
 
   // Listen for navigation messages from service worker
   const handleMessage = (event) => {
-    if (event.data.type === 'NAVIGATE_TO_MESSAGE' && event.data.messageId) {
+    if (event.data.type === "NAVIGATE_TO_MESSAGE" && event.data.messageId) {
       // Set selected message and scroll to it
       setSelectedMessageId(event.data.messageId);
       // Close any open modals/drawers
@@ -521,9 +540,9 @@ useEffect(() => {
     }
   };
 
-  navigator.serviceWorker.addEventListener('message', handleMessage);
+  navigator.serviceWorker.addEventListener("message", handleMessage);
   return () => {
-    navigator.serviceWorker.removeEventListener('message', handleMessage);
+    navigator.serviceWorker.removeEventListener("message", handleMessage);
   };
 }, []);
 ```
@@ -540,6 +559,7 @@ git commit -m "feat: handle navigation from push notification clicks"
 ## Task 7: Add Notification Permission UI to Settings
 
 **Files:**
+
 - Modify: `src/components/SettingsPanel.jsx` (add notification toggle)
 
 **Step 1: Add toggle UI**
@@ -548,28 +568,28 @@ Add this section to the settings panel (find or create the Settings component):
 
 ```javascript
 const [notificationPermission, setNotificationPermission] = useState(
-  Notification.permission
+  Notification.permission,
 );
 
 const handleNotificationToggle = async () => {
-  if (notificationPermission === 'granted') {
+  if (notificationPermission === "granted") {
     // Remove subscription
     const registration = await navigator.serviceWorker.ready;
     const subscription = await registration.pushManager.getSubscription();
     if (subscription) {
       await supabase
-        .from('push_subscriptions')
+        .from("push_subscriptions")
         .delete()
         .match({ user_id: user.id, subscription: subscription.toJSON() });
       await subscription.unsubscribe();
-      setNotificationPermission('denied');
+      setNotificationPermission("denied");
     }
   } else {
     // Request permission and subscribe
     const permission = await Notification.requestPermission();
-    if (permission === 'granted') {
+    if (permission === "granted") {
       await subscribeToPushNotifications();
-      setNotificationPermission('granted');
+      setNotificationPermission("granted");
     }
   }
 };
@@ -580,17 +600,17 @@ const handleNotificationToggle = async () => {
   <label className="notification-toggle">
     <input
       type="checkbox"
-      checked={notificationPermission === 'granted'}
+      checked={notificationPermission === "granted"}
       onChange={handleNotificationToggle}
     />
     <span>Enable push notifications for action items</span>
   </label>
-  {notificationPermission === 'denied' && (
+  {notificationPermission === "denied" && (
     <p className="text-secondary">
       Notifications blocked. Enable in browser settings to receive alerts.
     </p>
   )}
-</div>
+</div>;
 ```
 
 **Step 2: Style the toggle**
@@ -639,20 +659,24 @@ git commit -m "feat: add notification toggle to settings panel"
 ## Task 8: Add VAPID Keys to Environment
 
 **Files:**
+
 - Modify: `.env.local` (add VAPID key)
 
 **Step 1: Generate VAPID keys**
 
 Run (requires npm package `web-push`):
+
 ```bash
 npm install -g web-push
 web-push generate-vapid-keys
 ```
+
 This outputs: `Public Key: ...` and `Private Key: ...`
 
 **Step 2: Add to .env.local**
 
 Add to `.env.local`:
+
 ```
 VITE_VAPID_PUBLIC_KEY=<public-key-from-step-1>
 ```
@@ -660,6 +684,7 @@ VITE_VAPID_PUBLIC_KEY=<public-key-from-step-1>
 **Step 3: Add to Supabase secrets**
 
 In Supabase dashboard (Project Settings → Secrets), add:
+
 ```
 FCM_SERVER_KEY=<your-fcm-key>  (get from Firebase Console)
 ```
@@ -678,6 +703,7 @@ git commit -m "chore: add vapid keys for web push notifications"
 ## Task 9: Update Message Status Change to "action_required"
 
 **Files:**
+
 - Verify: `src/App.jsx` or message update function (find where message status is updated)
 
 **Step 1: Verify status update flow**
@@ -688,12 +714,12 @@ Search in App.jsx for where messages update their status. Ensure the update goes
 // This should already exist somewhere:
 const updateMessageStatus = async (messageId, newStatus) => {
   const { error } = await supabase
-    .from('messages')
+    .from("messages")
     .update({ status: newStatus })
-    .eq('id', messageId);
+    .eq("id", messageId);
 
   if (error) {
-    console.error('Failed to update message:', error);
+    console.error("Failed to update message:", error);
   }
   // PostgreSQL trigger will fire automatically
 };
@@ -712,11 +738,13 @@ const updateMessageStatus = async (messageId, newStatus) => {
 ## Task 10: Manual Testing on Real Devices
 
 **Files:**
+
 - No new files, testing phase
 
 **Step 1: Deploy to staging**
 
 Run:
+
 ```bash
 npm run build
 # Deploy to Vercel or your hosting
@@ -766,8 +794,8 @@ If any failures, note them for debugging.
 ## Rollback Plan
 
 If issues occur:
+
 1. Remove trigger: `DROP TRIGGER message_status_change_notify ON messages;`
 2. Disable function call in Edge Function (comment out push loop)
 3. Disable Service Worker listeners (comment out push/notificationclick)
 4. Clear `push_subscriptions` table: `DELETE FROM push_subscriptions;`
-

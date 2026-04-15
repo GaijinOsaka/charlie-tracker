@@ -17,7 +17,7 @@ export default function SettingsPanel({ onProfileUpdated }) {
   const [newDisplayName, setNewDisplayName] = useState("");
   const [savingDisplayName, setSavingDisplayName] = useState(false);
   const [notificationPermission, setNotificationPermission] = useState(
-    typeof Notification !== "undefined" ? Notification.permission : "denied"
+    typeof Notification !== "undefined" ? Notification.permission : "denied",
   );
 
   useEffect(() => {

@@ -25,36 +25,38 @@ import "./App.css";
 
 async function subscribeToPushNotifications(user) {
   // Check if browser supports notifications
-  if (!('Notification' in window)) {
-    console.log('Notifications not supported');
+  if (!("Notification" in window)) {
+    console.log("Notifications not supported");
     return;
   }
 
   // Check if service worker is available
   if (!navigator.serviceWorker) {
-    console.log('Service workers not supported');
+    console.log("Service workers not supported");
     return;
   }
 
   // Validate VAPID key is configured
   const vapidKey = import.meta.env.VITE_VAPID_PUBLIC_KEY?.trim();
   if (!vapidKey) {
-    console.warn('VITE_VAPID_PUBLIC_KEY is not configured. Push notifications disabled.');
+    console.warn(
+      "VITE_VAPID_PUBLIC_KEY is not configured. Push notifications disabled.",
+    );
     return;
   }
 
   try {
     // Get permission if not already granted
-    if (Notification.permission === 'default') {
+    if (Notification.permission === "default") {
       const permission = await Notification.requestPermission();
-      if (permission !== 'granted') {
-        console.log('Notification permission denied');
+      if (permission !== "granted") {
+        console.log("Notification permission denied");
         return;
       }
     }
 
     // If user denied permission, abort
-    if (Notification.permission !== 'granted') {
+    if (Notification.permission !== "granted") {
       return;
     }
 
@@ -63,7 +65,7 @@ async function subscribeToPushNotifications(user) {
 
     // Check if push is supported
     if (!registration.pushManager) {
-      console.log('Push notifications not supported');
+      console.log("Push notifications not supported");
       return;
     }
 
@@ -74,37 +76,35 @@ async function subscribeToPushNotifications(user) {
     });
 
     // Send subscription to Supabase
-    const { error } = await supabase
-      .from('push_subscriptions')
-      .upsert(
-        {
-          user_id: user.id,
-          subscription: subscription.toJSON(),
-          device_name: `${getBrowserName()} ${new Date().toLocaleDateString()}`,
-        },
-        { onConflict: 'user_id,subscription' }
-      );
+    const { error } = await supabase.from("push_subscriptions").upsert(
+      {
+        user_id: user.id,
+        subscription: subscription.toJSON(),
+        device_name: `${getBrowserName()} ${new Date().toLocaleDateString()}`,
+      },
+      { onConflict: "user_id,subscription" },
+    );
 
     if (error) {
-      console.error('Failed to save subscription:', error);
+      console.error("Failed to save subscription:", error);
     } else {
-      console.log('Push subscription saved');
+      console.log("Push subscription saved");
     }
   } catch (error) {
-    console.error('Failed to subscribe to push:', error);
+    console.error("Failed to subscribe to push:", error);
   }
 }
 
 // Helper function to convert VAPID key from URL-safe base64 to Uint8Array
 function urlBase64ToUint8Array(base64String) {
-  if (typeof base64String !== 'string' || !base64String) {
-    throw new Error('VAPID key must be a non-empty string');
+  if (typeof base64String !== "string" || !base64String) {
+    throw new Error("VAPID key must be a non-empty string");
   }
 
-  const padding = '='.repeat((4 - base64String.length % 4) % 4);
+  const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
   const base64 = (base64String + padding)
-    .replace(/\-/g, '+')
-    .replace(/_/g, '/');
+    .replace(/\-/g, "+")
+    .replace(/_/g, "/");
 
   try {
     const rawData = window.atob(base64);
@@ -117,18 +117,18 @@ function urlBase64ToUint8Array(base64String) {
 // Helper function to extract browser name from user agent
 function getBrowserName() {
   const ua = navigator.userAgent;
-  if (ua.includes('Chrome') && !ua.includes('Chromium')) {
-    return 'Chrome';
-  } else if (ua.includes('Safari') && !ua.includes('Chrome')) {
-    return 'Safari';
-  } else if (ua.includes('Firefox')) {
-    return 'Firefox';
-  } else if (ua.includes('Edge') || ua.includes('Edg')) {
-    return 'Edge';
-  } else if (ua.includes('Chromium')) {
-    return 'Chromium';
+  if (ua.includes("Chrome") && !ua.includes("Chromium")) {
+    return "Chrome";
+  } else if (ua.includes("Safari") && !ua.includes("Chrome")) {
+    return "Safari";
+  } else if (ua.includes("Firefox")) {
+    return "Firefox";
+  } else if (ua.includes("Edge") || ua.includes("Edg")) {
+    return "Edge";
+  } else if (ua.includes("Chromium")) {
+    return "Chromium";
   }
-  return 'Unknown';
+  return "Unknown";
 }
 
 function linkify(text) {
@@ -230,7 +230,10 @@ function App() {
     // Listen for navigation messages from service worker
     const handleMessage = (event) => {
       try {
-        if (event.data?.type === 'NAVIGATE_TO_MESSAGE' && event.data?.messageId != null) {
+        if (
+          event.data?.type === "NAVIGATE_TO_MESSAGE" &&
+          event.data?.messageId != null
+        ) {
           // Batch state updates to avoid double re-render
           unstable_batchedUpdates(() => {
             setExpandedMessages(new Set([event.data.messageId]));
@@ -240,25 +243,32 @@ function App() {
           // Scroll to the message after DOM updates
           setTimeout(() => {
             try {
-              const messageElement = document.getElementById(`message-${event.data.messageId}`);
+              const messageElement = document.getElementById(
+                `message-${event.data.messageId}`,
+              );
               if (messageElement) {
-                messageElement.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                messageElement.scrollIntoView({
+                  behavior: "smooth",
+                  block: "nearest",
+                });
               } else {
-                console.warn(`Message element not found: message-${event.data.messageId}`);
+                console.warn(
+                  `Message element not found: message-${event.data.messageId}`,
+                );
               }
             } catch (scrollError) {
-              console.error('Error scrolling to message:', scrollError);
+              console.error("Error scrolling to message:", scrollError);
             }
           }, 100);
         }
       } catch (error) {
-        console.error('Error handling push notification navigation:', error);
+        console.error("Error handling push notification navigation:", error);
       }
     };
 
-    navigator.serviceWorker.addEventListener('message', handleMessage);
+    navigator.serviceWorker.addEventListener("message", handleMessage);
     return () => {
-      navigator.serviceWorker.removeEventListener('message', handleMessage);
+      navigator.serviceWorker.removeEventListener("message", handleMessage);
     };
   }, []);
 
@@ -299,7 +309,9 @@ function App() {
           },
           (payload) => {
             setMessages((prev) =>
-              prev.map((m) => (m.id === payload.new.id ? { ...m, ...payload.new } : m)),
+              prev.map((m) =>
+                m.id === payload.new.id ? { ...m, ...payload.new } : m,
+              ),
             );
           },
         )
