@@ -115,7 +115,7 @@ export async function deleteManualEvent(eventId) {
 
 // Message action status functions
 export async function updateActionStatus(messageId, newStatus, note) {
-  // newStatus can be: 'pending', 'actioned', or null
+  // newStatus can be: 'action_required', 'actioned', or null
   const {
     data: { user },
   } = await supabase.auth.getUser();

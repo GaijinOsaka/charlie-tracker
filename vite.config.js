@@ -7,6 +7,9 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: "autoUpdate",
+      strategies: "injectManifest",
+      srcDir: "public",
+      filename: "service-worker.js",
       includeAssets: ["favicon.ico"],
       manifest: {
         name: "Charlie Tracker",

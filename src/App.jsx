@@ -728,7 +728,7 @@ function App() {
     }
 
     if (actionFilter === "pending") {
-      filtered = filtered.filter((m) => m.action_status === "pending");
+      filtered = filtered.filter((m) => m.action_status === "action_required");
     } else if (actionFilter === "actioned") {
       filtered = filtered.filter((m) => m.action_status === "actioned");
     }
@@ -1145,7 +1145,7 @@ function App() {
         {activeTab === "actions" && (
           <ActionsBox
             pendingMessages={messages
-              .filter((m) => m.action_status === "pending")
+              .filter((m) => m.action_status === "action_required")
               .sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at))}
             actionedMessages={messages
               .filter((m) => m.action_status === "actioned")
@@ -1215,7 +1215,7 @@ function App() {
 
             {(() => {
               const actionsPending = messages
-                .filter((m) => m.action_status === "pending")
+                .filter((m) => m.action_status === "action_required")
                 .sort(
                   (a, b) => new Date(b.updated_at) - new Date(a.updated_at),
                 );
@@ -1349,7 +1349,7 @@ function App() {
                       {msg.action_note && (
                         <div className="message-action-note">
                           <span className="action-note-label">
-                            {msg.action_status === "pending"
+                            {msg.action_status === "action_required"
                               ? "Action Required:"
                               : "Action Taken:"}
                           </span>

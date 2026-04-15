@@ -115,7 +115,7 @@ Deno.serve(async (req) => {
       title: "Action Required",
       body: `${payload.sender}: ${payload.subject}`,
       icon: "/icons/icon-192.png",
-      badge: "/icons/badge-72.png",
+      // Badge is optional; badge file can be added later for monochrome notification badge display
       tag: `message-${payload.id}`, // Prevent duplicates for same message
       data: {
         messageId: payload.id,

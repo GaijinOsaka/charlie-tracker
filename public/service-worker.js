@@ -1,5 +1,8 @@
 // Service Worker for Charlie Tracker
 
+// Workbox manifest injection point
+self.__WB_MANIFEST = [];
+
 // Handle incoming push notifications
 self.addEventListener('push', (event) => {
   let data = {};
