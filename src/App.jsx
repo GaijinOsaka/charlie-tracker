@@ -637,6 +637,7 @@ function App() {
 
       const statusLabels = {
         pending: "marked as needing action",
+        action_required: "marked as action required",
         actioned: "marked as actioned",
         null: "cleared action status",
       };
