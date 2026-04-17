@@ -6,6 +6,7 @@ import {
   updateManualEvent,
   deleteManualEvent,
   updateActionStatus,
+  triggerPushNotifications,
 } from "./lib/supabase";
 import { useAuth } from "./lib/AuthContext";
 import LoginPage from "./components/LoginPage";
@@ -611,6 +612,7 @@ function App() {
 
   async function toggleActionStatus(msg, targetStatus, note = null) {
     try {
+      const previousStatus = msg.action_status;
       await updateActionStatus(msg.id, targetStatus, note);
 
       // Update local state optimistically
@@ -621,6 +623,17 @@ function App() {
             : m,
         ),
       );
+
+      // Trigger push notifications if status changed to action_required
+      if (
+        targetStatus === "action_required" &&
+        previousStatus !== "action_required"
+      ) {
+        await triggerPushNotifications(
+          { ...msg, action_status: targetStatus },
+          previousStatus,
+        );
+      }
 
       const statusLabels = {
         pending: "marked as needing action",

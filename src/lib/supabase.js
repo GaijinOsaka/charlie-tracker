@@ -166,3 +166,35 @@ export async function updateDisplayName(displayName) {
     throw error;
   }
 }
+
+// Trigger push notifications for action_required status
+export async function triggerPushNotifications(message, previousStatus) {
+  // Only trigger if status changed TO action_required
+  if (
+    message.action_status !== "action_required" ||
+    previousStatus === "action_required"
+  ) {
+    return;
+  }
+
+  try {
+    const response = await supabase.functions.invoke("notify-action-required", {
+      body: {
+        id: message.id,
+        status: message.action_status,
+        subject: message.subject,
+        content: message.content,
+        sender_name: message.sender_name,
+        old_status: previousStatus,
+      },
+    });
+
+    if (response.error) {
+      console.error("Failed to trigger notifications:", response.error);
+    } else {
+      console.log("Push notifications triggered:", response.data);
+    }
+  } catch (error) {
+    console.error("Error calling notify-action-required function:", error);
+  }
+}
