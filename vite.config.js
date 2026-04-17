@@ -7,7 +7,7 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: "autoUpdate",
-      strategies: "injectManifest",
+      strategies: "generateSW",
       srcDir: "public",
       filename: "service-worker.js",
       includeAssets: ["favicon.ico"],
