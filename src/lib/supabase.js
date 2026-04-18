@@ -183,8 +183,8 @@ export async function triggerPushNotifications(message, previousStatus) {
         id: message.id,
         status: message.action_status,
         subject: message.subject,
-        content: message.content,
-        sender_name: message.sender_name,
+        body: message.content,
+        sender: message.sender_name,
         old_status: previousStatus,
       },
     });
