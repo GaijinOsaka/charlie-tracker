@@ -50,6 +50,7 @@ export default defineConfig({
         categories: ["productivity"],
       },
       workbox: {
+        importScripts: ["/push-sw.js"],
         globPatterns: ["**/*.{js,css,html,ico,png,svg}"],
         runtimeCaching: [
           {
