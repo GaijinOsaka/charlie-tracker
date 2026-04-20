@@ -15,6 +15,8 @@ self.addEventListener("push", (event) => {
     icon: data.icon || "/icons/icon-192.png",
     tag: data.tag || "default",
     data: data.data || {},
+    requireInteraction: true,
+    vibrate: [200, 100, 200],
     actions: [
       { action: "open", title: "Open" },
       { action: "close", title: "Dismiss" },
