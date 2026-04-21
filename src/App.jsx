@@ -284,9 +284,18 @@ function App() {
     if (!user) return;
 
     let channel;
-    let isSubscribed = true;
+    let retryTimeout;
 
-    async function setupSubscription() {
+    function cleanupChannel() {
+      if (channel) {
+        supabase.removeChannel(channel);
+        channel = null;
+      }
+    }
+
+    function setupSubscription() {
+      cleanupChannel();
+
       channel = supabase
         .channel("public:messages")
         .on(
@@ -362,31 +371,45 @@ function App() {
           },
         )
         .subscribe((status) => {
-          console.log("Realtime status:", status);
+          console.log("[Realtime] Status:", status);
+          if (status === "CHANNEL_ERROR" || status === "TIMED_OUT") {
+            console.warn("[Realtime] Connection lost, retrying in 5s...");
+            clearTimeout(retryTimeout);
+            retryTimeout = setTimeout(() => {
+              setupSubscription();
+              loadMessages();
+            }, 5000);
+          }
         });
     }
 
-    // Handle app backgrounding/foregrounding on mobile
+    // Reload data + reconnect when app comes back to foreground or network recovers
+    function handleResume() {
+      console.log("[Realtime] Resuming — refreshing data and reconnecting");
+      loadMessages();
+      loadEvents();
+      setupSubscription();
+    }
+
     function handleVisibilityChange() {
-      if (document.hidden) {
-        console.log("[Realtime] App backgrounded - unsubscribing");
-        isSubscribed = false;
-        channel?.unsubscribe();
-      } else {
-        console.log("[Realtime] App foregrounded - re-subscribing");
-        isSubscribed = true;
-        setupSubscription();
+      if (!document.hidden) {
+        handleResume();
       }
+    }
+
+    function handleOnline() {
+      handleResume();
     }
 
     setupSubscription();
     document.addEventListener("visibilitychange", handleVisibilityChange);
+    window.addEventListener("online", handleOnline);
 
     return () => {
       document.removeEventListener("visibilitychange", handleVisibilityChange);
-      if (isSubscribed && channel) {
-        channel.unsubscribe();
-      }
+      window.removeEventListener("online", handleOnline);
+      clearTimeout(retryTimeout);
+      cleanupChannel();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
