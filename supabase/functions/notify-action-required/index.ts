@@ -24,6 +24,7 @@ interface MessagePayload {
   body: string;
   sender: string;
   old_status: string | null;
+  action_note: string | null;
 }
 
 interface WebPushSubscription {
@@ -109,9 +110,10 @@ Deno.serve(async (req) => {
 
     // Prepare Web Push notification payload
     const messageSnippet = payload.body.substring(0, 150).replace(/\n/g, " ");
+    const noteText = payload.action_note ? `\n📌 ${payload.action_note}` : "";
     const notificationPayload = {
       title: "Action Required",
-      body: `${payload.sender}: ${payload.subject}`,
+      body: `${payload.sender}: ${payload.subject}${noteText}`,
       icon: "/icons/icon-192.png",
       // Badge is optional; badge file can be added later for monochrome notification badge display
       tag: `message-${payload.id}`, // Prevent duplicates for same message

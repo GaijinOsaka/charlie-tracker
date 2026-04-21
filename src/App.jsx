@@ -602,6 +602,12 @@ function App() {
 
       if (error) throw error;
 
+      // Clear any action status so it doesn't linger in the other user's Actions view
+      const msg = messages.find((m) => m.id === msgId);
+      if (msg && msg.action_status) {
+        await updateActionStatus(msgId, null, null);
+      }
+
       // Update local state
       setMessages((prev) => prev.filter((m) => m.id !== msgId));
       addToast("Message deleted from your view", "success");
@@ -636,7 +642,7 @@ function App() {
         previousStatus !== "action_required"
       ) {
         await triggerPushNotifications(
-          { ...msg, action_status: targetStatus },
+          { ...msg, action_status: targetStatus, action_note: note },
           previousStatus,
         );
       }

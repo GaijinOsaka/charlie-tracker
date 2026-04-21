@@ -29,7 +29,8 @@ BEGIN
               'subject', NEW.subject,
               'content', NEW.content,
               'sender_name', NEW.sender_name,
-              'old_status', OLD.action_status
+              'old_status', OLD.action_status,
+              'action_note', NEW.action_note
             )
           );
       EXCEPTION WHEN OTHERS THEN
