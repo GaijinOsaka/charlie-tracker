@@ -2533,6 +2533,40 @@ header h1 {
   display: block;
 }
 
+/* Notification type styling */
+.notification-content {
+  flex: 1;
+}
+
+.notification-type-badge {
+  display: inline-block;
+  background: var(--primary);
+  color: white;
+  font-size: 0.65rem;
+  font-weight: 600;
+  padding: 0.2rem 0.5rem;
+  border-radius: 3px;
+  margin-left: 0.5rem;
+  white-space: nowrap;
+  align-self: flex-start;
+  flex-shrink: 0;
+}
+
+.notification-item {
+  display: flex !important;
+  align-items: flex-start;
+  gap: 0.5rem;
+}
+
+.notification-new_message {
+  background: rgba(59, 130, 246, 0.05);
+  border-left: 3px solid var(--primary) !important;
+}
+
+.notification-actioned {
+  border-left: 3px solid var(--success) !important;
+}
+
 /* Modal */
 .modal-overlay {
   position: fixed;

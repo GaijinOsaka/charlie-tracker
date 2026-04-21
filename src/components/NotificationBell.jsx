@@ -124,13 +124,18 @@ export default function NotificationBell({ onNavigateToMessage }) {
               {notifications.map((n) => (
                 <li
                   key={n.id}
-                  className="notification-item"
+                  className={`notification-item notification-${n.type}`}
                   onClick={() => handleClick(n)}
                 >
-                  <p className="notification-summary">{n.summary}</p>
-                  <span className="notification-time">
-                    {new Date(n.created_at).toLocaleString("en-GB")}
-                  </span>
+                  <div className="notification-content">
+                    <p className="notification-summary">{n.summary}</p>
+                    <span className="notification-time">
+                      {new Date(n.created_at).toLocaleString("en-GB")}
+                    </span>
+                  </div>
+                  {n.type === "new_message" && (
+                    <span className="notification-type-badge">New</span>
+                  )}
                 </li>
               ))}
             </ul>

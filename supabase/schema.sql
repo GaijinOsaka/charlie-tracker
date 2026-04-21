@@ -500,3 +500,62 @@ CREATE TRIGGER message_status_change_notify
   FOR EACH ROW
   EXECUTE FUNCTION trigger_notify_action_required();
 
+-- 22. New message notification trigger
+-- Create notification entry and send push notification when a message is received
+CREATE OR REPLACE FUNCTION create_message_notification()
+RETURNS TRIGGER AS $$
+DECLARE
+  user_record RECORD;
+BEGIN
+  -- Notify all authenticated users about the new message
+  -- (max 2 users in the system, both should know about incoming messages)
+  FOR user_record IN
+    SELECT id FROM profiles
+  LOOP
+    INSERT INTO user_notifications (user_id, message_id, type, summary)
+    VALUES (
+      user_record.id,
+      NEW.id,
+      'new_message',
+      COALESCE(NEW.sender_name, NEW.source) || ': ' || LEFT(NEW.subject, 60)
+    );
+  END LOOP;
+
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+CREATE TRIGGER message_creation_notification
+  AFTER INSERT ON messages
+  FOR EACH ROW
+  EXECUTE FUNCTION create_message_notification();
+
+-- Trigger to call Edge Function for push notification on new message
+CREATE OR REPLACE FUNCTION trigger_notify_new_message()
+RETURNS TRIGGER AS $$
+BEGIN
+  -- Call the Edge Function to send push notifications
+  PERFORM
+    net.http_post(
+      url := 'https://' || current_setting('app.settings.supabase_url') || '/functions/v1/notify-new-message',
+      headers := jsonb_build_object(
+        'Authorization', 'Bearer ' || current_setting('app.settings.supabase_service_key'),
+        'Content-Type', 'application/json'
+      ),
+      body := jsonb_build_object(
+        'id', NEW.id,
+        'subject', NEW.subject,
+        'content', NEW.content,
+        'sender_name', NEW.sender_name,
+        'source', NEW.source
+      )
+    );
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER message_push_notification
+  AFTER INSERT ON messages
+  FOR EACH ROW
+  EXECUTE FUNCTION trigger_notify_new_message();
+
