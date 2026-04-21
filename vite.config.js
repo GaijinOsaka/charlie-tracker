@@ -7,7 +7,7 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: "autoUpdate",
-      strategies: "injectManifest",
+      strategies: "generateSW",
       srcDir: "public",
       filename: "service-worker.js",
       includeAssets: ["favicon.ico"],
@@ -50,6 +50,7 @@ export default defineConfig({
         categories: ["productivity"],
       },
       workbox: {
+        importScripts: ["/push-sw.js"],
         globPatterns: ["**/*.{js,css,html,ico,png,svg}"],
         runtimeCaching: [
           {

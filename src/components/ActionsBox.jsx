@@ -11,6 +11,8 @@ export function ActionsBox({
   showRecentlyActioned = false,
 }) {
   const [expandedId, setExpandedId] = useState(null);
+  const [pendingCollapsed, setPendingCollapsed] = useState(false);
+  const [actionedCollapsed, setActionedCollapsed] = useState(false);
 
   // Provide default no-op handlers if not provided
   const handleStatusChange = onStatusChange || (() => {});
@@ -143,24 +145,44 @@ export function ActionsBox({
     <div className="actions-box">
       {pendingMessages.length > 0 && (
         <div className="actions-section">
-          <div className="actions-section-title pending">
+          <div
+            className={`actions-section-title pending${pendingCollapsed ? " collapsed" : ""}`}
+            onClick={() => setPendingCollapsed(!pendingCollapsed)}
+          >
+            <span
+              className={`actions-chevron ${pendingCollapsed ? "" : "actions-chevron-open"}`}
+            >
+              ▸
+            </span>
             ⏳ Action Required ({pendingMessages.length})
           </div>
-          <div className="actions-list">
-            {pendingMessages.map((msg) => renderCompactRow(msg, "pending"))}
-          </div>
+          {!pendingCollapsed && (
+            <div className="actions-list">
+              {pendingMessages.map((msg) => renderCompactRow(msg, "pending"))}
+            </div>
+          )}
         </div>
       )}
 
       {actionedMessages.length > 0 && (
         <div className="actions-section">
-          <div className="actions-section-title actioned">
+          <div
+            className={`actions-section-title actioned${actionedCollapsed ? " collapsed" : ""}`}
+            onClick={() => setActionedCollapsed(!actionedCollapsed)}
+          >
+            <span
+              className={`actions-chevron ${actionedCollapsed ? "" : "actions-chevron-open"}`}
+            >
+              ▸
+            </span>
             ✓ {showRecentlyActioned ? "Recently Actioned" : "Actioned"} (
             {actionedMessages.length})
           </div>
-          <div className="actions-list">
-            {actionedMessages.map((msg) => renderCompactRow(msg, "actioned"))}
-          </div>
+          {!actionedCollapsed && (
+            <div className="actions-list">
+              {actionedMessages.map((msg) => renderCompactRow(msg, "actioned"))}
+            </div>
+          )}
         </div>
       )}
     </div>
