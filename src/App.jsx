@@ -443,7 +443,8 @@ function App() {
           created_at,
           updated_at,
           attachments(id, filename, file_path, mime_type, file_size),
-          message_read_status!left(user_id, read_at)
+          message_read_status!left(user_id, read_at),
+          action_notes(id, user_id, note, action_type, created_at)
         `,
         )
         .order("received_at", { ascending: false })
@@ -689,19 +690,54 @@ function App() {
     setActionModalOpen(true);
   }
 
-  function handleActionModalConfirm(note) {
+  async function handleActionModalConfirm(note) {
     if (actionModalMessage && actionModalType) {
-      // Append user name, date, and time to the note
-      const now = new Date();
+      // Insert note into action_notes table
+      if (note && note.trim()) {
+        const { error: noteError } = await supabase
+          .from("action_notes")
+          .insert({
+            message_id: actionModalMessage.id,
+            user_id: user.id,
+            note: note.trim(),
+            action_type: actionModalType,
+          });
+        if (noteError) {
+          console.error("Failed to insert action note:", noteError);
+        } else {
+          // Add the new note to local state
+          const newNote = {
+            id: crypto.randomUUID(),
+            user_id: user.id,
+            note: note.trim(),
+            action_type: actionModalType,
+            created_at: new Date().toISOString(),
+          };
+          setMessages((prev) =>
+            prev.map((m) =>
+              m.id === actionModalMessage.id
+                ? {
+                    ...m,
+                    action_notes: [...(m.action_notes || []), newNote],
+                  }
+                : m,
+            ),
+          );
+        }
+      }
+
+      // Update message action status (keep action_note for backward compat)
       const userName =
         profiles[user?.id]?.display_name || user?.email || "Unknown";
+      const now = new Date();
       const formattedDate = now.toLocaleDateString();
       const formattedTime = now.toLocaleTimeString([], {
         hour: "2-digit",
         minute: "2-digit",
       });
-      const noteWithMetadata = `${note} — ${userName} • ${formattedDate} ${formattedTime}`;
-
+      const noteWithMetadata = note
+        ? `${note} — ${userName} • ${formattedDate} ${formattedTime}`
+        : "";
       toggleActionStatus(actionModalMessage, actionModalType, noteWithMetadata);
     }
     setActionModalOpen(false);
@@ -796,6 +832,16 @@ function App() {
       );
     } else if (actionFilter === "actioned") {
       filtered = filtered.filter((m) => m.action_status === "actioned");
+    } else {
+      // Default view: exclude messages that have an action status
+      // (they appear in the ActionsBox above)
+      filtered = filtered.filter(
+        (m) =>
+          !m.action_status ||
+          (m.action_status !== "action_required" &&
+            m.action_status !== "pending" &&
+            m.action_status !== "actioned"),
+      );
     }
 
     if (searchQuery) {
@@ -1223,6 +1269,7 @@ function App() {
             }}
             onStatusChange={toggleActionStatus}
             onShowActionModal={handleShowActionModal}
+            onAttachmentClick={openAttachmentViewer}
           />
         )}
 
@@ -1305,6 +1352,7 @@ function App() {
                   }}
                   onStatusChange={toggleActionStatus}
                   onShowActionModal={handleShowActionModal}
+                  onAttachmentClick={openAttachmentViewer}
                 />
               );
             })()}

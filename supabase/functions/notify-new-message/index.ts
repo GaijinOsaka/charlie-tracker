@@ -1,21 +1,22 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.0";
+import webpush from "npm:web-push@3.6.7";
 
-// CORS headers for consistency with other Edge Functions
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
     "authorization, x-client-info, apikey, content-type",
 };
 
-// Environment variable validation
-const supabaseUrl = Deno.env.get("SUPABASE_URL");
-const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+const vapidPublicKey = Deno.env.get("VAPID_PUBLIC_KEY")!;
+const vapidPrivateKey = Deno.env.get("VAPID_PRIVATE_KEY")!;
 
-if (!supabaseUrl || !supabaseServiceKey) {
-  throw new Error(
-    "Required environment variables not set: SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY",
-  );
-}
+webpush.setVapidDetails(
+  "mailto:davidjamesoakes@gmail.com",
+  vapidPublicKey,
+  vapidPrivateKey,
+);
 
 interface MessagePayload {
   id: string;
@@ -25,24 +26,11 @@ interface MessagePayload {
   source: string;
 }
 
-interface WebPushSubscription {
-  endpoint: string;
-  keys: {
-    p256dh: string;
-    auth: string;
-  };
-}
-
 Deno.serve(async (req) => {
-  // Add CORS headers to all responses
   if (req.method === "OPTIONS") {
-    return new Response(null, {
-      status: 200,
-      headers: corsHeaders,
-    });
+    return new Response(null, { status: 200, headers: corsHeaders });
   }
 
-  // Only handle POST requests
   if (req.method !== "POST") {
     return new Response(JSON.stringify({ error: "Method not allowed" }), {
       status: 405,
@@ -50,7 +38,6 @@ Deno.serve(async (req) => {
     });
   }
 
-  // Bearer token validation for authorization
   const authHeader = req.headers.get("Authorization");
   if (!authHeader?.startsWith("Bearer ")) {
     return new Response(JSON.stringify({ error: "Unauthorized" }), {
@@ -61,20 +48,18 @@ Deno.serve(async (req) => {
 
   try {
     const payload: MessagePayload = await req.json();
-
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Fetch all active push subscriptions
+    // Fetch active push subscriptions only
     const { data: subscriptions, error: fetchError } = await supabase
       .from("push_subscriptions")
-      .select("id, subscription, user_id");
+      .select("id, subscription, user_id")
+      .is("deleted_at", null);
 
     if (fetchError) {
       console.error("Failed to fetch subscriptions:", fetchError);
       return new Response(
-        JSON.stringify({
-          error: "Failed to process notifications",
-        }),
+        JSON.stringify({ error: "Failed to process notifications" }),
         {
           status: 500,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -92,96 +77,67 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Prepare Web Push notification payload
-    const messageSnippet = payload.content
-      ? payload.content.substring(0, 100).replace(/\n/g, " ")
-      : "New message";
-    const notificationPayload = {
+    const notificationPayload = JSON.stringify({
       title: `New message from ${payload.sender_name || payload.source}`,
-      body: `${payload.subject}`,
+      body: payload.subject,
       icon: "/icons/icon-192.png",
-      tag: `message-${payload.id}`, // Prevent duplicates for same message
+      tag: `message-${payload.id}`,
       data: {
         messageId: payload.id,
-        snippet: messageSnippet,
         url: `/messages/${payload.id}`,
       },
-    };
+    });
 
-    // Send Web Push to all subscriptions
     const pushResults = [];
-    const failedSubscriptions = [];
+    const expiredSubscriptions: string[] = [];
 
     for (const sub of subscriptions) {
       try {
-        const webPushSub = sub.subscription as WebPushSubscription;
-
-        // Validate Web Push subscription structure
+        const pushSub = sub.subscription;
         if (
-          !webPushSub.endpoint ||
-          !webPushSub.keys?.p256dh ||
-          !webPushSub.keys?.auth
+          !pushSub?.endpoint ||
+          !pushSub?.keys?.p256dh ||
+          !pushSub?.keys?.auth
         ) {
           console.warn(`Invalid subscription structure for ${sub.id}`);
-          failedSubscriptions.push(sub.id);
-          pushResults.push({
-            subscriptionId: sub.id,
-            success: false,
-            status: "invalid_subscription",
-          });
+          expiredSubscriptions.push(sub.id);
+          pushResults.push({ id: sub.id, success: false, reason: "invalid" });
           continue;
         }
 
-        // Send Web Push notification via browser push service
-        const response = await fetch(webPushSub.endpoint, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/octet-stream",
-            TTL: "24",
+        await webpush.sendNotification(
+          {
+            endpoint: pushSub.endpoint,
+            keys: { p256dh: pushSub.keys.p256dh, auth: pushSub.keys.auth },
           },
-          body: JSON.stringify(notificationPayload),
-        });
-
-        if (!response.ok) {
-          const status = response.status;
-          // 401/403/404 = invalid subscription, should be deleted
-          if (
-            status === 401 ||
-            status === 403 ||
-            status === 404 ||
-            status === 410
-          ) {
-            failedSubscriptions.push(sub.id);
-          }
-          pushResults.push({
-            subscriptionId: sub.id,
-            success: false,
-            status,
-          });
-        } else {
-          pushResults.push({
-            subscriptionId: sub.id,
-            success: true,
-          });
+          notificationPayload,
+        );
+        pushResults.push({ id: sub.id, success: true });
+      } catch (error: any) {
+        const statusCode = error?.statusCode;
+        console.error(
+          `Push failed for ${sub.id}: ${statusCode} ${error?.message}`,
+        );
+        // 404/410 = subscription expired/unsubscribed
+        if (statusCode === 404 || statusCode === 410) {
+          expiredSubscriptions.push(sub.id);
         }
-      } catch (error) {
-        console.error(`Failed to send push to ${sub.id}:`, error);
         pushResults.push({
-          subscriptionId: sub.id,
+          id: sub.id,
           success: false,
+          reason: statusCode || "error",
         });
       }
     }
 
-    // Cleanup invalid subscriptions
-    if (failedSubscriptions.length > 0) {
-      const { error: deleteErr } = await supabase
+    // Soft-delete expired subscriptions
+    if (expiredSubscriptions.length > 0) {
+      const { error: updateErr } = await supabase
         .from("push_subscriptions")
-        .delete()
-        .in("id", failedSubscriptions);
-      if (deleteErr) {
-        console.warn("Failed to cleanup subscriptions:", deleteErr);
-      }
+        .update({ deleted_at: new Date().toISOString() })
+        .in("id", expiredSubscriptions);
+      if (updateErr)
+        console.warn("Failed to cleanup subscriptions:", updateErr);
     }
 
     return new Response(
@@ -199,9 +155,7 @@ Deno.serve(async (req) => {
   } catch (error) {
     console.error("Error in notify-new-message:", error);
     return new Response(
-      JSON.stringify({
-        error: "Failed to process notifications",
-      }),
+      JSON.stringify({ error: "Failed to process notifications" }),
       {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },

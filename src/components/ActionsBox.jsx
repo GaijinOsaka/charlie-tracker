@@ -8,15 +8,60 @@ export function ActionsBox({
   onMessageClick,
   onStatusChange,
   onShowActionModal,
+  onAttachmentClick,
   showRecentlyActioned = false,
 }) {
   const [expandedId, setExpandedId] = useState(null);
   const [pendingCollapsed, setPendingCollapsed] = useState(false);
   const [actionedCollapsed, setActionedCollapsed] = useState(false);
 
-  // Provide default no-op handlers if not provided
   const handleStatusChange = onStatusChange || (() => {});
   const handleShowActionModal = onShowActionModal || (() => {});
+
+  const getUserName = (userId) => profiles[userId]?.display_name || "Unknown";
+
+  const formatNoteDate = (dateStr) => {
+    const d = new Date(dateStr);
+    return `${d.toLocaleDateString()} ${d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`;
+  };
+
+  const renderNotes = (msg) => {
+    const notes = msg.action_notes || [];
+    if (notes.length === 0 && msg.action_note) {
+      // Fallback to legacy single note
+      return (
+        <div className="action-notes-chain">
+          <div className="action-note-entry">
+            <span className="action-note-text">{msg.action_note}</span>
+          </div>
+        </div>
+      );
+    }
+    if (notes.length === 0) return null;
+
+    const sorted = [...notes].sort(
+      (a, b) => new Date(a.created_at) - new Date(b.created_at),
+    );
+
+    return (
+      <div className="action-notes-chain">
+        {sorted.map((n) => (
+          <div
+            key={n.id}
+            className={`action-note-entry action-note-${n.action_type === "actioned" ? "actioned" : "required"}`}
+          >
+            <span className="action-note-type-dot" />
+            <div className="action-note-body">
+              <span className="action-note-text">{n.note}</span>
+              <span className="action-note-meta">
+                {getUserName(n.user_id)} &bull; {formatNoteDate(n.created_at)}
+              </span>
+            </div>
+          </div>
+        ))}
+      </div>
+    );
+  };
 
   const renderCompactRow = (msg, status) => (
     <div
@@ -36,66 +81,71 @@ export function ActionsBox({
               {new Date(msg.received_at).toLocaleDateString()}
             </span>
           </div>
-          {msg.action_note && (
-            <div className="action-row-note">
-              {status === "pending" ? "📌" : "✓"} {msg.action_note}
-              {status === "actioned" && msg.actioned_by && (
-                <span className="action-row-note-meta">
-                  — {profiles[msg.actioned_by]?.display_name || "Unknown"}
-                  {msg.actioned_at &&
-                    ` • ${new Date(msg.actioned_at).toLocaleDateString()}`}
-                </span>
-              )}
-            </div>
-          )}
+          {renderNotes(msg)}
           {msg.attachments && msg.attachments.length > 0 && (
             <div className="action-row-attachments">
-              <span className="attachments-label">📎 Attachments:</span>
+              <span className="attachments-label">Attachments:</span>
               <div className="attachments-list">
                 {msg.attachments.map((att) => (
-                  <span key={att.id} className="attachment-item">
-                    {att.mime_type?.includes("pdf") ? "📄" : "📎"}{" "}
-                    {att.filename}
-                  </span>
+                  <button
+                    key={att.id}
+                    className="attachment-link"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (onAttachmentClick) onAttachmentClick(att);
+                    }}
+                    title={att.filename}
+                  >
+                    <span className="attachment-icon">
+                      {att.mime_type?.includes("pdf")
+                        ? "\u{1F4C4}"
+                        : "\u{1F4CE}"}
+                    </span>
+                    <span className="attachment-name">{att.filename}</span>
+                    {att.file_size && (
+                      <span className="attachment-size">
+                        ({Math.round(att.file_size / 1024)}KB)
+                      </span>
+                    )}
+                  </button>
                 ))}
               </div>
             </div>
           )}
         </div>
         <div className="action-row-buttons">
+          <button
+            className="action-row-btn action-row-btn-note"
+            onClick={(e) => {
+              e.stopPropagation();
+              handleShowActionModal(
+                msg,
+                status === "pending" ? "action_required" : "actioned",
+              );
+            }}
+          >
+            Add Note
+          </button>
           {status === "pending" && (
-            <>
-              <button
-                className="action-row-btn action-row-btn-action"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleShowActionModal(msg, "actioned");
-                }}
-              >
-                Mark as Actioned
-              </button>
-              <button
-                className="action-row-btn action-row-btn-clear"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleStatusChange(msg, null);
-                }}
-              >
-                Clear
-              </button>
-            </>
-          )}
-          {status === "actioned" && (
             <button
-              className="action-row-btn action-row-btn-clear"
+              className="action-row-btn action-row-btn-action"
               onClick={(e) => {
                 e.stopPropagation();
-                handleStatusChange(msg, null);
+                handleShowActionModal(msg, "actioned");
               }}
             >
-              Clear
+              Mark as Actioned
             </button>
           )}
+          <button
+            className="action-row-btn action-row-btn-clear"
+            onClick={(e) => {
+              e.stopPropagation();
+              handleStatusChange(msg, null);
+            }}
+          >
+            Clear
+          </button>
           <button
             className="action-row-btn action-row-btn-view"
             onClick={(e) => {
@@ -103,7 +153,7 @@ export function ActionsBox({
               onMessageClick(msg.id);
             }}
           >
-            View Full Message
+            View
           </button>
         </div>
       </div>
@@ -111,32 +161,11 @@ export function ActionsBox({
       {expandedId === msg.id && (
         <div className="action-row-expanded">
           <div className="action-row-content">{msg.content}</div>
-          {msg.action_note && (
-            <div className="action-row-expanded-note">
-              <strong>
-                {status === "pending" ? "Action Required:" : "Actioned:"}
-              </strong>{" "}
-              {msg.action_note}
-              {status === "actioned" && (
-                <div className="action-row-expanded-meta">
-                  {profiles && msg.actioned_by && (
-                    <span className="action-row-expanded-by">
-                      by {profiles[msg.actioned_by]?.display_name || "Unknown"}
-                    </span>
-                  )}
-                  {msg.actioned_at && (
-                    <span className="action-row-expanded-date">
-                      {new Date(msg.actioned_at).toLocaleDateString()}
-                    </span>
-                  )}
-                </div>
-              )}
-            </div>
-          )}
         </div>
       )}
     </div>
   );
+
   if (pendingMessages.length === 0 && actionedMessages.length === 0) {
     return null;
   }
@@ -154,7 +183,7 @@ export function ActionsBox({
             >
               ▸
             </span>
-            ⏳ Action Required ({pendingMessages.length})
+            Action Required ({pendingMessages.length})
           </div>
           {!pendingCollapsed && (
             <div className="actions-list">
@@ -175,7 +204,7 @@ export function ActionsBox({
             >
               ▸
             </span>
-            ✓ {showRecentlyActioned ? "Recently Actioned" : "Actioned"} (
+            {showRecentlyActioned ? "Recently Actioned" : "Actioned"} (
             {actionedMessages.length})
           </div>
           {!actionedCollapsed && (
