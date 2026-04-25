@@ -53,7 +53,7 @@
 }
 
 .action-option-pending {
-  color: #f59e0b;
+  color: var(--warning);
 }
 
 .action-option-pending:hover {
@@ -61,7 +61,7 @@
 }
 
 .action-option-actioned {
-  color: #10b981;
+  color: var(--success);
 }
 
 .action-option-actioned:hover {

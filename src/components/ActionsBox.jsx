@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { ACTION_STATUS } from "../lib/constants";
 import "./ActionsBox.css";
 
 export function ActionsBox({
@@ -120,7 +121,7 @@ export function ActionsBox({
               e.stopPropagation();
               handleShowActionModal(
                 msg,
-                status === "pending" ? "action_required" : "actioned",
+                status === "pending" ? ACTION_STATUS.REQUIRED : ACTION_STATUS.ACTIONED,
               );
             }}
           >
@@ -131,7 +132,7 @@ export function ActionsBox({
               className="action-row-btn action-row-btn-action"
               onClick={(e) => {
                 e.stopPropagation();
-                handleShowActionModal(msg, "actioned");
+                handleShowActionModal(msg, ACTION_STATUS.ACTIONED);
               }}
             >
               Mark as Actioned

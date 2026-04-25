@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from "react";
+import { ACTION_STATUS } from "../lib/constants";
 import "./ActionButton.css";
 
 export function ActionButton({ message, onStatusChange, onShowActionModal }) {
@@ -35,6 +36,7 @@ export function ActionButton({ message, onStatusChange, onShowActionModal }) {
         className="action-button"
         onClick={() => setIsOpen(!isOpen)}
         title="Set action status"
+        aria-label="Set action status"
       >
         ⚡
       </button>
@@ -43,13 +45,13 @@ export function ActionButton({ message, onStatusChange, onShowActionModal }) {
         <div className="action-popover">
           <button
             className="action-option action-option-pending"
-            onClick={() => handleActionClick("action_required")}
+            onClick={() => handleActionClick(ACTION_STATUS.REQUIRED)}
           >
             Action Required
           </button>
           <button
             className="action-option action-option-actioned"
-            onClick={() => handleActionClick("actioned")}
+            onClick={() => handleActionClick(ACTION_STATUS.ACTIONED)}
           >
             Actioned
           </button>

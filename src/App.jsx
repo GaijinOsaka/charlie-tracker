@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from "react";
-import { unstable_batchedUpdates } from "react-dom";
+import React, { useState, useEffect, useMemo } from "react";
+import { ACTION_STATUS } from "./lib/constants";
 import {
   supabase,
   createManualEvent,
@@ -25,15 +25,7 @@ import { getPaginatedMessages, calculateTotalPages } from "./lib/pagination";
 import "./App.css";
 
 async function subscribeToPushNotifications(user) {
-  // Check if browser supports notifications
-  if (!("Notification" in window)) {
-    console.log("Notifications not supported");
-    return;
-  }
-
-  // Check if service worker is available
-  if (!navigator.serviceWorker) {
-    console.log("Service workers not supported");
+  if (!("Notification" in window) || !navigator.serviceWorker) {
     return;
   }
 
@@ -51,7 +43,6 @@ async function subscribeToPushNotifications(user) {
     if (Notification.permission === "default") {
       const permission = await Notification.requestPermission();
       if (permission !== "granted") {
-        console.log("Notification permission denied");
         return;
       }
     }
@@ -64,9 +55,7 @@ async function subscribeToPushNotifications(user) {
     // Get service worker registration
     const registration = await navigator.serviceWorker.ready;
 
-    // Check if push is supported
     if (!registration.pushManager) {
-      console.log("Push notifications not supported");
       return;
     }
 
@@ -94,8 +83,6 @@ async function subscribeToPushNotifications(user) {
 
     if (error) {
       console.error("Failed to save subscription:", error);
-    } else {
-      console.log("Push subscription saved");
     }
   } catch (error) {
     console.error("Failed to subscribe to push:", error);
@@ -241,11 +228,8 @@ function App() {
           event.data?.type === "NAVIGATE_TO_MESSAGE" &&
           event.data?.messageId != null
         ) {
-          // Batch state updates to avoid double re-render
-          unstable_batchedUpdates(() => {
-            setExpandedMessages(new Set([event.data.messageId]));
-            setActionModalOpen(false);
-          });
+          setExpandedMessages(new Set([event.data.messageId]));
+          setActionModalOpen(false);
 
           // Scroll to the message after DOM updates
           setTimeout(() => {
@@ -371,7 +355,7 @@ function App() {
           },
         )
         .subscribe((status) => {
-          console.log("[Realtime] Status:", status);
+          if (import.meta.env.DEV) console.log("[Realtime] Status:", status);
           if (status === "CHANNEL_ERROR" || status === "TIMED_OUT") {
             console.warn("[Realtime] Connection lost, retrying in 5s...");
             clearTimeout(retryTimeout);
@@ -385,7 +369,7 @@ function App() {
 
     // Reload data + reconnect when app comes back to foreground or network recovers
     function handleResume() {
-      console.log("[Realtime] Resuming — refreshing data and reconnecting");
+      if (import.meta.env.DEV) console.log("[Realtime] Resuming — refreshing data and reconnecting");
       loadMessages();
       loadEvents();
       setupSubscription();
@@ -499,7 +483,7 @@ function App() {
     }
   }
 
-  function getFilteredEvents() {
+  const filteredEvents = useMemo(() => {
     const today = new Date().toISOString().split("T")[0];
     let filtered = events;
     if (eventsFilter === "upcoming") {
@@ -516,15 +500,15 @@ function App() {
       );
     }
     return filtered;
-  }
+  }, [events, eventsFilter, eventsTagFilter]);
 
-  function getAllTags() {
+  const allTags = useMemo(() => {
     const tags = new Set();
     events.forEach((e) => {
       if (e.event_tags) e.event_tags.forEach((t) => tags.add(t.tag));
     });
     return Array.from(tags).sort();
-  }
+  }, [events]);
 
   function toggleEventExpanded(eventId) {
     setExpandedEvents((prev) => {
@@ -555,7 +539,7 @@ function App() {
 
   async function archiveEvent(eventId) {
     try {
-      console.log("Archiving event:", eventId, "for user:", user?.id);
+      if (import.meta.env.DEV) console.log("Archiving event:", eventId, "for user:", user?.id);
       const { error } = await supabase
         .from("event_archives")
         .upsert(
@@ -662,8 +646,8 @@ function App() {
 
       // Trigger push notifications if status changed to action_required
       if (
-        targetStatus === "action_required" &&
-        previousStatus !== "action_required"
+        targetStatus === ACTION_STATUS.REQUIRED &&
+        previousStatus !== ACTION_STATUS.REQUIRED
       ) {
         await triggerPushNotifications(
           { ...msg, action_status: targetStatus, action_note: note },
@@ -672,9 +656,8 @@ function App() {
       }
 
       const statusLabels = {
-        pending: "marked as needing action",
-        action_required: "marked as action required",
-        actioned: "marked as actioned",
+        [ACTION_STATUS.REQUIRED]: "marked as action required",
+        [ACTION_STATUS.ACTIONED]: "marked as actioned",
         null: "cleared action status",
       };
       addToast(`Message ${statusLabels[targetStatus]}`, "success");
@@ -811,7 +794,7 @@ function App() {
     setToasts((prev) => prev.filter((t) => t.id !== id));
   }
 
-  function getFilteredMessages() {
+  const filteredMessages = useMemo(() => {
     let filtered = messages;
 
     if (statusFilter === "unread") {
@@ -827,20 +810,22 @@ function App() {
     if (actionFilter === "pending") {
       filtered = filtered.filter(
         (m) =>
-          m.action_status === "action_required" ||
+          m.action_status === ACTION_STATUS.REQUIRED ||
           m.action_status === "pending",
       );
     } else if (actionFilter === "actioned") {
-      filtered = filtered.filter((m) => m.action_status === "actioned");
+      filtered = filtered.filter(
+        (m) => m.action_status === ACTION_STATUS.ACTIONED,
+      );
     } else {
       // Default view: exclude messages that have an action status
       // (they appear in the ActionsBox above)
       filtered = filtered.filter(
         (m) =>
           !m.action_status ||
-          (m.action_status !== "action_required" &&
+          (m.action_status !== ACTION_STATUS.REQUIRED &&
             m.action_status !== "pending" &&
-            m.action_status !== "actioned"),
+            m.action_status !== ACTION_STATUS.ACTIONED),
       );
     }
 
@@ -855,7 +840,7 @@ function App() {
     }
 
     return filtered;
-  }
+  }, [messages, statusFilter, sourceFilter, actionFilter, searchQuery]);
 
   async function downloadAttachment(filePath, filename) {
     try {
@@ -911,11 +896,18 @@ function App() {
     }, 100);
   }
 
-  const filteredMessages = getFilteredMessages();
-  const filteredEvents = getFilteredEvents();
-  const totalPages = calculateTotalPages(filteredMessages.length);
-  const paginatedMessages = getPaginatedMessages(filteredMessages, currentPage);
-  const unreadCount = messages.filter((m) => !m.is_read).length;
+  const totalPages = useMemo(
+    () => calculateTotalPages(filteredMessages.length),
+    [filteredMessages.length],
+  );
+  const paginatedMessages = useMemo(
+    () => getPaginatedMessages(filteredMessages, currentPage),
+    [filteredMessages, currentPage],
+  );
+  const unreadCount = useMemo(
+    () => messages.filter((m) => !m.is_read).length,
+    [messages],
+  );
 
   if (authLoading) {
     return <div className="loading-screen">Loading...</div>;
@@ -1010,7 +1002,7 @@ function App() {
                   onChange={(e) => setEventsTagFilter(e.target.value)}
                 >
                   <option value="all">All Tags</option>
-                  {getAllTags().map((tag) => (
+                  {allTags.map((tag) => (
                     <option key={tag} value={tag}>
                       {tag}
                     </option>
@@ -1168,7 +1160,7 @@ function App() {
                                     }}
                                     title={att.filename}
                                   >
-                                    <span className="attachment-icon">
+                                    <span className="attachment-icon" aria-hidden="true">
                                       {att.mime_type?.includes("pdf")
                                         ? "\u{1F4C4}"
                                         : "\u{1F4CE}"}
@@ -1256,10 +1248,10 @@ function App() {
         {activeTab === "actions" && (
           <ActionsBox
             pendingMessages={messages
-              .filter((m) => m.action_status === "action_required")
+              .filter((m) => m.action_status === ACTION_STATUS.REQUIRED)
               .sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at))}
             actionedMessages={messages
-              .filter((m) => m.action_status === "actioned")
+              .filter((m) => m.action_status === ACTION_STATUS.ACTIONED)
               .sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at))}
             profiles={profiles}
             onMessageClick={(msgId) => {
@@ -1329,7 +1321,7 @@ function App() {
               const actionsPending = messages
                 .filter(
                   (m) =>
-                    m.action_status === "action_required" ||
+                    m.action_status === ACTION_STATUS.REQUIRED ||
                     m.action_status === "pending",
                 )
                 .sort(
@@ -1337,7 +1329,7 @@ function App() {
                 );
 
               const actionsCompleted = messages
-                .filter((m) => m.action_status === "actioned")
+                .filter((m) => m.action_status === ACTION_STATUS.ACTIONED)
                 .sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at))
                 .slice(0, 3);
 
@@ -1445,7 +1437,7 @@ function App() {
                               onClick={() => openAttachmentViewer(att)}
                               title={att.filename}
                             >
-                              <span className="attachment-icon">
+                              <span className="attachment-icon" aria-hidden="true">
                                 {att.mime_type?.includes("pdf")
                                   ? "\u{1F4C4}"
                                   : "\u{1F4CE}"}
@@ -1466,7 +1458,7 @@ function App() {
                       {msg.action_note && (
                         <div className="message-action-note">
                           <span className="action-note-label">
-                            {msg.action_status === "action_required"
+                            {msg.action_status === ACTION_STATUS.REQUIRED
                               ? "Action Required:"
                               : "Action Taken:"}
                           </span>

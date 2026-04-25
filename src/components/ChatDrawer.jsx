@@ -174,9 +174,6 @@ export default function ChatDrawer() {
         onClick={(e) => {
           e.stopPropagation();
           if (!dragState.current.moved) {
-            console.log("[ChatDrawer] FAB clicked, toggling drawer", {
-              isMobile: window.innerWidth <= 768,
-            });
             setIsOpen((prev) => !prev);
           }
         }}
@@ -191,11 +188,6 @@ export default function ChatDrawer() {
         <div
           className="chat-backdrop"
           onClick={() => {
-            const isMobile = window.innerWidth <= 768;
-            console.log("[ChatDrawer] Backdrop clicked", {
-              isMobile,
-              backdropActive,
-            });
             // Only close on backdrop click if NOT on mobile (viewport > 768px)
             if (window.innerWidth > 768 && backdropActive) {
               setIsOpen(false);
@@ -217,10 +209,7 @@ export default function ChatDrawer() {
             )}
             <button
               className="chat-close-btn"
-              onClick={() => {
-                console.log("[ChatDrawer] Close button clicked");
-                setIsOpen(false);
-              }}
+              onClick={() => setIsOpen(false)}
             >
               &times;
             </button>

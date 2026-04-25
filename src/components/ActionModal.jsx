@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from "react";
+import { ACTION_STATUS } from "../lib/constants";
 
 export default function ActionModal({ message, type, onConfirm, onCancel }) {
   const [note, setNote] = useState("");
@@ -13,8 +14,8 @@ export default function ActionModal({ message, type, onConfirm, onCancel }) {
     onConfirm(note.trim());
   }
 
-  const isPending = type === "action_required";
-  const isActioned = type === "actioned";
+  const isPending = type === ACTION_STATUS.REQUIRED;
+  const isActioned = type === ACTION_STATUS.ACTIONED;
 
   const labelText = isPending ? "What action is required?" : "What did you do?";
 

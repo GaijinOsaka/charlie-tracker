@@ -92,7 +92,11 @@ export default function NotificationBell({ onNavigateToMessage }) {
 
   return (
     <div className="notification-bell" ref={dropdownRef}>
-      <button className="bell-btn" onClick={() => setOpen(!open)}>
+      <button
+        className="bell-btn"
+        onClick={() => setOpen(!open)}
+        aria-label={count > 0 ? `Notifications (${count} unread)` : "Notifications"}
+      >
         <svg
           width="20"
           height="20"

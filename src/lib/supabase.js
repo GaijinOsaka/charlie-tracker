@@ -1,4 +1,5 @@
 import { createClient } from "@supabase/supabase-js";
+import { ACTION_STATUS } from "./constants";
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL?.trim();
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY?.trim();
@@ -128,7 +129,7 @@ export async function updateActionStatus(messageId, newStatus, note) {
   };
 
   // Add actioned timestamp and user ID for 'actioned' status
-  if (newStatus === "actioned") {
+  if (newStatus === ACTION_STATUS.ACTIONED) {
     updateData.actioned_at = new Date().toISOString();
     updateData.actioned_by = user.id;
   } else if (newStatus === null) {
@@ -171,8 +172,8 @@ export async function updateDisplayName(displayName) {
 export async function triggerPushNotifications(message, previousStatus) {
   // Only trigger if status changed TO action_required
   if (
-    message.action_status !== "action_required" ||
-    previousStatus === "action_required"
+    message.action_status !== ACTION_STATUS.REQUIRED ||
+    previousStatus === ACTION_STATUS.REQUIRED
   ) {
     return;
   }
@@ -192,8 +193,6 @@ export async function triggerPushNotifications(message, previousStatus) {
 
     if (response.error) {
       console.error("Failed to trigger notifications:", response.error);
-    } else {
-      console.log("Push notifications triggered:", response.data);
     }
   } catch (error) {
     console.error("Error calling notify-action-required function:", error);
