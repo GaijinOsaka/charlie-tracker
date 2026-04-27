@@ -26,7 +26,10 @@ supabase/
   schema.sql             # Full DB schema with RLS policies
   migrations/            # Migration files
   functions/             # Edge Functions (rag-chat, index-message, invite-user, etc.)
-docs/                    # Design docs and plans
+docs/
+  plans/                 # Implementation plans
+  solutions/             # Searchable knowledge base (bugs, patterns, best practices) — search by module, tags, or problem_type before starting work in a documented area
+  n8n-snapshots/         # Workflow JSON backups for rollback
 public/                  # Static assets, PWA icons
 ```
 

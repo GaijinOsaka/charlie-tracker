@@ -10,6 +10,9 @@ node_modules/
 /build
 /dist
 
+# n8n workflow snapshots (contain credentials)
+docs/n8n-snapshots/
+
 # Misc
 .DS_Store
 .env
