@@ -42,13 +42,14 @@ Push notifications appeared to subscribe correctly (Supabase `push_subscriptions
 **1. Switch Workbox strategy from `generateSW` to `injectManifest`**
 
 In `vite.config.js`:
+
 ```js
 VitePWA({
-  strategies: 'injectManifest',
-  srcDir: 'public',
-  filename: 'sw.js',
+  strategies: "injectManifest",
+  srcDir: "public",
+  filename: "sw.js",
   // ...manifest config
-})
+});
 ```
 
 This tells Workbox to inject the precache manifest into your own `public/sw.js` rather than generating a SW from scratch. Your custom `push` event handler survives.
@@ -57,19 +58,19 @@ This tells Workbox to inject the precache manifest into your own `public/sw.js` 
 
 ```js
 // Must call importScripts or Workbox injectManifest will inject here
-self.addEventListener('push', event => {
+self.addEventListener("push", (event) => {
   const data = event.data?.json() ?? {};
-  const title = data.title ?? 'Charlie Tracker';
+  const title = data.title ?? "Charlie Tracker";
   const options = {
-    body: data.body ?? '',
-    icon: data.icon ?? '/icons/icon-192x192.png',
-    badge: data.badge ?? '/icons/badge-72x72.png',
-    data: { url: data.url ?? '/' },
+    body: data.body ?? "",
+    icon: data.icon ?? "/icons/icon-192x192.png",
+    badge: data.badge ?? "/icons/badge-72x72.png",
+    data: { url: data.url ?? "/" },
   };
   event.waitUntil(self.registration.showNotification(title, options));
 });
 
-self.addEventListener('notificationclick', event => {
+self.addEventListener("notificationclick", (event) => {
   event.notification.close();
   event.waitUntil(clients.openWindow(event.notification.data.url));
 });
@@ -79,9 +80,9 @@ self.addEventListener('notificationclick', event => {
 
 ```js
 function urlBase64ToUint8Array(base64String) {
-  const padding = '='.repeat((4 - base64String.length % 4) % 4);
-  const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
-  return Uint8Array.from(atob(base64), c => c.charCodeAt(0));
+  const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
+  const base64 = (base64String + padding).replace(/-/g, "+").replace(/_/g, "/");
+  return Uint8Array.from(atob(base64), (c) => c.charCodeAt(0));
 }
 
 const sub = await reg.pushManager.subscribe({

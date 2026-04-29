@@ -95,7 +95,9 @@ export default function NotificationBell({ onNavigateToMessage }) {
       <button
         className="bell-btn"
         onClick={() => setOpen(!open)}
-        aria-label={count > 0 ? `Notifications (${count} unread)` : "Notifications"}
+        aria-label={
+          count > 0 ? `Notifications (${count} unread)` : "Notifications"
+        }
       >
         <svg
           width="20"

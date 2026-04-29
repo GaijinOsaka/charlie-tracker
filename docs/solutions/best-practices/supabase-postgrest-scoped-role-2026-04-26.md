@@ -89,13 +89,17 @@ The Supabase service-role key grants full database access with RLS bypassed. If 
 **After:** n8n credential holds `n8n_worker` JWT → PostgREST runs as `n8n_worker` → only 6 tables accessible, `BYPASSRLS` only for those GRANTs
 
 **Adding a new table later:** If a workflow needs access to a new table, add the grant and the role immediately picks it up — no JWT regeneration needed:
+
 ```sql
 GRANT SELECT ON public.new_table TO n8n_worker;
 ```
 
+## Status
+
+**Implemented 2026-04-29.** Role created, grants applied, JWT generated and deployed to n8n credential. See `docs/solutions/best-practices/n8n-scoped-jwt-implementation-2026-04-29.md` for full implementation details including the base64 secret decoding gotcha.
+
 ## Related
 
-- `memory/project_n8n_pending_jwt_step.md` — reminder with step-by-step JWT generation instructions
-- `memory/project_n8n_workflow_hardening.md` — finding #14 status
+- `docs/solutions/best-practices/n8n-scoped-jwt-implementation-2026-04-29.md` — full implementation walkthrough
 - Supabase docs: [Custom Claims & RLS](https://supabase.com/docs/guides/auth/row-level-security)
 - PostgREST docs: [Role System](https://postgrest.org/en/stable/references/auth.html)

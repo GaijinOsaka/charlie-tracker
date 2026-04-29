@@ -369,7 +369,8 @@ function App() {
 
     // Reload data + reconnect when app comes back to foreground or network recovers
     function handleResume() {
-      if (import.meta.env.DEV) console.log("[Realtime] Resuming — refreshing data and reconnecting");
+      if (import.meta.env.DEV)
+        console.log("[Realtime] Resuming — refreshing data and reconnecting");
       loadMessages();
       loadEvents();
       setupSubscription();
@@ -539,7 +540,8 @@ function App() {
 
   async function archiveEvent(eventId) {
     try {
-      if (import.meta.env.DEV) console.log("Archiving event:", eventId, "for user:", user?.id);
+      if (import.meta.env.DEV)
+        console.log("Archiving event:", eventId, "for user:", user?.id);
       const { error } = await supabase
         .from("event_archives")
         .upsert(
@@ -1160,7 +1162,10 @@ function App() {
                                     }}
                                     title={att.filename}
                                   >
-                                    <span className="attachment-icon" aria-hidden="true">
+                                    <span
+                                      className="attachment-icon"
+                                      aria-hidden="true"
+                                    >
                                       {att.mime_type?.includes("pdf")
                                         ? "\u{1F4C4}"
                                         : "\u{1F4CE}"}
@@ -1437,7 +1442,10 @@ function App() {
                               onClick={() => openAttachmentViewer(att)}
                               title={att.filename}
                             >
-                              <span className="attachment-icon" aria-hidden="true">
+                              <span
+                                className="attachment-icon"
+                                aria-hidden="true"
+                              >
                                 {att.mime_type?.includes("pdf")
                                   ? "\u{1F4C4}"
                                   : "\u{1F4CE}"}

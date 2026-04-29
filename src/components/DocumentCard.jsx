@@ -100,7 +100,8 @@ export default function DocumentCard({
         try {
           if (error.context && typeof error.context.json === "function") {
             const body = await error.context.json();
-            if (import.meta.env.DEV) console.log("Error body from context.json():", body);
+            if (import.meta.env.DEV)
+              console.log("Error body from context.json():", body);
             msg = body.error || msg;
             detail = body.detail || "";
             if (body.errorName) detail = `${detail} (${body.errorName})`;

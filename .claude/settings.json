@@ -28,5 +28,8 @@
     "additionalDirectories": [
       "c:\\Users\\david\\.claude"
     ]
+  },
+  "enabledPlugins": {
+    "compound-engineering@compound-engineering-plugin": true
   }
 }

@@ -121,7 +121,9 @@ export function ActionsBox({
               e.stopPropagation();
               handleShowActionModal(
                 msg,
-                status === "pending" ? ACTION_STATUS.REQUIRED : ACTION_STATUS.ACTIONED,
+                status === "pending"
+                  ? ACTION_STATUS.REQUIRED
+                  : ACTION_STATUS.ACTIONED,
               );
             }}
           >

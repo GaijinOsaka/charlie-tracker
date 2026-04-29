@@ -207,10 +207,7 @@ export default function ChatDrawer() {
                 Clear
               </button>
             )}
-            <button
-              className="chat-close-btn"
-              onClick={() => setIsOpen(false)}
-            >
+            <button className="chat-close-btn" onClick={() => setIsOpen(false)}>
               &times;
             </button>
           </div>

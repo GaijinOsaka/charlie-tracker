@@ -11,7 +11,16 @@ applies_when:
   - Adding error handling to existing n8n workflows
   - Migrating hardcoded secrets to the n8n credential store
   - Workflows that poll an external API in a loop
-tags: [n8n, workflow, error-handling, reliability, credentials, observability, supabase]
+tags:
+  [
+    n8n,
+    workflow,
+    error-handling,
+    reliability,
+    credentials,
+    observability,
+    supabase,
+  ]
 ---
 
 # n8n workflow reliability patterns — error handling, credentials, and observability
@@ -95,8 +104,8 @@ function parseDateSafe(str) {
     const d = new Date(str);
     return isNaN(d) ? new Date().toISOString() : d.toISOString();
   }
-  if (!str.includes('T')) str += 'T00:00:00Z';
-  else if (!/Z$/.test(str)) str += 'Z';
+  if (!str.includes("T")) str += "T00:00:00Z";
+  else if (!/Z$/.test(str)) str += "Z";
   const d = new Date(str);
   return isNaN(d) ? new Date().toISOString() : d.toISOString();
 }
@@ -107,7 +116,7 @@ function parseDateSafe(str) {
 `$node["NodeName"].json.field` is deprecated and breaks on node renames. Replace with:
 
 ```js
-$('NodeName').item.json.field
+$("NodeName").item.json.field;
 ```
 
 Scan for `$node["` and `$node['` patterns in workflow JSON and patch each occurrence. Only cross-node references need updating — `$json.field` (current item) is already correct.
@@ -141,12 +150,15 @@ Silent failures in workflows that write to a database produce invisible data los
 ## Examples
 
 **Before (silent failure):**
+
 ```
 Insert Message [continueOnFail: true] → Extract Events → Insert Events
 ```
+
 If Insert Message fails, execution continues with no data, Insert Events writes orphaned records.
 
 **After (routed failure):**
+
 ```
 Insert Message [onError: continueErrorOutput]
   → (pin 0) Extract Events → Insert Events

@@ -34,15 +34,15 @@ The workflows currently: silently swallow failed Supabase inserts with no error 
 
 ## Scope Boundaries
 
-- Arbor pagination (#12) is deferred — requires Skyvern workflow changes, outside n8n scope
+- Arbor pagination (#12) is not needed — Arbor only pulls the latest message, no pagination required
 - No new Supabase columns or schema migrations — use existing `sync_log` columns
 - No frontend changes — observability is workflow/backend only
-- P2 #14 (scoped DB user, remove service-role) is deferred — requires Supabase role changes
+- ~~P2 #14 (scoped DB user, remove service-role) is deferred~~ — **Completed 2026-04-29**
 
-### Deferred to Follow-Up Work
+### Completed Follow-Up Work
 
-- Arbor pagination (#12): separate plan once Skyvern workflow supports page navigation
-- Scoped Supabase DB user (#14): separate Supabase migration + credential update
+- Scoped Supabase DB user (#14): `n8n_worker` role created, JWT generated, n8n credential updated (2026-04-29)
+- Arbor pagination (#12): confirmed not needed — scraper only pulls latest messages
 
 ---
 
@@ -105,6 +105,7 @@ The workflows currently: silently swallow failed Supabase inserts with no error 
 **Files:** Remote — Gmail Monitor `gBJb0RH6dfvpLi21` (n8n MCP only)
 
 **Approach:**
+
 - Nodes to update: `Insert Message` (insert_msg), `Insert Events`, `Insert Tags`, `Upload to Storage`, `Insert Attachment Record`
 - For each: single updateNode call with `continueOnFail: null, onError: "continueErrorOutput"`
 - Add a Code node "Log Insert Error" that formats a sync_log payload from `$json.message` (error text) and context
@@ -112,14 +113,17 @@ The workflows currently: silently swallow failed Supabase inserts with no error 
 - Connect all five error output pins to the Code node → Supabase insert
 
 **Patterns to follow:**
+
 - Existing `log_failure` node in Arbor Scraper for Supabase insert shape
 - `updateNode` with `continueOnFail: null, onError: "continueErrorOutput"` per MCP tools documentation
 
 **Test scenarios:**
+
 - Happy path: normal insert succeeds → no error output fired, execution continues unchanged
 - Error path: insert fails (e.g., network error, RLS violation) → error output fires → sync_log record written with `status: 'error'` and non-empty `error_message`
 
 **Verification:**
+
 - All five insert nodes have `onError: "continueErrorOutput"` and no `continueOnFail` property
 - Five error output connections exist routing to Log Insert Error node
 - A forced failure produces a sync_log record with `status: 'error'`
@@ -137,6 +141,7 @@ The workflows currently: silently swallow failed Supabase inserts with no error 
 **Files:** Remote — both workflows (n8n MCP only)
 
 **Approach:**
+
 - Add `n8n-nodes-base.errorTrigger` root node to each workflow (standalone, not connected to main flow)
 - Add Code node "Format Error Alert" extracting: `$json.execution.error.message`, `$json.execution.id`, `$json.workflow.name`
 - Add Supabase insert node: `sync_started_at: now`, `status: 'error'`, `error_message: "[workflow] execution [id]: [error]"`
@@ -145,13 +150,16 @@ The workflows currently: silently swallow failed Supabase inserts with no error 
 - Use existing Gmail credential (same one as Gmail Trigger node) and Supabase account credential
 
 **Patterns to follow:**
+
 - n8n Error Trigger is a root node type — place it visually away from main flow to avoid confusion
 
 **Test scenarios:**
+
 - Error path: deliberate workflow failure (disable a credential temporarily) → Error Trigger fires → sync_log record created → email delivered to davidjamesoakes@gmail.com
 - Happy path: normal successful execution → Error Trigger does not fire → no spurious records or emails
 
 **Verification:**
+
 - Both workflows contain an `errorTrigger` node
 - Connections: errorTrigger → Format → Supabase + Gmail exist in both workflows
 - A forced failure in each workflow produces both a sync_log record and an email
@@ -169,13 +177,16 @@ The workflows currently: silently swallow failed Supabase inserts with no error 
 **Files:** Remote — Gmail Monitor `gBJb0RH6dfvpLi21` (n8n MCP only)
 
 **Approach:**
+
 - Single MCP call: `{type: "updateSettings", settings: {maxConcurrency: 1}}`
 - No node changes required
 
 **Test scenarios:**
+
 - Test expectation: none — settings change with no code path to unit test. Verified observationally: a second trigger while the first execution is running queues rather than spawning a concurrent run.
 
 **Verification:**
+
 - Workflow settings object contains `maxConcurrency: 1`
 - n8n UI Settings panel for Gmail Monitor shows "Max concurrent executions: 1"
 
@@ -192,6 +203,7 @@ The workflows currently: silently swallow failed Supabase inserts with no error 
 **Files:** Remote — Arbor Scraper `Parse Messages` Code node (n8n MCP only)
 
 **Approach:**
+
 - Replace the bare `msg.received_at || msg.message_date || new Date().toISOString()` date assignment with a helper function that:
   1. Returns `new Date().toISOString()` if no date string provided
   2. If string contains timezone info (matches `/Z|[+-]\d{2}:?\d{2}$/`), parses as-is and validates
@@ -201,15 +213,18 @@ The workflows currently: silently swallow failed Supabase inserts with no error 
 - Apply via `patchNodeField` on `parameters.jsCode`
 
 **Patterns to follow:**
+
 - Null guard pattern added to `Prepare Email Data` node (Gmail Monitor) in previous session
 
 **Test scenarios:**
+
 - Edge case: `"2026-03-15"` (date-only, no TZ) → `"2026-03-15T00:00:00.000Z"` regardless of server TZ
 - Edge case: `"2026-03-15T10:30:00+01:00"` (with offset) → preserved as-is, correctly normalised to UTC
 - Edge case: `null` or `""` → fallback to `new Date().toISOString()`
 - Edge case: `"not-a-date"` → fallback to `new Date().toISOString()` (NaN check)
 
 **Verification:**
+
 - `Parse Messages` Code node contains the timezone-aware helper function
 - Expression `new Date("2026-03-15").toISOString()` in the updated code produces `2026-03-15T00:00:00.000Z`
 
@@ -226,15 +241,18 @@ The workflows currently: silently swallow failed Supabase inserts with no error 
 **Files:** Remote — both workflows (n8n MCP only)
 
 **Approach:**
+
 - Fetch full JSON for both workflows (via `n8n_get_workflow` with mode `full`, extract via PowerShell)
 - Scan all node `parameters` fields for the patterns `$node["` and `$node['`
 - For each match: apply `patchNodeField` with strict find/replace to the specific node and field path
 - Note: `$json.field` (current item) is already correct; only cross-node references need updating
 
 **Test scenarios:**
+
 - Test expectation: none — syntax normalisation with no behavioral change. Verification is by inspection of updated expressions.
 
 **Verification:**
+
 - Neither workflow contains any `$node["` or `$node['` patterns in node parameters
 - Expressions that used old syntax still resolve to the same values in a test execution
 
@@ -251,13 +269,16 @@ The workflows currently: silently swallow failed Supabase inserts with no error 
 **Files:** Remote — both workflows (n8n MCP only)
 
 **Approach:**
+
 - Add a sticky note to each workflow: "Error handling: node-level insert failures (onError) → Log Insert Error node → sync_log. Unhandled execution failures → Error Trigger → email + sync_log. Check sync_log (status='error') or email for failure diagnosis."
 - Confirm the `error_message` written by U1 and U2 nodes includes: workflow name, node name where relevant, UTC timestamp, and error text — all within the existing TEXT column
 
 **Test scenarios:**
+
 - Test expectation: none — documentation and coverage confirmation only
 
 **Verification:**
+
 - Both workflows have an observability sticky note near the error handler nodes
 - sync_log `error_message` from a test failure contains enough context to identify source without the n8n UI
 
@@ -274,12 +295,12 @@ The workflows currently: silently swallow failed Supabase inserts with no error 
 
 ## Risks & Dependencies
 
-| Risk | Mitigation |
-|------|------------|
-| sync_log column name mismatch (`sync_started_at` vs `sync_timestamp`) | Verify live schema column name before U1/U2 inserts; adapt to whatever the deployed DB has |
-| `maxConcurrency` not honoured in n8n v2.1.5 | Verify after applying U3; if ineffective, note as deferred pending n8n upgrade |
-| Error Trigger email itself fails (e.g. Gmail rate limit) | Acceptable — error-handler-of-error-handler is omitted for simplicity; sync_log write still succeeds |
-| Partial state after insert failure + continued execution | Logged to sync_log via U1; no cleanup logic in scope |
+| Risk                                                                  | Mitigation                                                                                           |
+| --------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
+| sync_log column name mismatch (`sync_started_at` vs `sync_timestamp`) | Verify live schema column name before U1/U2 inserts; adapt to whatever the deployed DB has           |
+| `maxConcurrency` not honoured in n8n v2.1.5                           | Verify after applying U3; if ineffective, note as deferred pending n8n upgrade                       |
+| Error Trigger email itself fails (e.g. Gmail rate limit)              | Acceptable — error-handler-of-error-handler is omitted for simplicity; sync_log write still succeeds |
+| Partial state after insert failure + continued execution              | Logged to sync_log via U1; no cleanup logic in scope                                                 |
 
 ---
 
