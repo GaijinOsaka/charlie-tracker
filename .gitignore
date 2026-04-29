@@ -46,8 +46,7 @@ Thumbs.db
 *.pem
 credentials.json
 .env
-.claude/settings.local.json
-.claude/worktrees/
+.claude/
 .playwright-mcp/
 .mcp.json
 .vercel
