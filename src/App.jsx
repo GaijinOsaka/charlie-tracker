@@ -927,9 +927,12 @@ function App() {
     <div className="app">
       <header>
         <div className="header-top">
-          <div>
-            <h1>Charlie Oakes Tracker</h1>
-            <p className="subtitle">Communication Dashboard</p>
+          <div className="header-brand">
+            <div className="brand-mark">C</div>
+            <div>
+              <h1>Charlie Oakes Tracker</h1>
+              <p className="subtitle">Communication Dashboard</p>
+            </div>
           </div>
           <div className="header-right">
             <NotificationBell onNavigateToMessage={navigateToMessage} />
@@ -1013,7 +1016,17 @@ function App() {
               </div>
             </div>
 
-            {eventsLoading && <p className="loading">Loading events...</p>}
+            {eventsLoading && (
+              <div className="skeleton-list">
+                {[1, 2, 3].map((n) => (
+                  <div key={n} className="skeleton-item">
+                    <div className="skeleton-line skeleton-subject" />
+                    <div className="skeleton-line skeleton-sender" />
+                    <div className="skeleton-line skeleton-body-short" />
+                  </div>
+                ))}
+              </div>
+            )}
 
             {!eventsLoading && filteredEvents.length === 0 && (
               <p className="no-messages">
@@ -1275,6 +1288,16 @@ function App() {
         {activeTab === "messages" && (
           <>
             <div className="filters">
+              <div className="filter-group search">
+                <label>Search</label>
+                <input
+                  type="text"
+                  placeholder="Search messages..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                />
+              </div>
+
               <div className="filter-group">
                 <label>Status</label>
                 <select
@@ -1310,16 +1333,6 @@ function App() {
                   <option value="actioned">Actioned</option>
                 </select>
               </div>
-
-              <div className="filter-group search">
-                <label>Search</label>
-                <input
-                  type="text"
-                  placeholder="Search messages..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                />
-              </div>
             </div>
 
             {(() => {
@@ -1354,7 +1367,18 @@ function App() {
               );
             })()}
 
-            {loading && <p className="loading">Loading messages...</p>}
+            {loading && (
+              <div className="skeleton-list">
+                {[1, 2, 3, 4, 5].map((n) => (
+                  <div key={n} className="skeleton-item">
+                    <div className="skeleton-line skeleton-subject" />
+                    <div className="skeleton-line skeleton-sender" />
+                    <div className="skeleton-line skeleton-body" />
+                    <div className="skeleton-line skeleton-body-short" />
+                  </div>
+                ))}
+              </div>
+            )}
             {error && <p className="error">Error: {error}</p>}
 
             {!loading && !error && filteredMessages.length === 0 && (
@@ -1371,36 +1395,35 @@ function App() {
                       className={`message-item ${msg.is_read ? "read" : "unread"}`}
                     >
                       <div className="message-header">
-                        <div className="message-info">
-                          <h3 className="message-subject">
-                            {msg.subject}
-                            {msg.action_status && (
-                              <span
-                                className={`message-action-indicator ${msg.action_status}`}
-                              />
-                            )}
-                          </h3>
-                          <p className="message-sender">
+                        <div className="message-top-row">
+                          {!msg.is_read && <span className="unread-dot"></span>}
+                          <span className="message-sender">
                             {msg.sender_name || msg.sender_email}
-                          </p>
-                          <p className="message-time">
-                            {new Date(msg.received_at).toLocaleString()}
-                          </p>
-                        </div>
-                        <div className="message-meta">
+                          </span>
+                          <span className="message-source-sep" aria-hidden="true">·</span>
                           <span className={`source-badge source-${msg.source}`}>
                             {(msg.source || "arbor").toUpperCase()}
                           </span>
-                          {!msg.is_read && <span className="unread-dot"></span>}
                           <ActionButton
                             message={msg}
                             onStatusChange={toggleActionStatus}
                             onShowActionModal={handleShowActionModal}
                           />
                           {msg.indexed_for_rag && (
-                            <span className="indexed-badge">RAG Indexed</span>
+                            <span className="indexed-badge">RAG</span>
                           )}
+                          <span className="message-time">
+                            {new Date(msg.received_at).toLocaleString()}
+                          </span>
                         </div>
+                        <h3 className="message-subject">
+                          {msg.subject}
+                          {msg.action_status && (
+                            <span
+                              className={`message-action-indicator ${msg.action_status}`}
+                            />
+                          )}
+                        </h3>
                       </div>
 
                       <div
@@ -1533,6 +1556,7 @@ function App() {
       <div className="toast-container">
         {toasts.map((toast) => (
           <div key={toast.id} className={`toast toast-${toast.type}`}>
+            <div className="toast-bar"></div>
             <p>{toast.message}</p>
             <button
               className="toast-close"

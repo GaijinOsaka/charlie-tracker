@@ -6,27 +6,29 @@
 .action-button {
   background: none;
   border: none;
-  font-size: 18px;
+  font-size: 14px;
+  line-height: 1;
   cursor: pointer;
-  padding: 4px 8px;
-  border-radius: 4px;
-  transition: background-color 0.2s;
+  padding: 2px 5px;
+  border-radius: var(--ct-radius-sm);
+  transition: background-color var(--ct-dur-fast);
+  flex-shrink: 0;
 }
 
 .action-button:hover {
-  background-color: var(--bg-muted);
+  background-color: var(--ct-surface-soft);
 }
 
 .action-popover {
   position: absolute;
   top: 100%;
-  right: 0;
-  background: var(--bg-surface);
-  border: 1px solid var(--border);
-  border-radius: 6px;
+  left: 0;
+  background: var(--ct-surface);
+  border: 1px solid var(--ct-line);
+  border-radius: var(--ct-radius-md);
   margin-top: 4px;
   z-index: 1000;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  box-shadow: var(--ct-shadow-md);
   min-width: 160px;
 }
 
@@ -38,10 +40,10 @@
   background: none;
   text-align: left;
   cursor: pointer;
-  font-size: 14px;
-  color: var(--text);
-  transition: background-color 0.15s;
-  border-bottom: 1px solid var(--bg-muted);
+  font-size: 13px;
+  color: var(--ct-ink);
+  transition: background-color var(--ct-dur-fast);
+  border-bottom: 1px solid var(--ct-line-soft);
 }
 
 .action-option:last-child {
@@ -49,7 +51,7 @@
 }
 
 .action-option:hover {
-  background-color: var(--bg-muted);
+  background-color: var(--ct-surface-soft);
 }
 
 .action-option-pending {
@@ -57,7 +59,7 @@
 }
 
 .action-option-pending:hover {
-  background-color: rgba(245, 158, 11, 0.1);
+  background-color: var(--ct-surface-warn);
 }
 
 .action-option-actioned {
@@ -65,25 +67,25 @@
 }
 
 .action-option-actioned:hover {
-  background-color: rgba(16, 185, 129, 0.1);
+  background-color: var(--ct-success-soft);
 }
 
 .action-option-clear {
   font-size: 12px;
-  color: var(--text-secondary);
+  color: var(--ct-muted);
 }
 
 .action-option-clear:hover {
-  background-color: var(--bg-muted);
-  color: var(--text);
+  background-color: var(--ct-surface-soft);
+  color: var(--ct-ink);
 }
 
 .action-option-cancel {
   font-size: 12px;
-  color: var(--text-secondary);
+  color: var(--ct-muted);
 }
 
 .action-option-cancel:hover {
-  background-color: var(--bg-muted);
-  color: var(--text);
+  background-color: var(--ct-surface-soft);
+  color: var(--ct-ink);
 }

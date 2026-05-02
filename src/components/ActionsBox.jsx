@@ -13,8 +13,8 @@ export function ActionsBox({
   showRecentlyActioned = false,
 }) {
   const [expandedId, setExpandedId] = useState(null);
-  const [pendingCollapsed, setPendingCollapsed] = useState(false);
-  const [actionedCollapsed, setActionedCollapsed] = useState(false);
+  const [pendingCollapsed, setPendingCollapsed] = useState(true);
+  const [actionedCollapsed, setActionedCollapsed] = useState(true);
 
   const handleStatusChange = onStatusChange || (() => {});
   const handleShowActionModal = onShowActionModal || (() => {});

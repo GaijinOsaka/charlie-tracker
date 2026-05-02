@@ -14,15 +14,15 @@
 
 .attachment-viewer-modal {
   position: relative;
-  background: var(--bg-surface);
-  border: 1px solid var(--border);
-  border-radius: 8px;
+  background: var(--ct-surface);
+  border: 1px solid var(--ct-line);
+  border-radius: var(--ct-radius-xl);
   max-width: 90vw;
   max-height: 90vh;
   overflow: auto;
   display: flex;
   flex-direction: column;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
+  box-shadow: 0 20px 60px rgba(20, 18, 14, 0.25);
 }
 
 .viewer-close-btn {
@@ -45,7 +45,7 @@
 }
 
 .viewer-close-btn:hover {
-  background: #dc2626;
+  background: var(--ct-danger);
   opacity: 0.9;
 }
 
@@ -86,24 +86,24 @@
   align-items: center;
   justify-content: center;
   padding: 12px;
-  background: var(--bg-muted);
-  border-radius: 6px;
+  background: var(--ct-surface-soft);
+  border-radius: var(--ct-radius-md);
 }
 
 .pdf-controls button {
   padding: 8px 16px;
-  background: var(--primary);
+  background: var(--ct-accent);
   color: white;
   border: none;
-  border-radius: 6px;
+  border-radius: var(--ct-radius-md);
   cursor: pointer;
   font-size: 14px;
   font-weight: 500;
-  transition: background 0.2s;
+  transition: background var(--ct-dur-fast);
 }
 
 .pdf-controls button:hover:not(:disabled) {
-  background: #2563eb;
+  background: var(--ct-accent-hover);
 }
 
 .pdf-controls button:disabled {
@@ -120,13 +120,13 @@
 
 .viewer-filename {
   padding: 12px 20px;
-  background: var(--bg-muted);
-  border-top: 1px solid var(--border);
+  background: var(--ct-surface-soft);
+  border-top: 1px solid var(--ct-line);
   font-size: 13px;
-  color: var(--text-secondary);
+  color: var(--ct-muted);
   text-align: center;
   word-break: break-all;
-  border-radius: 0 0 8px 8px;
+  border-radius: 0 0 var(--ct-radius-xl) var(--ct-radius-xl);
 }
 
 .viewer-loading,

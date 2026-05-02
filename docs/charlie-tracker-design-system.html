@@ -1,0 +1,592 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Charlie Tracker — Design System</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,500;8..60,600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    /* === CHARLIE TRACKER DESIGN TOKENS === */
+    /* Surfaces — warm off-white "paper" */
+    --ct-bg:           #FAF9F7;  /* page background */
+    --ct-surface:      #FFFFFF;  /* cards, inputs, raised elements */
+    --ct-surface-soft: #F4F2EE;  /* subtle fills, read-message bg, tab bar bg */
+    --ct-surface-warn: #F7EBE4;  /* action-required tint */
+
+    /* Ink — warm near-blacks */
+    --ct-ink:          #1A1816;  /* primary text, headlines */
+    --ct-ink-muted:    #3D3A36;  /* secondary text, read subjects */
+    --ct-muted:        #75716B;  /* tertiary text, meta, placeholders */
+    --ct-warn-ink:     #7A3A23;  /* text on warn surfaces */
+
+    /* Lines */
+    --ct-line:         #E8E4DD;  /* card borders, dividers */
+    --ct-line-soft:    #EFEBE4;  /* internal dividers in grouped lists */
+
+    /* Accent — single muted terracotta */
+    --ct-accent:       #C96442;
+    --ct-accent-hover: #B5563A;
+    --ct-accent-soft:  #F7EBE4;
+
+    /* Status */
+    --ct-success:      #5A7D5A;
+    --ct-success-soft: #E8EFE8;
+    --ct-warn:         #C96442;  /* same as accent for "needs attention" */
+    --ct-danger:       #B5413A;
+    --ct-danger-soft:  #F4E1DF;
+
+    /* Typography */
+    --ct-font-display: "Source Serif 4", "Tiempos Headline", Georgia, serif;
+    --ct-font-body:    "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    --ct-font-mono:    "JetBrains Mono", ui-monospace, "SF Mono", Consolas, monospace;
+
+    /* Type scale */
+    --ct-text-xs:      11px;
+    --ct-text-sm:      12px;
+    --ct-text-md:      13px;
+    --ct-text-base:    14px;
+    --ct-text-lg:      15px;
+    --ct-text-xl:      17px;
+    --ct-text-2xl:     22px;  /* serif h1 */
+    --ct-text-3xl:     28px;  /* large display */
+
+    /* Spacing — 4px base */
+    --ct-space-1:      4px;
+    --ct-space-2:      8px;
+    --ct-space-3:      12px;
+    --ct-space-4:      16px;
+    --ct-space-5:      20px;
+    --ct-space-6:      24px;
+    --ct-space-8:      32px;
+    --ct-space-10:     40px;
+
+    /* Radii */
+    --ct-radius-sm:    6px;
+    --ct-radius-md:    8px;
+    --ct-radius-lg:    10px;
+    --ct-radius-xl:    14px;
+    --ct-radius-pill:  999px;
+
+    /* Shadows — minimal, warm */
+    --ct-shadow-sm:    0 1px 2px rgba(20, 18, 14, 0.04);
+    --ct-shadow-md:    0 1px 2px rgba(20, 18, 14, 0.06), 0 0 0 1px rgba(20, 18, 14, 0.04);
+    --ct-shadow-lg:    0 4px 16px rgba(20, 18, 14, 0.06);
+
+    /* Motion */
+    --ct-ease:         cubic-bezier(0.2, 0.0, 0.2, 1.0);
+    --ct-dur-fast:     120ms;
+    --ct-dur-base:     180ms;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { background: var(--ct-bg); color: var(--ct-ink); font-family: var(--ct-font-body); -webkit-font-smoothing: antialiased; }
+  body { padding: 0; }
+
+  /* Page chrome */
+  .ds-page { max-width: 1080px; margin: 0 auto; padding: 56px 32px 80px; }
+  .ds-h1 { font-family: var(--ct-font-display); font-size: 40px; font-weight: 500; letter-spacing: -0.02em; line-height: 1.1; margin-bottom: 8px; }
+  .ds-sub { font-size: 15px; color: var(--ct-muted); max-width: 60ch; line-height: 1.6; margin-bottom: 12px; }
+  .ds-meta { font-family: var(--ct-font-mono); font-size: 11px; color: var(--ct-muted); text-transform: uppercase; letter-spacing: 0.06em; }
+
+  .ds-section { margin-top: 64px; }
+  .ds-section-h { display: flex; align-items: baseline; gap: 12px; margin-bottom: 24px; padding-bottom: 16px; border-bottom: 1px solid var(--ct-line); }
+  .ds-section-h h2 { font-family: var(--ct-font-display); font-size: 24px; font-weight: 500; letter-spacing: -0.01em; }
+  .ds-section-h .num { font-family: var(--ct-font-mono); color: var(--ct-muted); font-size: 13px; }
+  .ds-section-desc { color: var(--ct-muted); font-size: 14px; line-height: 1.6; max-width: 64ch; margin-bottom: 28px; }
+
+  .ds-block-h { font-size: 12px; font-weight: 600; color: var(--ct-muted); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 14px; margin-top: 28px; }
+
+  /* Color swatches */
+  .ds-color-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 12px; }
+  .ds-swatch { background: var(--ct-surface); border: 1px solid var(--ct-line); border-radius: var(--ct-radius-lg); overflow: hidden; }
+  .ds-swatch-chip { height: 80px; border-bottom: 1px solid var(--ct-line); }
+  .ds-swatch-info { padding: 10px 12px; }
+  .ds-swatch-name { font-size: 12px; font-weight: 600; color: var(--ct-ink); margin-bottom: 2px; }
+  .ds-swatch-token { font-family: var(--ct-font-mono); font-size: 10.5px; color: var(--ct-muted); }
+  .ds-swatch-hex { font-family: var(--ct-font-mono); font-size: 10.5px; color: var(--ct-muted); margin-top: 2px; }
+
+  /* Type specimens */
+  .ds-type-row { display: grid; grid-template-columns: 200px 1fr; gap: 24px; padding: 16px 0; border-bottom: 1px solid var(--ct-line-soft); align-items: baseline; }
+  .ds-type-meta { font-family: var(--ct-font-mono); font-size: 11px; color: var(--ct-muted); line-height: 1.6; }
+  .ds-type-meta b { color: var(--ct-ink); font-weight: 600; }
+
+  /* Spacing chips */
+  .ds-space-row { display: flex; gap: 16px; flex-wrap: wrap; }
+  .ds-space-chip { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; }
+  .ds-space-bar { background: var(--ct-accent); height: 12px; border-radius: 2px; }
+  .ds-space-meta { font-family: var(--ct-font-mono); font-size: 11px; color: var(--ct-muted); }
+
+  /* Radius chips */
+  .ds-radius-row { display: flex; gap: 16px; flex-wrap: wrap; }
+  .ds-radius-chip { display: flex; flex-direction: column; gap: 6px; align-items: flex-start; }
+  .ds-radius-box { width: 64px; height: 64px; background: var(--ct-surface); border: 1px solid var(--ct-line); }
+
+  /* Component example wrapper */
+  .ds-example { background: var(--ct-surface-soft); border: 1px solid var(--ct-line); border-radius: var(--ct-radius-xl); padding: 32px; margin-bottom: 16px; display: flex; flex-direction: column; gap: 16px; align-items: flex-start; }
+  .ds-example.compact { padding: 20px; }
+
+  /* === COMPONENTS === */
+
+  /* Buttons */
+  .ct-btn { font-family: inherit; font-size: var(--ct-text-md); font-weight: 500; border-radius: var(--ct-radius-md); padding: 8px 14px; cursor: pointer; transition: all var(--ct-dur-fast) var(--ct-ease); border: 1px solid transparent; display: inline-flex; align-items: center; gap: 6px; }
+  .ct-btn-primary   { background: var(--ct-accent); color: #fff; border-color: var(--ct-accent); }
+  .ct-btn-primary:hover { background: var(--ct-accent-hover); border-color: var(--ct-accent-hover); }
+  .ct-btn-secondary { background: var(--ct-surface); color: var(--ct-ink); border-color: var(--ct-line); }
+  .ct-btn-secondary:hover { background: var(--ct-surface-soft); }
+  .ct-btn-ghost     { background: transparent; color: var(--ct-ink-muted); }
+  .ct-btn-ghost:hover { background: var(--ct-surface-soft); color: var(--ct-ink); }
+  .ct-btn-danger    { background: var(--ct-surface); color: var(--ct-danger); border-color: var(--ct-line); }
+  .ct-btn-danger:hover { background: var(--ct-danger-soft); border-color: var(--ct-danger); }
+  .ct-btn-sm        { padding: 6px 10px; font-size: var(--ct-text-sm); }
+
+  /* Inputs */
+  .ct-input { font-family: inherit; font-size: var(--ct-text-base); background: var(--ct-surface); border: 1px solid var(--ct-line); border-radius: var(--ct-radius-lg); padding: 10px 14px; color: var(--ct-ink); width: 100%; transition: border-color var(--ct-dur-fast); }
+  .ct-input:focus { outline: none; border-color: var(--ct-accent); box-shadow: 0 0 0 3px var(--ct-accent-soft); }
+  .ct-input::placeholder { color: var(--ct-muted); }
+  .ct-search { display: flex; align-items: center; gap: 8px; background: var(--ct-surface); border: 1px solid var(--ct-line); border-radius: var(--ct-radius-lg); padding: 8px 14px; }
+  .ct-search input { flex: 1; border: none; outline: none; background: transparent; font-size: var(--ct-text-base); color: var(--ct-ink); font-family: inherit; }
+  .ct-search-icon { color: var(--ct-muted); font-size: 14px; }
+
+  /* Pills (filter dropdowns) */
+  .ct-pill { padding: 8px 12px; background: var(--ct-surface); border: 1px solid var(--ct-line); border-radius: var(--ct-radius-lg); font-size: var(--ct-text-md); color: var(--ct-ink); font-family: inherit; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; }
+  .ct-pill:hover { background: var(--ct-surface-soft); }
+  .ct-pill-caret { color: var(--ct-muted); font-size: 10px; }
+
+  /* Tabs */
+  .ct-tabs { display: inline-flex; gap: 4px; padding: 4px; background: var(--ct-surface-soft); border-radius: var(--ct-radius-xl); }
+  .ct-tab { padding: 8px 14px; border: none; background: transparent; font-size: var(--ct-text-md); font-weight: 500; color: var(--ct-muted); cursor: pointer; border-radius: var(--ct-radius-md); font-family: inherit; display: inline-flex; align-items: center; gap: 6px; }
+  .ct-tab.active { background: var(--ct-surface); color: var(--ct-ink); font-weight: 600; box-shadow: var(--ct-shadow-md); }
+  .ct-tab-badge { display: inline-flex; align-items: center; justify-content: center; min-width: 18px; height: 18px; padding: 0 6px; border-radius: 999px; background: var(--ct-accent); color: #fff; font-size: 10px; font-weight: 600; }
+
+  /* Badges */
+  .ct-badge { display: inline-flex; align-items: center; padding: 3px 8px; border-radius: 6px; font-size: var(--ct-text-xs); font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; }
+  .ct-badge-source { background: var(--ct-surface-soft); color: var(--ct-muted); border: 1px solid var(--ct-line); }
+  .ct-badge-warn   { background: var(--ct-surface-warn); color: var(--ct-warn-ink); }
+  .ct-badge-success{ background: var(--ct-success-soft); color: var(--ct-success); }
+
+  /* Card */
+  .ct-card { background: var(--ct-surface); border: 1px solid var(--ct-line); border-radius: var(--ct-radius-xl); padding: 18px 20px; }
+  .ct-card-soft { background: var(--ct-surface-soft); border-color: var(--ct-line-soft); }
+
+  /* Grouped list (iOS-style) */
+  .ct-grouped { background: var(--ct-surface); border: 1px solid var(--ct-line); border-radius: var(--ct-radius-xl); overflow: hidden; }
+  .ct-grouped-row { display: flex; align-items: flex-start; gap: 14px; padding: 16px 18px; border-bottom: 1px solid var(--ct-line-soft); }
+  .ct-grouped-row:last-child { border-bottom: none; }
+  .ct-grouped-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--ct-warn); margin-top: 7px; flex-shrink: 0; }
+
+  /* Message item */
+  .ct-msg { background: var(--ct-surface); border: 1px solid var(--ct-line); border-radius: var(--ct-radius-xl); padding: 18px 20px; }
+  .ct-msg.read { background: var(--ct-surface-soft); border-color: var(--ct-line-soft); }
+  .ct-msg-top { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+  .ct-msg-unread-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--ct-accent); flex-shrink: 0; }
+  .ct-msg-sender { font-size: var(--ct-text-md); color: var(--ct-ink); font-weight: 500; }
+  .ct-msg-source { font-size: var(--ct-text-xs); font-weight: 600; color: var(--ct-muted); text-transform: uppercase; letter-spacing: 0.06em; }
+  .ct-msg-time { font-size: var(--ct-text-sm); color: var(--ct-muted); margin-left: auto; }
+  .ct-msg-subj { font-size: var(--ct-text-lg); font-weight: 600; color: var(--ct-ink); margin-bottom: 4px; line-height: 1.35; letter-spacing: -0.005em; }
+  .ct-msg.read .ct-msg-subj { font-weight: 500; color: var(--ct-ink-muted); }
+  .ct-msg-preview { font-size: var(--ct-text-md); color: var(--ct-muted); line-height: 1.5; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+
+  /* Toast */
+  .ct-toast { background: var(--ct-surface); border: 1px solid var(--ct-line); border-radius: var(--ct-radius-lg); padding: 12px 14px; box-shadow: var(--ct-shadow-lg); display: flex; align-items: center; gap: 10px; min-width: 280px; }
+  .ct-toast-bar { width: 3px; align-self: stretch; background: var(--ct-accent); border-radius: 2px; }
+  .ct-toast-text { font-size: var(--ct-text-md); color: var(--ct-ink); flex: 1; }
+
+  /* Code block */
+  .ds-code { background: var(--ct-ink); color: #FAF9F7; font-family: var(--ct-font-mono); font-size: 12px; line-height: 1.6; padding: 20px 24px; border-radius: var(--ct-radius-xl); overflow-x: auto; white-space: pre; }
+  .ds-code-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+  .ds-code-title { font-family: var(--ct-font-mono); font-size: 11px; color: var(--ct-muted); text-transform: uppercase; letter-spacing: 0.08em; }
+  .ds-code-copy { font-family: inherit; font-size: 11px; color: var(--ct-muted); background: none; border: 1px solid var(--ct-line); padding: 4px 10px; border-radius: 6px; cursor: pointer; }
+  .ds-code-copy:hover { background: var(--ct-surface); color: var(--ct-ink); }
+
+  /* Mapping table */
+  .ds-table { width: 100%; border-collapse: collapse; font-size: var(--ct-text-md); }
+  .ds-table th { text-align: left; font-weight: 600; color: var(--ct-muted); text-transform: uppercase; font-size: 11px; letter-spacing: 0.06em; padding: 10px 12px; border-bottom: 1px solid var(--ct-line); }
+  .ds-table td { padding: 12px; border-bottom: 1px solid var(--ct-line-soft); vertical-align: top; }
+  .ds-table td:first-child { font-family: var(--ct-font-mono); font-size: 11.5px; color: var(--ct-ink); }
+  .ds-table td:nth-child(2) { font-family: var(--ct-font-mono); font-size: 11.5px; color: var(--ct-accent); }
+  .ds-table td:last-child { color: var(--ct-muted); }
+
+  /* Two-col layout for examples */
+  .ds-row { display: flex; gap: 16px; flex-wrap: wrap; align-items: center; }
+
+  /* Utility */
+  .ds-callout { background: var(--ct-surface-warn); border: 1px solid #E8C8B8; border-left: 3px solid var(--ct-accent); border-radius: var(--ct-radius-md); padding: 14px 16px; font-size: var(--ct-text-md); color: var(--ct-warn-ink); line-height: 1.6; }
+  .ds-callout b { color: var(--ct-ink); }
+</style>
+</head>
+<body>
+<div class="ds-page">
+
+  <!-- TITLE -->
+  <header>
+    <div class="ds-meta">v1.0 · Charlie Tracker · Light Theme</div>
+    <h1 class="ds-h1">Design System</h1>
+    <p class="ds-sub">A warm, white, Claude-Code-inspired UI language for Charlie Tracker. Single source of truth for colors, type, spacing, and components — with a CSS variable patch ready to drop into <code style="font-family: var(--ct-font-mono); font-size: 13px;">src/App.css</code>.</p>
+    <p class="ds-sub">Tone: <b>quiet, warm, precise</b>. Pure white feels clinical for a daily-use dashboard; we use a paper-cream off-white instead. Single muted terracotta accent — applied sparingly so action items genuinely stand out. Serif headlines add personality without going corporate.</p>
+  </header>
+
+  <!-- 01 COLORS -->
+  <section class="ds-section">
+    <div class="ds-section-h"><span class="num">01</span><h2>Color</h2></div>
+    <p class="ds-section-desc">A 4-tier surface system (page · card · soft · warn) plus a 3-tier ink system (primary · secondary · muted). One accent color, used only for primary actions and unread indicators. Status colors borrow the same desaturated, warm character.</p>
+
+    <div class="ds-block-h">Surfaces</div>
+    <div class="ds-color-grid">
+      <div class="ds-swatch"><div class="ds-swatch-chip" style="background:#FAF9F7;border-bottom-color:#E8E4DD"></div><div class="ds-swatch-info"><div class="ds-swatch-name">Page</div><div class="ds-swatch-token">--ct-bg</div><div class="ds-swatch-hex">#FAF9F7</div></div></div>
+      <div class="ds-swatch"><div class="ds-swatch-chip" style="background:#FFFFFF;border-bottom-color:#E8E4DD"></div><div class="ds-swatch-info"><div class="ds-swatch-name">Card / Surface</div><div class="ds-swatch-token">--ct-surface</div><div class="ds-swatch-hex">#FFFFFF</div></div></div>
+      <div class="ds-swatch"><div class="ds-swatch-chip" style="background:#F4F2EE"></div><div class="ds-swatch-info"><div class="ds-swatch-name">Soft fill</div><div class="ds-swatch-token">--ct-surface-soft</div><div class="ds-swatch-hex">#F4F2EE</div></div></div>
+      <div class="ds-swatch"><div class="ds-swatch-chip" style="background:#F7EBE4"></div><div class="ds-swatch-info"><div class="ds-swatch-name">Warn surface</div><div class="ds-swatch-token">--ct-surface-warn</div><div class="ds-swatch-hex">#F7EBE4</div></div></div>
+    </div>
+
+    <div class="ds-block-h">Ink</div>
+    <div class="ds-color-grid">
+      <div class="ds-swatch"><div class="ds-swatch-chip" style="background:#1A1816"></div><div class="ds-swatch-info"><div class="ds-swatch-name">Ink</div><div class="ds-swatch-token">--ct-ink</div><div class="ds-swatch-hex">#1A1816</div></div></div>
+      <div class="ds-swatch"><div class="ds-swatch-chip" style="background:#3D3A36"></div><div class="ds-swatch-info"><div class="ds-swatch-name">Ink muted</div><div class="ds-swatch-token">--ct-ink-muted</div><div class="ds-swatch-hex">#3D3A36</div></div></div>
+      <div class="ds-swatch"><div class="ds-swatch-chip" style="background:#75716B"></div><div class="ds-swatch-info"><div class="ds-swatch-name">Muted</div><div class="ds-swatch-token">--ct-muted</div><div class="ds-swatch-hex">#75716B</div></div></div>
+      <div class="ds-swatch"><div class="ds-swatch-chip" style="background:#7A3A23"></div><div class="ds-swatch-info"><div class="ds-swatch-name">Warn ink</div><div class="ds-swatch-token">--ct-warn-ink</div><div class="ds-swatch-hex">#7A3A23</div></div></div>
+    </div>
+
+    <div class="ds-block-h">Lines</div>
+    <div class="ds-color-grid">
+      <div class="ds-swatch"><div class="ds-swatch-chip" style="background:#E8E4DD"></div><div class="ds-swatch-info"><div class="ds-swatch-name">Line</div><div class="ds-swatch-token">--ct-line</div><div class="ds-swatch-hex">#E8E4DD</div></div></div>
+      <div class="ds-swatch"><div class="ds-swatch-chip" style="background:#EFEBE4"></div><div class="ds-swatch-info"><div class="ds-swatch-name">Line soft</div><div class="ds-swatch-token">--ct-line-soft</div><div class="ds-swatch-hex">#EFEBE4</div></div></div>
+    </div>
+
+    <div class="ds-block-h">Accent &amp; Status</div>
+    <div class="ds-color-grid">
+      <div class="ds-swatch"><div class="ds-swatch-chip" style="background:#C96442"></div><div class="ds-swatch-info"><div class="ds-swatch-name">Accent (terracotta)</div><div class="ds-swatch-token">--ct-accent</div><div class="ds-swatch-hex">#C96442</div></div></div>
+      <div class="ds-swatch"><div class="ds-swatch-chip" style="background:#B5563A"></div><div class="ds-swatch-info"><div class="ds-swatch-name">Accent hover</div><div class="ds-swatch-token">--ct-accent-hover</div><div class="ds-swatch-hex">#B5563A</div></div></div>
+      <div class="ds-swatch"><div class="ds-swatch-chip" style="background:#5A7D5A"></div><div class="ds-swatch-info"><div class="ds-swatch-name">Success</div><div class="ds-swatch-token">--ct-success</div><div class="ds-swatch-hex">#5A7D5A</div></div></div>
+      <div class="ds-swatch"><div class="ds-swatch-chip" style="background:#B5413A"></div><div class="ds-swatch-info"><div class="ds-swatch-name">Danger</div><div class="ds-swatch-token">--ct-danger</div><div class="ds-swatch-hex">#B5413A</div></div></div>
+    </div>
+
+    <div style="margin-top:24px" class="ds-callout">
+      <b>Rule of thumb.</b> Use <code style="font-family:var(--ct-font-mono)">--ct-accent</code> only for: primary buttons, unread dots, focus rings, the active tab indicator, and the dot beside an action-required item. If you find yourself reaching for it in a 5th place, that place probably doesn't need it.
+    </div>
+  </section>
+
+  <!-- 02 TYPOGRAPHY -->
+  <section class="ds-section">
+    <div class="ds-section-h"><span class="num">02</span><h2>Typography</h2></div>
+    <p class="ds-section-desc">Two families: <b>Source Serif 4</b> for display (headlines + page titles), <b>Inter</b> for everything else. JetBrains Mono for tokens, code, and meta. Self-hostable; both Google Fonts.</p>
+
+    <div class="ds-type-row">
+      <div class="ds-type-meta"><b>Display / H1</b><br>Source Serif 4<br>500 · 22–28px · -0.02em<br>line-height 1.1</div>
+      <div style="font-family: var(--ct-font-display); font-size: 28px; font-weight: 500; letter-spacing: -0.02em; color: var(--ct-ink);">Charlie Tracker</div>
+    </div>
+    <div class="ds-type-row">
+      <div class="ds-type-meta"><b>Section title</b><br>Source Serif 4<br>500 · 17–24px<br>line-height 1.2</div>
+      <div style="font-family: var(--ct-font-display); font-size: 17px; font-weight: 600; letter-spacing: -0.01em;">Needs your attention</div>
+    </div>
+    <div class="ds-type-row">
+      <div class="ds-type-meta"><b>Subject</b><br>Inter<br>600 · 15px<br>line-height 1.35 · -0.005em</div>
+      <div style="font-size: 15px; font-weight: 600; letter-spacing: -0.005em; line-height: 1.35;">Year 4 Trip to the Natural History Museum — Consent Required</div>
+    </div>
+    <div class="ds-type-row">
+      <div class="ds-type-meta"><b>Body</b><br>Inter<br>400 · 14px<br>line-height 1.5</div>
+      <div style="font-size: 14px; line-height: 1.5; color: var(--ct-ink-muted);">We're pleased to confirm that Year 4 will be visiting the Natural History Museum on Thursday 22nd May. Please complete the consent form attached and return by Friday this week.</div>
+    </div>
+    <div class="ds-type-row">
+      <div class="ds-type-meta"><b>Meta</b><br>Inter<br>400 · 12–13px<br>color: --ct-muted</div>
+      <div style="font-size: 13px; color: var(--ct-muted);">Mrs. P. Henderson · 4h ago · Arbor</div>
+    </div>
+    <div class="ds-type-row">
+      <div class="ds-type-meta"><b>Eyebrow / source tag</b><br>Inter<br>600 · 11px · UPPERCASE<br>letter-spacing 0.06em</div>
+      <div style="font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: var(--ct-muted);">ARBOR</div>
+    </div>
+    <div class="ds-type-row">
+      <div class="ds-type-meta"><b>Mono</b><br>JetBrains Mono<br>400 · 11–12px<br>tokens, code, technical</div>
+      <div style="font-family: var(--ct-font-mono); font-size: 12px; color: var(--ct-ink);">--ct-accent: #C96442;</div>
+    </div>
+  </section>
+
+  <!-- 03 SPACING + RADIUS -->
+  <section class="ds-section">
+    <div class="ds-section-h"><span class="num">03</span><h2>Spacing &amp; Radius</h2></div>
+    <p class="ds-section-desc">4px base scale. Cards prefer 14px radius (warm, paper-like); inputs and pills 10px; small chips 6–8px. Pure-pill (999px) is reserved for filter chips when in cool/iOS mode.</p>
+
+    <div class="ds-block-h">Spacing scale</div>
+    <div class="ds-space-row">
+      <div class="ds-space-chip"><div class="ds-space-bar" style="width:4px"></div><div class="ds-space-meta">--ct-space-1 · 4px</div></div>
+      <div class="ds-space-chip"><div class="ds-space-bar" style="width:8px"></div><div class="ds-space-meta">--ct-space-2 · 8px</div></div>
+      <div class="ds-space-chip"><div class="ds-space-bar" style="width:12px"></div><div class="ds-space-meta">--ct-space-3 · 12px</div></div>
+      <div class="ds-space-chip"><div class="ds-space-bar" style="width:16px"></div><div class="ds-space-meta">--ct-space-4 · 16px</div></div>
+      <div class="ds-space-chip"><div class="ds-space-bar" style="width:20px"></div><div class="ds-space-meta">--ct-space-5 · 20px</div></div>
+      <div class="ds-space-chip"><div class="ds-space-bar" style="width:24px"></div><div class="ds-space-meta">--ct-space-6 · 24px</div></div>
+      <div class="ds-space-chip"><div class="ds-space-bar" style="width:32px"></div><div class="ds-space-meta">--ct-space-8 · 32px</div></div>
+      <div class="ds-space-chip"><div class="ds-space-bar" style="width:40px"></div><div class="ds-space-meta">--ct-space-10 · 40px</div></div>
+    </div>
+
+    <div class="ds-block-h">Radii</div>
+    <div class="ds-radius-row">
+      <div class="ds-radius-chip"><div class="ds-radius-box" style="border-radius:6px"></div><div class="ds-space-meta">sm · 6px</div></div>
+      <div class="ds-radius-chip"><div class="ds-radius-box" style="border-radius:8px"></div><div class="ds-space-meta">md · 8px</div></div>
+      <div class="ds-radius-chip"><div class="ds-radius-box" style="border-radius:10px"></div><div class="ds-space-meta">lg · 10px</div></div>
+      <div class="ds-radius-chip"><div class="ds-radius-box" style="border-radius:14px"></div><div class="ds-space-meta">xl · 14px (cards)</div></div>
+      <div class="ds-radius-chip"><div class="ds-radius-box" style="border-radius:999px;width:96px"></div><div class="ds-space-meta">pill · 999px</div></div>
+    </div>
+
+    <div class="ds-block-h">Shadows</div>
+    <div class="ds-row">
+      <div class="ct-card" style="box-shadow:var(--ct-shadow-sm)">shadow-sm · subtle lift</div>
+      <div class="ct-card" style="box-shadow:var(--ct-shadow-md)">shadow-md · cards, raised</div>
+      <div class="ct-card" style="box-shadow:var(--ct-shadow-lg)">shadow-lg · toasts, modals</div>
+    </div>
+  </section>
+
+  <!-- 04 COMPONENTS -->
+  <section class="ds-section">
+    <div class="ds-section-h"><span class="num">04</span><h2>Components</h2></div>
+    <p class="ds-section-desc">Live, code-it-as-you-see-it specimens. All built from the tokens above — no hard-coded colors, type, or spacing. Class names use the <code style="font-family:var(--ct-font-mono);font-size:13px">.ct-*</code> prefix and can replace existing classes in <code style="font-family:var(--ct-font-mono);font-size:13px">App.css</code>.</p>
+
+    <div class="ds-block-h">Buttons</div>
+    <div class="ds-example">
+      <div class="ds-row">
+        <button class="ct-btn ct-btn-primary">Mark done</button>
+        <button class="ct-btn ct-btn-secondary">Add note</button>
+        <button class="ct-btn ct-btn-ghost">Mark as Read</button>
+        <button class="ct-btn ct-btn-danger">Delete</button>
+      </div>
+      <div class="ds-row">
+        <button class="ct-btn ct-btn-primary ct-btn-sm">Mark done</button>
+        <button class="ct-btn ct-btn-secondary ct-btn-sm">View</button>
+      </div>
+    </div>
+
+    <div class="ds-block-h">Inputs</div>
+    <div class="ds-example">
+      <input class="ct-input" placeholder="Add a note…" style="max-width:380px"/>
+      <div class="ct-search" style="max-width:380px;width:100%"><span class="ct-search-icon">⌕</span><input placeholder="Search messages, senders, attachments…"/></div>
+      <div class="ds-row">
+        <button class="ct-pill">All sources <span class="ct-pill-caret">▾</span></button>
+        <button class="ct-pill">Unread <span class="ct-pill-caret">▾</span></button>
+        <button class="ct-pill">Last 7 days <span class="ct-pill-caret">▾</span></button>
+      </div>
+    </div>
+
+    <div class="ds-block-h">Tabs</div>
+    <div class="ds-example">
+      <div class="ct-tabs">
+        <button class="ct-tab active">Messages <span class="ct-tab-badge">3</span></button>
+        <button class="ct-tab">Events</button>
+        <button class="ct-tab">Calendar</button>
+        <button class="ct-tab">Documents</button>
+        <button class="ct-tab">Actions</button>
+        <button class="ct-tab">Settings</button>
+      </div>
+    </div>
+
+    <div class="ds-block-h">Badges</div>
+    <div class="ds-example">
+      <div class="ds-row">
+        <span class="ct-badge ct-badge-source">Arbor</span>
+        <span class="ct-badge ct-badge-source">Gmail</span>
+        <span class="ct-badge ct-badge-warn">Action required</span>
+        <span class="ct-badge ct-badge-success">Done</span>
+      </div>
+    </div>
+
+    <div class="ds-block-h">Message card · unread</div>
+    <div class="ds-example compact">
+      <div class="ct-msg" style="width:100%;max-width:680px">
+        <div class="ct-msg-top">
+          <span class="ct-msg-unread-dot"></span>
+          <span class="ct-msg-sender">Mrs. P. Henderson</span>
+          <span style="color:var(--ct-muted);font-size:11px">●</span>
+          <span class="ct-msg-source">Arbor</span>
+          <span class="ct-msg-time">4h ago</span>
+        </div>
+        <h3 class="ct-msg-subj">Year 4 Trip to the Natural History Museum — Consent Required</h3>
+        <p class="ct-msg-preview">Dear Parent/Carer, We're pleased to confirm that Year 4 will be visiting the Natural History Museum on Thursday 22nd May. Please complete the consent form attached and return by Friday this week.</p>
+      </div>
+    </div>
+
+    <div class="ds-block-h">Message card · read</div>
+    <div class="ds-example compact">
+      <div class="ct-msg read" style="width:100%;max-width:680px">
+        <div class="ct-msg-top">
+          <span class="ct-msg-sender" style="color:var(--ct-muted)">Oakwood Bookings</span>
+          <span style="color:var(--ct-muted);font-size:11px">●</span>
+          <span class="ct-msg-source">Gmail</span>
+          <span class="ct-badge ct-badge-success" style="margin-left:auto">Done</span>
+          <span class="ct-msg-time" style="margin-left:0">1d ago</span>
+        </div>
+        <h3 class="ct-msg-subj">After-school club booking confirmation — Football</h3>
+        <p class="ct-msg-preview">Your booking for Football Club (Tuesdays, 3.30–4.30pm) for the Summer half-term is confirmed.</p>
+      </div>
+    </div>
+
+    <div class="ds-block-h">Grouped list (Actions box)</div>
+    <div class="ds-example compact">
+      <div class="ct-grouped" style="width:100%;max-width:680px">
+        <div class="ct-grouped-row">
+          <div class="ct-grouped-dot"></div>
+          <div style="flex:1;min-width:0">
+            <div style="font-size:14px;font-weight:500;color:var(--ct-ink);margin-bottom:2px">Year 4 Trip — Consent Required</div>
+            <div style="font-size:12px;color:var(--ct-muted)">Mrs. P. Henderson · 4h ago</div>
+            <div style="font-size:12px;color:var(--ct-muted);font-style:italic;margin-top:6px">"Need to pay £18 + sign form by Fri"</div>
+          </div>
+          <button class="ct-btn ct-btn-primary ct-btn-sm">Mark done</button>
+          <button class="ct-btn ct-btn-secondary ct-btn-sm">View</button>
+        </div>
+        <div class="ct-grouped-row">
+          <div class="ct-grouped-dot"></div>
+          <div style="flex:1;min-width:0">
+            <div style="font-size:14px;font-weight:500;color:var(--ct-ink);margin-bottom:2px">Updated drop-off arrangements from Monday</div>
+            <div style="font-size:12px;color:var(--ct-muted)">Ms. K. Reilly (Head) · 19h ago</div>
+          </div>
+          <button class="ct-btn ct-btn-primary ct-btn-sm">Mark done</button>
+          <button class="ct-btn ct-btn-secondary ct-btn-sm">View</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="ds-block-h">Toast</div>
+    <div class="ds-example compact">
+      <div class="ct-toast"><div class="ct-toast-bar"></div><div class="ct-toast-text">Message marked as actioned</div></div>
+      <div class="ct-toast"><div class="ct-toast-bar" style="background:var(--ct-success)"></div><div class="ct-toast-text">Event archived</div></div>
+      <div class="ct-toast"><div class="ct-toast-bar" style="background:var(--ct-danger)"></div><div class="ct-toast-text">Failed to update read status</div></div>
+    </div>
+  </section>
+
+  <!-- 05 TOKEN MAPPING -->
+  <section class="ds-section">
+    <div class="ds-section-h"><span class="num">05</span><h2>Token mapping</h2></div>
+    <p class="ds-section-desc">How the new tokens replace the existing ones in <code style="font-family:var(--ct-font-mono);font-size:13px">src/App.css</code>. Where there isn't a 1:1, the right column says what to do instead.</p>
+    <table class="ds-table">
+      <thead><tr><th>Current</th><th>Replace with</th><th>Notes</th></tr></thead>
+      <tbody>
+        <tr><td>--primary: #3b82f6</td><td>--ct-accent: #C96442</td><td>Used for primary action buttons, focus rings, unread dots, active tab indicator only</td></tr>
+        <tr><td>--bg: #1a2332</td><td>--ct-bg: #FAF9F7</td><td>Page background; warm off-white</td></tr>
+        <tr><td>--bg-surface: #1e2a3a</td><td>--ct-surface: #FFFFFF</td><td>Cards, inputs, raised elements</td></tr>
+        <tr><td>--bg-hover: #243044</td><td>--ct-surface-soft: #F4F2EE</td><td>Hover state on ghost buttons; soft fill</td></tr>
+        <tr><td>--bg-accent / bg-muted</td><td>--ct-surface-soft</td><td>Collapse to a single soft surface — don't need 3 dark variants on light</td></tr>
+        <tr><td>--border: #2d3a4a</td><td>--ct-line: #E8E4DD</td><td>Card and divider lines</td></tr>
+        <tr><td>--text: #e2e8f0</td><td>--ct-ink: #1A1816</td><td>Primary text</td></tr>
+        <tr><td>--text-secondary: #94a3b8</td><td>--ct-ink-muted: #3D3A36</td><td>Secondary text, read-message subjects</td></tr>
+        <tr><td>--text-muted: #64748b</td><td>--ct-muted: #75716B</td><td>Meta text, placeholders, timestamps</td></tr>
+        <tr><td>--success: #10b981</td><td>--ct-success: #5A7D5A</td><td>Desaturated to match warm palette</td></tr>
+        <tr><td>--danger: #ef4444</td><td>--ct-danger: #B5413A</td><td>Desaturated to match warm palette</td></tr>
+        <tr><td>--warning: #f59e0b</td><td>--ct-warn: #C96442</td><td>Same as accent — "needs attention" reads as one signal</td></tr>
+        <tr><td>color-scheme: dark</td><td>color-scheme: light</td><td>Flips form controls to light</td></tr>
+        <tr><td>source-arbor / source-gmail (cyan / pink)</td><td>.ct-badge-source (neutral)</td><td>Both sources use the same neutral badge — source is meta, not a status</td></tr>
+        <tr><td>.message-item.read (dim background)</td><td>background: --ct-surface-soft + lighter weight</td><td>Read state should recede, not look like an error</td></tr>
+        <tr><td>border-left: 4px solid primary (unread)</td><td>7px circular dot in top row</td><td>Less visually heavy; dot is the same affordance everywhere</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- 06 CSS PATCH -->
+  <section class="ds-section">
+    <div class="ds-section-h"><span class="num">06</span><h2>CSS patch</h2></div>
+    <p class="ds-section-desc">Drop this at the top of <code style="font-family:var(--ct-font-mono);font-size:13px">src/App.css</code> (replacing the existing <code style="font-family:var(--ct-font-mono);font-size:13px">:root</code> block) and update <code style="font-family:var(--ct-font-mono);font-size:13px">body</code> as shown. Then incrementally migrate components — they'll keep working with the old variable names if you alias them (last block).</p>
+
+    <div class="ds-code-header">
+      <div class="ds-code-title">src/App.css — :root</div>
+      <button class="ds-code-copy" onclick="navigator.clipboard.writeText(document.getElementById('patch1').textContent)">Copy</button>
+    </div>
+    <pre class="ds-code" id="patch1">:root {
+  /* === Surfaces (warm paper-white) === */
+  --ct-bg:           #FAF9F7;
+  --ct-surface:      #FFFFFF;
+  --ct-surface-soft: #F4F2EE;
+  --ct-surface-warn: #F7EBE4;
+
+  /* === Ink === */
+  --ct-ink:          #1A1816;
+  --ct-ink-muted:    #3D3A36;
+  --ct-muted:        #75716B;
+  --ct-warn-ink:     #7A3A23;
+
+  /* === Lines === */
+  --ct-line:         #E8E4DD;
+  --ct-line-soft:    #EFEBE4;
+
+  /* === Accent + status === */
+  --ct-accent:       #C96442;
+  --ct-accent-hover: #B5563A;
+  --ct-accent-soft:  #F7EBE4;
+  --ct-success:      #5A7D5A;
+  --ct-success-soft: #E8EFE8;
+  --ct-warn:         #C96442;
+  --ct-danger:       #B5413A;
+  --ct-danger-soft:  #F4E1DF;
+
+  /* === Type === */
+  --ct-font-display: "Source Serif 4", "Tiempos Headline", Georgia, serif;
+  --ct-font-body:    "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --ct-font-mono:    "JetBrains Mono", ui-monospace, "SF Mono", Consolas, monospace;
+
+  /* === Radii === */
+  --ct-radius-sm:    6px;
+  --ct-radius-md:    8px;
+  --ct-radius-lg:    10px;
+  --ct-radius-xl:    14px;
+  --ct-radius-pill:  999px;
+
+  /* === Shadows === */
+  --ct-shadow-sm:    0 1px 2px rgba(20, 18, 14, 0.04);
+  --ct-shadow-md:    0 1px 2px rgba(20, 18, 14, 0.06), 0 0 0 1px rgba(20, 18, 14, 0.04);
+  --ct-shadow-lg:    0 4px 16px rgba(20, 18, 14, 0.06);
+
+  /* === Legacy aliases — keep until full migration === */
+  --primary:         var(--ct-accent);
+  --success:         var(--ct-success);
+  --danger:          var(--ct-danger);
+  --warning:         var(--ct-warn);
+  --bg:              var(--ct-bg);
+  --bg-surface:      var(--ct-surface);
+  --bg-hover:        var(--ct-surface-soft);
+  --bg-accent:       var(--ct-surface-soft);
+  --bg-muted:        var(--ct-surface-soft);
+  --border:          var(--ct-line);
+  --text:            var(--ct-ink);
+  --text-secondary:  var(--ct-ink-muted);
+  --text-muted:      var(--ct-muted);
+}
+
+body {
+  font-family: var(--ct-font-body);
+  background-color: var(--ct-bg);
+  color: var(--ct-ink);
+  color-scheme: light;
+  -webkit-font-smoothing: antialiased;
+}</pre>
+
+    <div class="ds-code-header" style="margin-top:32px">
+      <div class="ds-code-title">index.html — fonts (in &lt;head&gt;)</div>
+      <button class="ds-code-copy" onclick="navigator.clipboard.writeText(document.getElementById('patch2').textContent)">Copy</button>
+    </div>
+    <pre class="ds-code" id="patch2">&lt;link rel="preconnect" href="https://fonts.googleapis.com"&gt;
+&lt;link rel="preconnect" href="https://fonts.gstatic.com" crossorigin&gt;
+&lt;link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Source+Serif+4:opsz,wght@8..60,400;8..60,500;8..60,600&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap"&gt;</pre>
+  </section>
+
+  <!-- 07 IMPLEMENTATION ORDER -->
+  <section class="ds-section">
+    <div class="ds-section-h"><span class="num">07</span><h2>Implementation order for Claude Code</h2></div>
+    <p class="ds-section-desc">Suggested order — each step is shippable on its own.</p>
+    <ol style="padding-left: 24px; line-height: 1.9; font-size: 14px; color: var(--ct-ink-muted);">
+      <li><b>Apply the token patch</b> to <code style="font-family:var(--ct-font-mono);font-size:13px">App.css</code> + add font links to <code style="font-family:var(--ct-font-mono);font-size:13px">index.html</code>. The legacy aliases mean nothing breaks.</li>
+      <li><b>Header:</b> swap brand mark to a 32px terracotta square with "C", change h1 to <code style="font-family:var(--ct-font-mono);font-size:13px">--ct-font-display</code>, drop subtitle font size to 13px / muted.</li>
+      <li><b>Tab nav:</b> replace bottom-border tabs with the pill tab bar (<code style="font-family:var(--ct-font-mono);font-size:13px">.tab-nav</code> → segmented control inside a soft fill). Active tab gets a white surface + shadow-md.</li>
+      <li><b>Filter bar:</b> collapse the four labelled selects into one search input + 3 pill dropdowns. Remove the bottom border (the section heading below it does the divider job).</li>
+      <li><b>Actions box:</b> remove the orange left border + uppercase title; replace with a section heading (<code style="font-family:var(--ct-font-mono);font-size:13px">"Needs your attention"</code>) above a grouped-list card.</li>
+      <li><b>Message card:</b> kill the 4px left border on unread; add a 7px terracotta dot in the top row instead. Read state = soft surface + lighter font weight (not a different background tint).</li>
+      <li><b>Source badges:</b> consolidate <code style="font-family:var(--ct-font-mono);font-size:13px">.source-arbor</code> + <code style="font-family:var(--ct-font-mono);font-size:13px">.source-gmail</code> to a single neutral <code style="font-family:var(--ct-font-mono);font-size:13px">.ct-badge-source</code>. Source is meta, not status.</li>
+      <li><b>Buttons:</b> primary (Mark done) gets terracotta fill; everything else neutral with line border. Drop the colored-border-only style.</li>
+      <li><b>Other tabs (Events, Calendar, Documents, Settings):</b> apply the same tokens; layout tweaks happen in a follow-up design pass.</li>
+      <li><b>Cleanup:</b> once everything migrates, remove the legacy aliases from the <code style="font-family:var(--ct-font-mono);font-size:13px">:root</code>.</li>
+    </ol>
+
+    <div style="margin-top:24px" class="ds-callout">
+      <b>One rule for Claude Code:</b> never hard-code a color, font-family, radius, or shadow. If a value is needed and there's no token for it, add a token first.
+    </div>
+  </section>
+
+</div>
+</body>
+</html>
