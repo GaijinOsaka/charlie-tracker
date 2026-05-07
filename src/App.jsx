@@ -190,6 +190,7 @@ function App() {
   const [categories, setCategories] = useState([]);
   const [categoryFilter, setCategoryFilter] = useState("all");
   const lastLoadedAt = useRef(null);
+  const loadRetryTimer = useRef(null);
 
   async function loadProfiles() {
     try {
@@ -417,6 +418,8 @@ function App() {
       document.removeEventListener("visibilitychange", handleVisibilityChange);
       window.removeEventListener("online", handleOnline);
       clearTimeout(retryTimeout);
+      clearTimeout(loadRetryTimer.current);
+      loadRetryTimer.current = null;
       cleanupChannel();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -483,9 +486,21 @@ function App() {
 
       setMessages(annotated);
       lastLoadedAt.current = Date.now();
+      if (loadRetryTimer.current) {
+        clearTimeout(loadRetryTimer.current);
+        loadRetryTimer.current = null;
+      }
     } catch (error) {
-      setError(error.message);
       console.error("Error loading messages:", error);
+      if (!lastLoadedAt.current && !loadRetryTimer.current) {
+        // First-ever load failed (e.g. mobile waking up) — retry once after 4s
+        loadRetryTimer.current = setTimeout(() => {
+          loadRetryTimer.current = null;
+          loadMessages();
+        }, 4000);
+      } else {
+        setError(error.message);
+      }
     } finally {
       setLoading(false);
     }
