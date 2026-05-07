@@ -191,6 +191,7 @@ function App() {
   const [categoryFilter, setCategoryFilter] = useState("all");
   const lastLoadedAt = useRef(null);
   const loadRetryTimer = useRef(null);
+  const loadRetryCount = useRef(0);
 
   async function loadProfiles() {
     try {
@@ -220,10 +221,16 @@ function App() {
   // Load initial data when user is available
   useEffect(() => {
     if (!user) return;
+    loadRetryCount.current = 0;
     loadMessages();
     loadEvents();
     loadProfiles();
     loadCategories();
+    return () => {
+      clearTimeout(loadRetryTimer.current);
+      loadRetryTimer.current = null;
+      loadRetryCount.current = 0;
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
 
@@ -418,8 +425,6 @@ function App() {
       document.removeEventListener("visibilitychange", handleVisibilityChange);
       window.removeEventListener("online", handleOnline);
       clearTimeout(retryTimeout);
-      clearTimeout(loadRetryTimer.current);
-      loadRetryTimer.current = null;
       cleanupChannel();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -431,6 +436,7 @@ function App() {
   }, [statusFilter, sourceFilter, actionFilter, searchQuery, categoryFilter]);
 
   async function loadMessages() {
+    let retrying = false;
     try {
       setLoading(true);
       const { data, error } = await supabase
@@ -486,23 +492,36 @@ function App() {
 
       setMessages(annotated);
       lastLoadedAt.current = Date.now();
+      loadRetryCount.current = 0;
       if (loadRetryTimer.current) {
         clearTimeout(loadRetryTimer.current);
         loadRetryTimer.current = null;
       }
     } catch (error) {
       console.error("Error loading messages:", error);
-      if (!lastLoadedAt.current && !loadRetryTimer.current) {
-        // First-ever load failed (e.g. mobile waking up) — retry once after 4s
-        loadRetryTimer.current = setTimeout(() => {
-          loadRetryTimer.current = null;
-          loadMessages();
-        }, 4000);
-      } else {
-        setError(error.message);
+      const hadPreviousData = !!lastLoadedAt.current;
+      if (!hadPreviousData && !loadRetryTimer.current) {
+        // First load failed — retry up to 3 times (2s, 5s, 10s) and keep skeleton visible
+        const MAX_RETRIES = 3;
+        const delays = [2000, 5000, 10000];
+        if (loadRetryCount.current < MAX_RETRIES) {
+          const delay = delays[loadRetryCount.current];
+          loadRetryCount.current += 1;
+          retrying = true;
+          loadRetryTimer.current = setTimeout(() => {
+            loadRetryTimer.current = null;
+            loadMessages();
+          }, delay);
+        } else {
+          // All retries exhausted with no data
+          setError("Couldn't load messages. Pull down to retry.");
+        }
       }
+      // If hadPreviousData: silently fail — old messages remain visible
     } finally {
-      setLoading(false);
+      if (!retrying) {
+        setLoading(false);
+      }
     }
   }
 
