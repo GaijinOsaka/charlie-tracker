@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
 import { ACTION_STATUS } from "./lib/constants";
 import {
   supabase,
@@ -187,6 +187,9 @@ function App() {
   const [actionModalOpen, setActionModalOpen] = useState(false);
   const [actionModalMessage, setActionModalMessage] = useState(null);
   const [actionModalType, setActionModalType] = useState(null);
+  const [categories, setCategories] = useState([]);
+  const [categoryFilter, setCategoryFilter] = useState("all");
+  const lastLoadedAt = useRef(null);
 
   async function loadProfiles() {
     try {
@@ -201,12 +204,25 @@ function App() {
     }
   }
 
+  async function loadCategories() {
+    try {
+      const { data } = await supabase
+        .from("categories")
+        .select("id, name, color")
+        .order("name");
+      setCategories(data || []);
+    } catch (err) {
+      console.error("Error loading categories:", err);
+    }
+  }
+
   // Load initial data when user is available
   useEffect(() => {
     if (!user) return;
     loadMessages();
     loadEvents();
     loadProfiles();
+    loadCategories();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
 
@@ -368,11 +384,18 @@ function App() {
     }
 
     // Reload data + reconnect when app comes back to foreground or network recovers
-    function handleResume() {
+    const STALE_THRESHOLD_MS = 5 * 60 * 1000; // 5 minutes
+    function handleResume(forceReload = false) {
       if (import.meta.env.DEV)
         console.log("[Realtime] Resuming — refreshing data and reconnecting");
-      loadMessages();
-      loadEvents();
+      const isStale =
+        forceReload ||
+        !lastLoadedAt.current ||
+        Date.now() - lastLoadedAt.current > STALE_THRESHOLD_MS;
+      if (isStale) {
+        loadMessages();
+        loadEvents();
+      }
       setupSubscription();
     }
 
@@ -383,7 +406,7 @@ function App() {
     }
 
     function handleOnline() {
-      handleResume();
+      handleResume(true); // network restored → always reload
     }
 
     setupSubscription();
@@ -402,7 +425,7 @@ function App() {
   // Reset page when filters change
   useEffect(() => {
     setCurrentPage(1);
-  }, [statusFilter, sourceFilter, actionFilter, searchQuery]);
+  }, [statusFilter, sourceFilter, actionFilter, searchQuery, categoryFilter]);
 
   async function loadMessages() {
     try {
@@ -420,6 +443,7 @@ function App() {
           sender_email,
           received_at,
           category_id,
+          categories(id, name, color),
           action_status,
           actioned_at,
           actioned_by,
@@ -433,7 +457,7 @@ function App() {
         `,
         )
         .order("received_at", { ascending: false })
-        .limit(100);
+        .limit(500);
 
       if (error) throw error;
 
@@ -458,6 +482,7 @@ function App() {
         }));
 
       setMessages(annotated);
+      lastLoadedAt.current = Date.now();
     } catch (error) {
       setError(error.message);
       console.error("Error loading messages:", error);
@@ -841,8 +866,12 @@ function App() {
       );
     }
 
+    if (categoryFilter !== "all") {
+      filtered = filtered.filter((m) => m.category_id === categoryFilter);
+    }
+
     return filtered;
-  }, [messages, statusFilter, sourceFilter, actionFilter, searchQuery]);
+  }, [messages, statusFilter, sourceFilter, actionFilter, searchQuery, categoryFilter]);
 
   async function downloadAttachment(filePath, filename) {
     try {
@@ -1333,6 +1362,23 @@ function App() {
                   <option value="actioned">Actioned</option>
                 </select>
               </div>
+
+              {categories.length > 0 && (
+                <div className="filter-group">
+                  <label>Category</label>
+                  <select
+                    value={categoryFilter}
+                    onChange={(e) => setCategoryFilter(e.target.value)}
+                  >
+                    <option value="all">All Categories</option>
+                    {categories.map((cat) => (
+                      <option key={cat.id} value={cat.id}>
+                        {cat.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
             </div>
 
             {(() => {
@@ -1404,6 +1450,14 @@ function App() {
                           <span className={`source-badge source-${msg.source}`}>
                             {(msg.source || "arbor").toUpperCase()}
                           </span>
+                          {msg.categories && (
+                            <span
+                              className="category-badge"
+                              style={{ backgroundColor: msg.categories.color }}
+                            >
+                              {msg.categories.name}
+                            </span>
+                          )}
                           <ActionButton
                             message={msg}
                             onStatusChange={toggleActionStatus}
