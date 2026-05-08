@@ -500,22 +500,27 @@ function App() {
     } catch (error) {
       console.error("Error loading messages:", error);
       const hadPreviousData = !!lastLoadedAt.current;
-      if (!hadPreviousData && !loadRetryTimer.current) {
-        // First load failed — retry up to 3 times (2s, 5s, 10s) and keep skeleton visible
-        const MAX_RETRIES = 3;
-        const delays = [2000, 5000, 10000];
-        if (loadRetryCount.current < MAX_RETRIES) {
-          const delay = delays[loadRetryCount.current];
-          loadRetryCount.current += 1;
-          retrying = true;
-          loadRetryTimer.current = setTimeout(() => {
-            loadRetryTimer.current = null;
-            loadMessages();
-          }, delay);
-        } else {
-          // All retries exhausted with no data
-          setError("Couldn't load messages. Pull down to retry.");
+      if (!hadPreviousData) {
+        if (!loadRetryTimer.current) {
+          // First load failed — retry up to 3 times (2s, 5s, 10s)
+          const MAX_RETRIES = 3;
+          const delays = [2000, 5000, 10000];
+          if (loadRetryCount.current < MAX_RETRIES) {
+            const delay = delays[loadRetryCount.current];
+            loadRetryCount.current += 1;
+            loadRetryTimer.current = setTimeout(() => {
+              loadRetryTimer.current = null;
+              loadMessages();
+            }, delay);
+          } else {
+            // All retries exhausted with no data
+            setError("Couldn't load messages. Pull down to retry.");
+          }
         }
+        // Keep skeleton visible as long as any retry is pending —
+        // a concurrent call may have already set the timer, so check the ref
+        // rather than assuming this call was the one that set it.
+        retrying = !!loadRetryTimer.current;
       }
       // If hadPreviousData: silently fail — old messages remain visible
     } finally {
