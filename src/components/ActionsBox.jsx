@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { ACTION_STATUS } from "../lib/constants";
 import "./ActionsBox.css";
 
@@ -13,13 +13,7 @@ export function ActionsBox({
   showRecentlyActioned = false,
 }) {
   const [expandedId, setExpandedId] = useState(null);
-  const [pendingCollapsed, setPendingCollapsed] = useState(false);
   const [actionedCollapsed, setActionedCollapsed] = useState(true);
-
-  // Auto-expand pending section whenever a new item is added
-  useEffect(() => {
-    if (pendingMessages.length > 0) setPendingCollapsed(false);
-  }, [pendingMessages.length]);
 
   const handleStatusChange = onStatusChange || (() => {});
   const handleShowActionModal = onShowActionModal || (() => {});
@@ -182,22 +176,12 @@ export function ActionsBox({
     <div className="actions-box">
       {pendingMessages.length > 0 && (
         <div className="actions-section">
-          <div
-            className={`actions-section-title pending${pendingCollapsed ? " collapsed" : ""}`}
-            onClick={() => setPendingCollapsed(!pendingCollapsed)}
-          >
-            <span
-              className={`actions-chevron ${pendingCollapsed ? "" : "actions-chevron-open"}`}
-            >
-              ▸
-            </span>
+          <div className="actions-section-title pending">
             Action Required ({pendingMessages.length})
           </div>
-          {!pendingCollapsed && (
-            <div className="actions-list">
-              {pendingMessages.map((msg) => renderCompactRow(msg, "pending"))}
-            </div>
-          )}
+          <div className="actions-list">
+            {pendingMessages.map((msg) => renderCompactRow(msg, "pending"))}
+          </div>
         </div>
       )}
 

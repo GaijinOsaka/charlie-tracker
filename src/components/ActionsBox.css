@@ -48,14 +48,11 @@
   background: var(--ct-surface-warn);
   color: var(--ct-warn-ink);
   border-bottom: 1px solid var(--ct-line-soft);
-}
-
-.actions-section-title.pending.collapsed {
-  border-bottom: none;
+  cursor: default;
 }
 
 .actions-section-title.pending:hover {
-  background: var(--ct-accent-soft);
+  background: var(--ct-surface-warn);
 }
 
 .actions-section-title.actioned {
