@@ -5,8 +5,10 @@ import "./ActionsBox.css";
 export function ActionsBox({
   pendingMessages,
   actionedMessages,
+  pendingEvents = [],
   profiles,
   onMessageClick,
+  onEventClick,
   onStatusChange,
   onShowActionModal,
   onAttachmentClick,
@@ -169,13 +171,58 @@ export function ActionsBox({
     </div>
   );
 
-  if (pendingMessages.length === 0 && actionedMessages.length === 0) {
+  const renderEventRow = (evt) => (
+    <div
+      key={evt.id}
+      className="action-row action-row-pending"
+      onClick={() => onEventClick && onEventClick(evt)}
+    >
+      <div className="action-row-header">
+        <div className="action-row-status-dot" />
+        <div className="action-row-info">
+          <div className="action-row-subject">{evt.title}</div>
+          <div className="action-row-meta">
+            <span className="action-row-source">Calendar</span>
+            <span className="action-row-date">
+              {new Date(evt.event_date + "T00:00:00").toLocaleDateString()}
+              {evt.event_time && ` · ${evt.event_time.slice(0, 5)}`}
+            </span>
+          </div>
+          {evt.action_detail && (
+            <div className="action-notes-chain">
+              <div className="action-note-entry action-note-required">
+                <span className="action-note-type-dot" />
+                <div className="action-note-body">
+                  <span className="action-note-text">{evt.action_detail}</span>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+        <div className="action-row-buttons">
+          <button
+            className="action-row-btn action-row-btn-view"
+            onClick={(e) => {
+              e.stopPropagation();
+              onEventClick && onEventClick(evt);
+            }}
+          >
+            View
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+
+  const totalPending = pendingMessages.length + pendingEvents.length;
+
+  if (totalPending === 0 && actionedMessages.length === 0) {
     return null;
   }
 
   return (
     <div className="actions-box">
-      {pendingMessages.length > 0 && (
+      {totalPending > 0 && (
         <div className="actions-section">
           <div
             className={`actions-section-title pending${pendingCollapsed ? " collapsed" : ""}`}
@@ -186,11 +233,12 @@ export function ActionsBox({
             >
               ▸
             </span>
-            Action Required ({pendingMessages.length})
+            Action Required ({totalPending})
           </div>
           {!pendingCollapsed && (
             <div className="actions-list">
               {pendingMessages.map((msg) => renderCompactRow(msg, "pending"))}
+              {pendingEvents.map((evt) => renderEventRow(evt))}
             </div>
           )}
         </div>

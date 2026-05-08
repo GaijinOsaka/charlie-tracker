@@ -1458,11 +1458,18 @@ function App() {
             actionedMessages={messages
               .filter((m) => m.action_status === ACTION_STATUS.ACTIONED)
               .sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at))}
+            pendingEvents={events
+              .filter((e) => e.action_required)
+              .sort((a, b) => new Date(a.event_date) - new Date(b.event_date))}
             profiles={profiles}
             onMessageClick={(msgId) => {
               setExpandedMessages(new Set([...expandedMessages, msgId]));
               setActiveTab("messages");
               navigateToMessage(msgId);
+            }}
+            onEventClick={(evt) => {
+              setCalendarFocusDate(evt.event_date);
+              setActiveTab("calendar");
             }}
             onStatusChange={toggleActionStatus}
             onShowActionModal={handleShowActionModal}
