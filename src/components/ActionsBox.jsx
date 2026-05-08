@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { ACTION_STATUS } from "../lib/constants";
 import "./ActionsBox.css";
 
@@ -13,13 +13,8 @@ export function ActionsBox({
   showRecentlyActioned = false,
 }) {
   const [expandedId, setExpandedId] = useState(null);
-  const [pendingCollapsed, setPendingCollapsed] = useState(false);
+  const [pendingCollapsed, setPendingCollapsed] = useState(true);
   const [actionedCollapsed, setActionedCollapsed] = useState(true);
-
-  // Auto-expand pending section whenever a new item is added
-  useEffect(() => {
-    if (pendingMessages.length > 0) setPendingCollapsed(false);
-  }, [pendingMessages.length]);
 
   const handleStatusChange = onStatusChange || (() => {});
   const handleShowActionModal = onShowActionModal || (() => {});

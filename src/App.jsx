@@ -168,6 +168,7 @@ function App() {
   } = useAuth();
   const [activeTab, setActiveTab] = useState("messages");
   const [calendarFocusDate, setCalendarFocusDate] = useState(null);
+  const [calendarActionsCollapsed, setCalendarActionsCollapsed] = useState(true);
   const [messages, setMessages] = useState([]);
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -198,6 +199,7 @@ function App() {
   const [noteModalOpen, setNoteModalOpen] = useState(false);
   const [editingNote, setEditingNote] = useState(null);
   const [promoteNote, setPromoteNote] = useState(null);
+  const [editingNoteEvent, setEditingNoteEvent] = useState(null);
   const lastLoadedAt = useRef(null);
   const loadRetryTimer = useRef(null);
   const loadRetryCount = useRef(0);
@@ -717,8 +719,13 @@ function App() {
   }
 
   function handleEditNote(note) {
-    setEditingNote(note);
-    setNoteModalOpen(true);
+    if (note.event_id) {
+      const linkedEvent = events.find((e) => e.id === note.event_id) || { id: note.event_id };
+      setEditingNoteEvent({ note, event: linkedEvent });
+    } else {
+      setEditingNote(note);
+      setNoteModalOpen(true);
+    }
   }
 
   async function handleDeleteNote(noteId) {
@@ -1445,23 +1452,78 @@ function App() {
         {activeTab === "documents" && <DocumentBrowser />}
 
         {activeTab === "actions" && (
-          <ActionsBox
-            pendingMessages={messages
-              .filter((m) => m.action_status === ACTION_STATUS.REQUIRED)
-              .sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at))}
-            actionedMessages={messages
-              .filter((m) => m.action_status === ACTION_STATUS.ACTIONED)
-              .sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at))}
-            profiles={profiles}
-            onMessageClick={(msgId) => {
-              setExpandedMessages(new Set([...expandedMessages, msgId]));
-              setActiveTab("messages");
-              navigateToMessage(msgId);
-            }}
-            onStatusChange={toggleActionStatus}
-            onShowActionModal={handleShowActionModal}
-            onAttachmentClick={openAttachmentViewer}
-          />
+          <>
+            <ActionsBox
+              pendingMessages={messages
+                .filter((m) => m.action_status === ACTION_STATUS.REQUIRED)
+                .sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at))}
+              actionedMessages={messages
+                .filter((m) => m.action_status === ACTION_STATUS.ACTIONED)
+                .sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at))}
+              profiles={profiles}
+              onMessageClick={(msgId) => {
+                setExpandedMessages(new Set([...expandedMessages, msgId]));
+                setActiveTab("messages");
+                navigateToMessage(msgId);
+              }}
+              onStatusChange={toggleActionStatus}
+              onShowActionModal={handleShowActionModal}
+              onAttachmentClick={openAttachmentViewer}
+            />
+            {events.filter((e) => e.action_required).length > 0 && (
+              <div className="actions-box">
+                <div className="actions-section">
+                  <div
+                    className={`actions-section-title pending${calendarActionsCollapsed ? " collapsed" : ""}`}
+                    onClick={() => setCalendarActionsCollapsed(!calendarActionsCollapsed)}
+                  >
+                    <span className={`actions-chevron${calendarActionsCollapsed ? "" : " actions-chevron-open"}`}>▸</span>
+                    Calendar Actions ({events.filter((e) => e.action_required).length})
+                  </div>
+                  {!calendarActionsCollapsed && (
+                    <div className="actions-list">
+                      {events
+                        .filter((e) => e.action_required)
+                        .sort((a, b) => new Date(a.event_date) - new Date(b.event_date))
+                        .map((evt) => (
+                          <div
+                            key={evt.id}
+                            className="action-row action-row-pending"
+                            onClick={() => {
+                              setCalendarFocusDate(evt.event_date);
+                              setActiveTab("calendar");
+                            }}
+                          >
+                            <div className="action-row-header">
+                              <div className="action-row-status-dot" />
+                              <div className="action-row-info">
+                                <div className="action-row-subject">{evt.title}</div>
+                                <div className="action-row-meta">
+                                  <span className="action-row-source">Calendar</span>
+                                  <span className="action-row-date">
+                                    {new Date(evt.event_date + "T00:00:00").toLocaleDateString()}
+                                  </span>
+                                </div>
+                                {evt.action_detail && (
+                                  <div className="action-notes-chain" style={{ marginTop: "6px" }}>
+                                    <div className="action-note-entry action-note-required">
+                                      <span className="action-note-type-dot" />
+                                      <div className="action-note-body">
+                                        <span className="action-note-text">{evt.action_detail}</span>
+                                      </div>
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+          </>
         )}
 
         {activeTab === "notes" && (
@@ -1846,6 +1908,36 @@ function App() {
             ? { title: promoteNote.title, description: promoteNote.body }
             : null
         }
+      />
+
+      <EventModal
+        isOpen={!!editingNoteEvent}
+        onClose={() => setEditingNoteEvent(null)}
+        editingEvent={editingNoteEvent?.event}
+        onSubmit={async (formData) => {
+          try {
+            await updateManualEvent(editingNoteEvent.event.id, formData);
+            await loadEvents();
+            const { error } = await supabase
+              .from("notes")
+              .update({ title: formData.title, body: formData.description || null })
+              .eq("id", editingNoteEvent.note.id);
+            if (!error) {
+              setNotes((prev) =>
+                prev.map((n) =>
+                  n.id === editingNoteEvent.note.id
+                    ? { ...n, title: formData.title, body: formData.description || null }
+                    : n,
+                ),
+              );
+            }
+            setEditingNoteEvent(null);
+            addToast("Note and event updated", "success");
+          } catch (err) {
+            addToast("Failed to update: " + err.message, "error");
+            throw err;
+          }
+        }}
       />
 
       {import.meta.env.DEV && <Agentation />}
