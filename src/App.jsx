@@ -678,8 +678,8 @@ function App() {
 
   async function handleCreateEvent(formData) {
     try {
-      const newEvent = await createManualEvent(formData);
-      setEvents([...events, newEvent]);
+      await createManualEvent(formData);
+      await loadEvents();
       addToast("Event created successfully", "success");
     } catch (err) {
       console.error("Error creating event:", err);
@@ -689,8 +689,8 @@ function App() {
 
   async function handleUpdateEvent(eventId, formData) {
     try {
-      const updatedEvent = await updateManualEvent(eventId, formData);
-      setEvents(events.map((e) => (e.id === eventId ? updatedEvent : e)));
+      await updateManualEvent(eventId, formData);
+      await loadEvents();
       addToast("Event updated successfully", "success");
     } catch (err) {
       console.error("Error updating event:", err);
@@ -740,7 +740,6 @@ function App() {
   async function handlePromoteNoteSave(formData) {
     try {
       const newEvent = await createManualEvent(formData);
-      setEvents((prev) => [...prev, newEvent]);
       const { error } = await supabase
         .from("notes")
         .update({ event_id: newEvent.id })
@@ -752,6 +751,7 @@ function App() {
         ),
       );
       setPromoteNote(null);
+      await loadEvents();
       addToast("Event created and note linked", "success");
     } catch (err) {
       console.error("Error promoting note:", err);
