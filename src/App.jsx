@@ -1579,10 +1579,17 @@ function App() {
                 <ActionsBox
                   pendingMessages={actionsPending}
                   actionedMessages={actionsCompleted}
+                  pendingEvents={events
+                    .filter((e) => e.action_required && notes.some((n) => n.event_id === e.id))
+                    .sort((a, b) => new Date(a.event_date) - new Date(b.event_date))}
                   profiles={profiles}
                   showRecentlyActioned={true}
                   onMessageClick={(msgId) => {
                     setExpandedMessages(new Set([...expandedMessages, msgId]));
+                  }}
+                  onEventClick={(evt) => {
+                    setCalendarFocusDate(evt.event_date);
+                    setActiveTab("calendar");
                   }}
                   onStatusChange={toggleActionStatus}
                   onShowActionModal={handleShowActionModal}
