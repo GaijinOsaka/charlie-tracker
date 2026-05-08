@@ -118,7 +118,7 @@ export default function NoteModal({ isOpen, note, onSave, onCancel }) {
                     id="note-event-date"
                     type="date"
                     value={eventDate}
-                    onChange={(e) => { setEventDate(e.target.value); setError(""); }}
+                    onChange={(e) => { setEventDate(e.target.value); setError(""); if (!eventEndDate) setEventEndDate(e.target.value); }}
                     required
                   />
                 </div>
