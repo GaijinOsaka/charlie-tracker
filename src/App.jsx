@@ -167,6 +167,7 @@ function App() {
     signOut,
   } = useAuth();
   const [activeTab, setActiveTab] = useState("messages");
+  const [calendarFocusDate, setCalendarFocusDate] = useState(null);
   const [messages, setMessages] = useState([]);
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -754,6 +755,8 @@ function App() {
       );
       setPromoteNote(null);
       await loadEvents();
+      setCalendarFocusDate(newEvent.event_date);
+      setActiveTab("calendar");
       addToast("Event created and note linked", "success");
     } catch (err) {
       console.error("Error promoting note:", err);
@@ -1435,6 +1438,7 @@ function App() {
             onDeleteEvent={handleDeleteEvent}
             currentUserId={user?.id}
             profiles={profiles}
+            initialDate={calendarFocusDate}
           />
         )}
 

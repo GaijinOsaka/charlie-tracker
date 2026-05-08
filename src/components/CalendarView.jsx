@@ -27,11 +27,13 @@ function CalendarView({
   onDeleteEvent,
   currentUserId,
   profiles,
+  initialDate,
 }) {
   const today = new Date();
   const todayStr = today.toISOString().split("T")[0];
-  const [viewYear, setViewYear] = useState(today.getFullYear());
-  const [viewMonth, setViewMonth] = useState(today.getMonth());
+  const focusDate = initialDate ? new Date(initialDate + "T00:00:00") : today;
+  const [viewYear, setViewYear] = useState(focusDate.getFullYear());
+  const [viewMonth, setViewMonth] = useState(focusDate.getMonth());
   const [selectedDate, setSelectedDate] = useState(null);
   const [expandedCalEvent, setExpandedCalEvent] = useState(null);
   const [showEventModal, setShowEventModal] = useState(false);
