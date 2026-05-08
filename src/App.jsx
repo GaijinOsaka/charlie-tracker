@@ -1829,23 +1829,60 @@ function App() {
         isOpen={noteModalOpen}
         note={editingNote}
         onSave={async (noteData) => {
+          const { addToCalendar, eventDate, eventTime, eventEndTime, actionRequired, actionDetail, ...noteFields } = noteData;
           if (editingNote) {
             const { data, error } = await supabase
               .from("notes")
-              .update(noteData)
+              .update(noteFields)
               .eq("id", editingNote.id)
               .select()
               .single();
             if (error) throw error;
-            setNotes((prev) => prev.map((n) => (n.id === editingNote.id ? data : n)));
+            let saved = data;
+            if (addToCalendar) {
+              const newEvent = await createManualEvent({
+                title: noteFields.title,
+                event_date: eventDate,
+                event_time: eventTime,
+                event_end_time: eventEndTime,
+                description: noteFields.body,
+                action_required: actionRequired,
+                action_detail: actionDetail,
+              });
+              const { error: linkErr } = await supabase
+                .from("notes")
+                .update({ event_id: newEvent.id })
+                .eq("id", editingNote.id);
+              if (!linkErr) saved = { ...saved, event_id: newEvent.id };
+              await loadEvents();
+            }
+            setNotes((prev) => prev.map((n) => (n.id === editingNote.id ? saved : n)));
           } else {
             const { data, error } = await supabase
               .from("notes")
-              .insert({ ...noteData, author_id: user.id })
+              .insert({ ...noteFields, author_id: user.id })
               .select()
               .single();
             if (error) throw error;
-            setNotes((prev) => [data, ...prev]);
+            let saved = data;
+            if (addToCalendar) {
+              const newEvent = await createManualEvent({
+                title: noteFields.title,
+                event_date: eventDate,
+                event_time: eventTime,
+                event_end_time: eventEndTime,
+                description: noteFields.body,
+                action_required: actionRequired,
+                action_detail: actionDetail,
+              });
+              const { error: linkErr } = await supabase
+                .from("notes")
+                .update({ event_id: newEvent.id })
+                .eq("id", data.id);
+              if (!linkErr) saved = { ...saved, event_id: newEvent.id };
+              await loadEvents();
+            }
+            setNotes((prev) => [saved, ...prev]);
           }
           setNoteModalOpen(false);
           setEditingNote(null);
