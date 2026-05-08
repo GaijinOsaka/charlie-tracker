@@ -6,6 +6,7 @@ export default function NoteModal({ isOpen, note, onSave, onCancel }) {
   const [body, setBody] = useState("");
   const [addToCalendar, setAddToCalendar] = useState(false);
   const [eventDate, setEventDate] = useState("");
+  const [eventEndDate, setEventEndDate] = useState("");
   const [eventTime, setEventTime] = useState("");
   const [eventEndTime, setEventEndTime] = useState("");
   const [actionRequired, setActionRequired] = useState(false);
@@ -20,6 +21,7 @@ export default function NoteModal({ isOpen, note, onSave, onCancel }) {
       setBody(note?.body || "");
       setAddToCalendar(false);
       setEventDate("");
+      setEventEndDate("");
       setEventTime("");
       setEventEndTime("");
       setActionRequired(false);
@@ -47,6 +49,7 @@ export default function NoteModal({ isOpen, note, onSave, onCancel }) {
         body: body.trim() || null,
         addToCalendar,
         eventDate,
+        eventEndDate: eventEndDate || null,
         eventTime: eventTime || null,
         eventEndTime: eventEndTime || null,
         actionRequired,
@@ -110,13 +113,22 @@ export default function NoteModal({ isOpen, note, onSave, onCancel }) {
             <>
               <div className="form-row">
                 <div className="form-group">
-                  <label htmlFor="note-event-date">Date *</label>
+                  <label htmlFor="note-event-date">Start Date *</label>
                   <input
                     id="note-event-date"
                     type="date"
                     value={eventDate}
                     onChange={(e) => { setEventDate(e.target.value); setError(""); }}
                     required
+                  />
+                </div>
+                <div className="form-group">
+                  <label htmlFor="note-event-end-date">End Date <span className="optional">(optional)</span></label>
+                  <input
+                    id="note-event-end-date"
+                    type="date"
+                    value={eventEndDate}
+                    onChange={(e) => setEventEndDate(e.target.value)}
                   />
                 </div>
               </div>

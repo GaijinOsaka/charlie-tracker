@@ -1829,7 +1829,7 @@ function App() {
         isOpen={noteModalOpen}
         note={editingNote}
         onSave={async (noteData) => {
-          const { addToCalendar, eventDate, eventTime, eventEndTime, actionRequired, actionDetail, ...noteFields } = noteData;
+          const { addToCalendar, eventDate, eventEndDate, eventTime, eventEndTime, actionRequired, actionDetail, ...noteFields } = noteData;
           if (editingNote) {
             const { data, error } = await supabase
               .from("notes")
@@ -1843,6 +1843,7 @@ function App() {
               const newEvent = await createManualEvent({
                 title: noteFields.title,
                 event_date: eventDate,
+                event_end_date: eventEndDate,
                 event_time: eventTime,
                 event_end_time: eventEndTime,
                 description: noteFields.body,
@@ -1869,6 +1870,7 @@ function App() {
               const newEvent = await createManualEvent({
                 title: noteFields.title,
                 event_date: eventDate,
+                event_end_date: eventEndDate,
                 event_time: eventTime,
                 event_end_time: eventEndTime,
                 description: noteFields.body,
