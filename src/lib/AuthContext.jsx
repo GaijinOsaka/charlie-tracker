@@ -12,48 +12,58 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     let mounted = true;
 
+    // Safety net: if auth hasn't resolved in 8s (e.g. token refresh hangs on
+    // mobile with no network), force loading off so the UI isn't stuck forever.
+    const fallbackTimer = setTimeout(() => {
+      if (mounted) {
+        console.warn("[Auth] Timeout waiting for auth state — forcing resolve");
+        setLoading(false);
+      }
+    }, 8000);
+
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (mounted) {
-        setUser(session?.user ?? null);
+    } = supabase.auth.onAuthStateChange((event, session) => {
+      if (!mounted) return;
+      clearTimeout(fallbackTimer);
 
-        // User clicked a password recovery or invite link
-        if (event === "PASSWORD_RECOVERY") {
-          setNeedsPasswordSet(true);
-          setLoading(false);
-          return;
-        }
+      setUser(session?.user ?? null);
 
-        if (session?.user) {
-          try {
-            await loadProfile(session.user.id);
-            setLoading(false);
-          } catch (err) {
-            console.warn("Profile load error:", err);
-            setLoading(false);
-          }
-        } else {
-          setProfile(null);
-          setLoading(false);
-        }
+      // User clicked a password recovery or invite link
+      if (event === "PASSWORD_RECOVERY") {
+        setNeedsPasswordSet(true);
+        setLoading(false);
+        return;
+      }
+
+      // Unblock the UI immediately — don't await the profile fetch
+      setLoading(false);
+
+      if (session?.user) {
+        loadProfile(session.user.id);
+      } else {
+        setProfile(null);
       }
     });
 
     return () => {
       mounted = false;
+      clearTimeout(fallbackTimer);
       subscription.unsubscribe();
     };
   }, []);
 
   async function loadProfile(userId) {
-    const { data } = await supabase
-      .from("profiles")
-      .select("*")
-      .eq("id", userId)
-      .single();
-    setProfile(data);
-    setLoading(false);
+    try {
+      const { data } = await supabase
+        .from("profiles")
+        .select("*")
+        .eq("id", userId)
+        .single();
+      setProfile(data);
+    } catch (err) {
+      console.warn("Profile load error:", err);
+    }
   }
 
   async function signIn(email, password) {
