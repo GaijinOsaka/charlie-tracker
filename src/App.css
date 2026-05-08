@@ -1667,7 +1667,7 @@ header h1 {
 
 .cal-grid {
   display: grid;
-  grid-template-columns: repeat(7, 1fr);
+  grid-template-columns: repeat(7, minmax(0, 1fr));
   gap: 2px;
 }
 
@@ -1688,6 +1688,7 @@ header h1 {
   cursor: pointer;
   transition: all 0.15s;
   position: relative;
+  overflow: hidden;
 }
 
 .cal-cell:hover {
