@@ -231,7 +231,7 @@ function App() {
       setNotesLoading(true);
       const { data, error } = await supabase
         .from("notes")
-        .select("id, title, body, author_id, event_id, created_at, updated_at")
+        .select("id, title, body, author_id, event_id, created_at, updated_at, events(id, event_date, title)")
         .order("created_at", { ascending: false });
       if (error) throw error;
       setNotes(data || []);
@@ -747,7 +747,9 @@ function App() {
       if (error) throw error;
       setNotes((prev) =>
         prev.map((n) =>
-          n.id === promoteNote.id ? { ...n, event_id: newEvent.id } : n,
+          n.id === promoteNote.id
+            ? { ...n, event_id: newEvent.id, events: { id: newEvent.id, event_date: newEvent.event_date, title: newEvent.title } }
+            : n,
         ),
       );
       setPromoteNote(null);
@@ -885,7 +887,10 @@ function App() {
       const noteWithMetadata = note
         ? `${note} — ${userName} • ${formattedDate} ${formattedTime}`
         : "";
-      toggleActionStatus(actionModalMessage, actionModalType, noteWithMetadata);
+      await toggleActionStatus(actionModalMessage, actionModalType, noteWithMetadata);
+      if (actionModalType === ACTION_STATUS.REQUIRED) {
+        addToast("Moved to Action Required — check the Actions tab", "info");
+      }
     }
     setActionModalOpen(false);
   }

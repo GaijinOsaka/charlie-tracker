@@ -16,6 +16,14 @@ export default function NotesTab({
     });
   }
 
+  function formatEventDate(dateStr) {
+    return new Date(dateStr + "T00:00:00").toLocaleDateString("en-GB", {
+      day: "numeric",
+      month: "short",
+      year: "numeric",
+    });
+  }
+
   function truncate(text, max = 120) {
     if (!text) return "";
     return text.length > max ? text.slice(0, max) + "…" : text;
@@ -60,7 +68,9 @@ export default function NotesTab({
                       onClick={onNavigateToCalendar}
                       title="View in Calendar"
                     >
-                      In Calendar
+                      {note.events?.event_date
+                        ? formatEventDate(note.events.event_date)
+                        : "In Calendar"}
                     </button>
                   )}
                 </div>

@@ -128,6 +128,13 @@ function CalendarView({
         await onEditEvent(editingEvent.id, formData);
       } else {
         await onCreateEvent(formData);
+        // Navigate to the new event's date so it's immediately visible
+        if (formData.event_date) {
+          const [y, m] = formData.event_date.split("-").map(Number);
+          setViewYear(y);
+          setViewMonth(m - 1);
+          setSelectedDate(formData.event_date);
+        }
       }
       setShowEventModal(false);
       setEditingEvent(null);
