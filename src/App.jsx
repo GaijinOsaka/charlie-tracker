@@ -1459,7 +1459,7 @@ function App() {
               .filter((m) => m.action_status === ACTION_STATUS.ACTIONED)
               .sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at))}
             pendingEvents={events
-              .filter((e) => e.action_required)
+              .filter((e) => e.action_required && notes.some((n) => n.event_id === e.id))
               .sort((a, b) => new Date(a.event_date) - new Date(b.event_date))}
             profiles={profiles}
             onMessageClick={(msgId) => {
