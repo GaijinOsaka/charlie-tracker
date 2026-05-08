@@ -168,7 +168,6 @@ function App() {
   } = useAuth();
   const [activeTab, setActiveTab] = useState("messages");
   const [calendarFocusDate, setCalendarFocusDate] = useState(null);
-  const [calendarActionsCollapsed, setCalendarActionsCollapsed] = useState(true);
   const [messages, setMessages] = useState([]);
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -234,7 +233,7 @@ function App() {
       setNotesLoading(true);
       const { data, error } = await supabase
         .from("notes")
-        .select("id, title, body, author_id, event_id, created_at, updated_at, events(id, event_date, title)")
+        .select("id, title, body, author_id, event_id, created_at, updated_at, events!event_id(id, event_date, title)")
         .order("created_at", { ascending: false });
       if (error) throw error;
       setNotes(data || []);
@@ -1452,78 +1451,23 @@ function App() {
         {activeTab === "documents" && <DocumentBrowser />}
 
         {activeTab === "actions" && (
-          <>
-            <ActionsBox
-              pendingMessages={messages
-                .filter((m) => m.action_status === ACTION_STATUS.REQUIRED)
-                .sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at))}
-              actionedMessages={messages
-                .filter((m) => m.action_status === ACTION_STATUS.ACTIONED)
-                .sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at))}
-              profiles={profiles}
-              onMessageClick={(msgId) => {
-                setExpandedMessages(new Set([...expandedMessages, msgId]));
-                setActiveTab("messages");
-                navigateToMessage(msgId);
-              }}
-              onStatusChange={toggleActionStatus}
-              onShowActionModal={handleShowActionModal}
-              onAttachmentClick={openAttachmentViewer}
-            />
-            {events.filter((e) => e.action_required).length > 0 && (
-              <div className="actions-box">
-                <div className="actions-section">
-                  <div
-                    className={`actions-section-title pending${calendarActionsCollapsed ? " collapsed" : ""}`}
-                    onClick={() => setCalendarActionsCollapsed(!calendarActionsCollapsed)}
-                  >
-                    <span className={`actions-chevron${calendarActionsCollapsed ? "" : " actions-chevron-open"}`}>▸</span>
-                    Calendar Actions ({events.filter((e) => e.action_required).length})
-                  </div>
-                  {!calendarActionsCollapsed && (
-                    <div className="actions-list">
-                      {events
-                        .filter((e) => e.action_required)
-                        .sort((a, b) => new Date(a.event_date) - new Date(b.event_date))
-                        .map((evt) => (
-                          <div
-                            key={evt.id}
-                            className="action-row action-row-pending"
-                            onClick={() => {
-                              setCalendarFocusDate(evt.event_date);
-                              setActiveTab("calendar");
-                            }}
-                          >
-                            <div className="action-row-header">
-                              <div className="action-row-status-dot" />
-                              <div className="action-row-info">
-                                <div className="action-row-subject">{evt.title}</div>
-                                <div className="action-row-meta">
-                                  <span className="action-row-source">Calendar</span>
-                                  <span className="action-row-date">
-                                    {new Date(evt.event_date + "T00:00:00").toLocaleDateString()}
-                                  </span>
-                                </div>
-                                {evt.action_detail && (
-                                  <div className="action-notes-chain" style={{ marginTop: "6px" }}>
-                                    <div className="action-note-entry action-note-required">
-                                      <span className="action-note-type-dot" />
-                                      <div className="action-note-body">
-                                        <span className="action-note-text">{evt.action_detail}</span>
-                                      </div>
-                                    </div>
-                                  </div>
-                                )}
-                              </div>
-                            </div>
-                          </div>
-                        ))}
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
-          </>
+          <ActionsBox
+            pendingMessages={messages
+              .filter((m) => m.action_status === ACTION_STATUS.REQUIRED)
+              .sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at))}
+            actionedMessages={messages
+              .filter((m) => m.action_status === ACTION_STATUS.ACTIONED)
+              .sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at))}
+            profiles={profiles}
+            onMessageClick={(msgId) => {
+              setExpandedMessages(new Set([...expandedMessages, msgId]));
+              setActiveTab("messages");
+              navigateToMessage(msgId);
+            }}
+            onStatusChange={toggleActionStatus}
+            onShowActionModal={handleShowActionModal}
+            onAttachmentClick={openAttachmentViewer}
+          />
         )}
 
         {activeTab === "notes" && (

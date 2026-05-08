@@ -30,7 +30,7 @@ function CalendarView({
   initialDate,
 }) {
   const today = new Date();
-  const todayStr = today.toISOString().split("T")[0];
+  const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
   const focusDate = initialDate ? new Date(initialDate + "T00:00:00") : today;
   const [viewYear, setViewYear] = useState(focusDate.getFullYear());
   const [viewMonth, setViewMonth] = useState(focusDate.getMonth());
@@ -56,7 +56,7 @@ function CalendarView({
       d <= endDate;
       d.setDate(d.getDate() + 1)
     ) {
-      const dateStr = d.toISOString().split("T")[0];
+      const dateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
       if (!eventsByDate[dateStr]) eventsByDate[dateStr] = [];
       eventsByDate[dateStr].push(evt);
     }
