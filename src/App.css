@@ -3801,3 +3801,173 @@ header h1 {
 .message-action-indicator.actioned {
   background: var(--ct-success);
 }
+
+/* ── Notes Tab ─────────────────────────────── */
+
+.notes-tab {
+  padding: 0 0 2rem;
+}
+
+.notes-header {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 1rem;
+}
+
+.btn-add-note {
+  padding: 0.5rem 1.1rem;
+  background: var(--ct-accent);
+  color: #fff;
+  border: none;
+  border-radius: var(--ct-radius-md);
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.btn-add-note:hover {
+  opacity: 0.88;
+}
+
+.note-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.note-card {
+  background: var(--ct-surface);
+  border: 1px solid var(--ct-line);
+  border-radius: var(--ct-radius-xl);
+  padding: 1rem 1.1rem;
+}
+
+.note-card-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 0.35rem;
+}
+
+.note-title {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--ct-ink);
+  flex: 1;
+  min-width: 0;
+  word-break: break-word;
+}
+
+.note-calendar-badge {
+  flex-shrink: 0;
+  padding: 0.2rem 0.6rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+  border-radius: 999px;
+  border: none;
+  cursor: pointer;
+  background: var(--ct-success-soft);
+  color: var(--ct-success);
+}
+
+.note-calendar-badge:hover {
+  filter: brightness(0.95);
+}
+
+.note-body {
+  margin: 0 0 0.5rem;
+  font-size: 0.9rem;
+  color: var(--ct-muted);
+  line-height: 1.5;
+  word-break: break-word;
+}
+
+.note-meta {
+  display: flex;
+  gap: 0.5rem;
+  font-size: 0.8rem;
+  color: var(--ct-muted);
+  margin-bottom: 0.75rem;
+}
+
+.note-meta::before {
+  content: "";
+}
+
+.note-author {
+  font-weight: 500;
+}
+
+.note-actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.btn-note-edit,
+.btn-note-delete,
+.btn-note-promote {
+  padding: 0.3rem 0.75rem;
+  border-radius: var(--ct-radius-md);
+  font-size: 0.8rem;
+  cursor: pointer;
+  border: 1px solid var(--ct-line);
+  background: transparent;
+}
+
+.btn-note-edit {
+  color: var(--ct-accent);
+  border-color: var(--ct-accent);
+}
+
+.btn-note-edit:hover {
+  background: var(--ct-accent-soft);
+}
+
+.btn-note-delete {
+  color: var(--ct-danger);
+  border-color: var(--ct-danger);
+}
+
+.btn-note-delete:hover {
+  background: var(--ct-danger-soft);
+}
+
+.btn-note-promote {
+  color: var(--ct-success);
+  border-color: var(--ct-success);
+}
+
+.btn-note-promote:hover {
+  background: var(--ct-success-soft);
+}
+
+/* form-error used in NoteModal */
+.form-error {
+  color: var(--ct-danger, var(--danger));
+  font-size: 0.85rem;
+  margin: 0.25rem 0 0.75rem;
+}
+
+/* NoteModal — input style inherits from form-group but modal-card needs it too */
+.modal-card input[type="text"] {
+  width: 100%;
+  padding: 0.6rem 0.75rem;
+  border: 1px solid var(--ct-line);
+  border-radius: var(--ct-radius-md);
+  background: var(--ct-surface);
+  color: var(--ct-ink);
+  font-size: 0.95rem;
+  box-sizing: border-box;
+}
+
+.modal-card input[type="text"]:focus {
+  outline: none;
+  border-color: var(--ct-accent);
+  box-shadow: 0 0 0 3px var(--ct-accent-soft);
+}

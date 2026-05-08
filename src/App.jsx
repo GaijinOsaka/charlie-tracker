@@ -20,6 +20,9 @@ import SetPassword from "./components/SetPassword";
 import { ActionsBox } from "./components/ActionsBox";
 import { ActionButton } from "./components/ActionButton";
 import ActionModal from "./components/ActionModal";
+import NoteModal from "./components/NoteModal";
+import NotesTab from "./components/NotesTab";
+import EventModal from "./components/EventModal";
 import { Agentation } from "agentation";
 import { getPaginatedMessages, calculateTotalPages } from "./lib/pagination";
 import "./App.css";
@@ -189,6 +192,11 @@ function App() {
   const [actionModalType, setActionModalType] = useState(null);
   const [categories, setCategories] = useState([]);
   const [categoryFilter, setCategoryFilter] = useState("all");
+  const [notes, setNotes] = useState([]);
+  const [notesLoading, setNotesLoading] = useState(true);
+  const [noteModalOpen, setNoteModalOpen] = useState(false);
+  const [editingNote, setEditingNote] = useState(null);
+  const [promoteNote, setPromoteNote] = useState(null);
   const lastLoadedAt = useRef(null);
   const loadRetryTimer = useRef(null);
   const loadRetryCount = useRef(0);
@@ -218,6 +226,22 @@ function App() {
     }
   }
 
+  async function loadNotes() {
+    try {
+      setNotesLoading(true);
+      const { data, error } = await supabase
+        .from("notes")
+        .select("id, title, body, author_id, event_id, created_at, updated_at")
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      setNotes(data || []);
+    } catch (err) {
+      console.error("Error loading notes:", err);
+    } finally {
+      setNotesLoading(false);
+    }
+  }
+
   // Load initial data when user is available
   useEffect(() => {
     if (!user) return;
@@ -226,6 +250,7 @@ function App() {
     loadEvents();
     loadProfiles();
     loadCategories();
+    loadNotes();
     return () => {
       clearTimeout(loadRetryTimer.current);
       loadRetryTimer.current = null;
@@ -378,6 +403,29 @@ function App() {
             );
           },
         )
+        .on(
+          "postgres_changes",
+          { event: "INSERT", schema: "public", table: "notes" },
+          (payload) => {
+            setNotes((prev) => [payload.new, ...prev]);
+          },
+        )
+        .on(
+          "postgres_changes",
+          { event: "UPDATE", schema: "public", table: "notes" },
+          (payload) => {
+            setNotes((prev) =>
+              prev.map((n) => (n.id === payload.new.id ? { ...n, ...payload.new } : n)),
+            );
+          },
+        )
+        .on(
+          "postgres_changes",
+          { event: "DELETE", schema: "public", table: "notes" },
+          (payload) => {
+            setNotes((prev) => prev.filter((n) => n.id !== payload.old.id));
+          },
+        )
         .subscribe((status) => {
           if (import.meta.env.DEV) console.log("[Realtime] Status:", status);
           if (status === "CHANNEL_ERROR" || status === "TIMED_OUT") {
@@ -403,6 +451,7 @@ function App() {
       if (isStale) {
         loadMessages();
         loadEvents();
+        loadNotes();
       }
       setupSubscription();
     }
@@ -658,6 +707,55 @@ function App() {
     } catch (err) {
       console.error("Error deleting event:", err);
       addToast("Failed to delete event: " + err.message, "error");
+    }
+  }
+
+  function handleAddNote() {
+    setEditingNote(null);
+    setNoteModalOpen(true);
+  }
+
+  function handleEditNote(note) {
+    setEditingNote(note);
+    setNoteModalOpen(true);
+  }
+
+  async function handleDeleteNote(noteId) {
+    if (!window.confirm("Delete this note?")) return;
+    try {
+      const { error } = await supabase.from("notes").delete().eq("id", noteId);
+      if (error) throw error;
+      setNotes((prev) => prev.filter((n) => n.id !== noteId));
+      addToast("Note deleted", "success");
+    } catch (err) {
+      console.error("Error deleting note:", err);
+      addToast("Failed to delete note", "error");
+    }
+  }
+
+  function handlePromoteNote(note) {
+    setPromoteNote(note);
+  }
+
+  async function handlePromoteNoteSave(formData) {
+    try {
+      const newEvent = await createManualEvent(formData);
+      setEvents((prev) => [...prev, newEvent]);
+      const { error } = await supabase
+        .from("notes")
+        .update({ event_id: newEvent.id })
+        .eq("id", promoteNote.id);
+      if (error) throw error;
+      setNotes((prev) =>
+        prev.map((n) =>
+          n.id === promoteNote.id ? { ...n, event_id: newEvent.id } : n,
+        ),
+      );
+      setPromoteNote(null);
+      addToast("Event created and note linked", "success");
+    } catch (err) {
+      console.error("Error promoting note:", err);
+      addToast("Failed to create event: " + err.message, "error");
     }
   }
 
@@ -1045,6 +1143,12 @@ function App() {
           Actions
         </button>
         <button
+          className={`tab-btn ${activeTab === "notes" ? "active" : ""}`}
+          onClick={() => setActiveTab("notes")}
+        >
+          Notes
+        </button>
+        <button
           className={`tab-btn ${activeTab === "settings" ? "active" : ""}`}
           onClick={() => setActiveTab("settings")}
         >
@@ -1348,6 +1452,19 @@ function App() {
             onStatusChange={toggleActionStatus}
             onShowActionModal={handleShowActionModal}
             onAttachmentClick={openAttachmentViewer}
+          />
+        )}
+
+        {activeTab === "notes" && (
+          <NotesTab
+            notes={notes}
+            notesLoading={notesLoading}
+            profiles={profiles}
+            onAdd={handleAddNote}
+            onEdit={handleEditNote}
+            onDelete={handleDeleteNote}
+            onPromote={handlePromoteNote}
+            onNavigateToCalendar={() => setActiveTab("calendar")}
           />
         )}
 
@@ -1678,6 +1795,49 @@ function App() {
           onCancel={handleActionModalCancel}
         />
       )}
+
+      <NoteModal
+        isOpen={noteModalOpen}
+        note={editingNote}
+        onSave={async (noteData) => {
+          if (editingNote) {
+            const { data, error } = await supabase
+              .from("notes")
+              .update(noteData)
+              .eq("id", editingNote.id)
+              .select()
+              .single();
+            if (error) throw error;
+            setNotes((prev) => prev.map((n) => (n.id === editingNote.id ? data : n)));
+          } else {
+            const { data, error } = await supabase
+              .from("notes")
+              .insert({ ...noteData, author_id: user.id })
+              .select()
+              .single();
+            if (error) throw error;
+            setNotes((prev) => [data, ...prev]);
+          }
+          setNoteModalOpen(false);
+          setEditingNote(null);
+          addToast(editingNote ? "Note updated" : "Note saved", "success");
+        }}
+        onCancel={() => {
+          setNoteModalOpen(false);
+          setEditingNote(null);
+        }}
+      />
+
+      <EventModal
+        isOpen={!!promoteNote}
+        onClose={() => setPromoteNote(null)}
+        onSubmit={handlePromoteNoteSave}
+        editingEvent={
+          promoteNote
+            ? { title: promoteNote.title, description: promoteNote.body }
+            : null
+        }
+      />
 
       {import.meta.env.DEV && <Agentation />}
     </div>
