@@ -42,6 +42,7 @@ export async function createManualEvent(eventData) {
         description: eventData.description || null,
         action_required: eventData.action_required || false,
         action_detail: eventData.action_detail || null,
+        reminder: eventData.reminder || "none",
         created_by: user.id,
         source_type: "manual",
         message_id: null,
@@ -83,6 +84,7 @@ export async function updateManualEvent(eventId, eventData) {
       description: eventData.description || null,
       action_required: eventData.action_required || false,
       action_detail: eventData.action_detail || null,
+      reminder: eventData.reminder || "none",
     })
     .eq("id", eventId)
     .select();

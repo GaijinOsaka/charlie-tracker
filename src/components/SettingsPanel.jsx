@@ -20,9 +20,20 @@ export default function SettingsPanel({ onProfileUpdated }) {
     typeof Notification !== "undefined" ? Notification.permission : "denied",
   );
 
+  const [whatsappPhone, setWhatsappPhone] = useState("");
+  const [whatsappEnabled, setWhatsappEnabled] = useState(true);
+  const [whatsappWeeklyDigest, setWhatsappWeeklyDigest] = useState(false);
+  const [whatsappSaving, setWhatsappSaving] = useState(false);
+  const [whatsappTesting, setWhatsappTesting] = useState(false);
+  const [whatsappMessage, setWhatsappMessage] = useState(null);
+
   useEffect(() => {
     loadProfiles();
   }, []);
+
+  useEffect(() => {
+    if (user?.id) loadWhatsappSettings();
+  }, [user?.id]);
 
   async function loadProfiles() {
     const { data } = await supabase
@@ -30,6 +41,94 @@ export default function SettingsPanel({ onProfileUpdated }) {
       .select("*")
       .order("created_at");
     setProfiles(data || []);
+  }
+
+  async function loadWhatsappSettings() {
+    try {
+      const { data, error } = await supabase
+        .from("user_whatsapp_settings")
+        .select("whatsapp_phone, whatsapp_enabled, whatsapp_weekly_digest")
+        .eq("user_id", user.id)
+        .maybeSingle();
+      if (error) throw error;
+      if (data) {
+        setWhatsappPhone(data.whatsapp_phone || "");
+        setWhatsappEnabled(data.whatsapp_enabled);
+        setWhatsappWeeklyDigest(data.whatsapp_weekly_digest);
+      }
+    } catch (err) {
+      console.error("Error loading WhatsApp settings:", err);
+    }
+  }
+
+  const isValidE164 = (s) => /^\+[1-9]\d{6,14}$/.test(s.trim());
+
+  async function handleSaveWhatsappSettings(e) {
+    e.preventDefault();
+    setWhatsappMessage(null);
+    const phone = whatsappPhone.trim();
+    if (phone && !isValidE164(phone)) {
+      setWhatsappMessage({
+        type: "error",
+        text: "Phone must be in international format, e.g. +447700900000",
+      });
+      return;
+    }
+    setWhatsappSaving(true);
+    try {
+      const { error } = await supabase
+        .from("user_whatsapp_settings")
+        .upsert(
+          {
+            user_id: user.id,
+            whatsapp_phone: phone || null,
+            whatsapp_enabled: whatsappEnabled,
+            whatsapp_weekly_digest: whatsappWeeklyDigest,
+          },
+          { onConflict: "user_id" },
+        );
+      if (error) throw error;
+      setWhatsappMessage({ type: "success", text: "WhatsApp settings saved" });
+    } catch (err) {
+      setWhatsappMessage({ type: "error", text: err.message });
+    } finally {
+      setWhatsappSaving(false);
+    }
+  }
+
+  async function handleWhatsappTestSend() {
+    setWhatsappMessage(null);
+    setWhatsappTesting(true);
+    try {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      if (!session?.access_token) {
+        throw new Error("Session expired — please sign in again.");
+      }
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL?.trim();
+      const resp = await fetch(`${supabaseUrl}/functions/v1/whatsapp-test-send`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+          apikey: import.meta.env.VITE_SUPABASE_ANON_KEY?.trim(),
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({}),
+      });
+      const data = await resp.json().catch(() => ({}));
+      if (!resp.ok) {
+        throw new Error(data.error || `HTTP ${resp.status}`);
+      }
+      setWhatsappMessage({
+        type: "success",
+        text: `Test sent (Twilio SID ${data?.sid || "unknown"})`,
+      });
+    } catch (err) {
+      setWhatsappMessage({ type: "error", text: err.message });
+    } finally {
+      setWhatsappTesting(false);
+    }
   }
 
   async function handleInvite(e) {
@@ -337,6 +436,79 @@ export default function SettingsPanel({ onProfileUpdated }) {
           </form>
         </section>
       )}
+
+      <section className="settings-section">
+        <h3>WhatsApp Reminders</h3>
+        <p className="section-description">
+          Get event reminders sent to your WhatsApp.
+        </p>
+        <form onSubmit={handleSaveWhatsappSettings} className="invite-form">
+            <div className="form-group">
+              <label htmlFor="wa-phone">Phone number</label>
+              <input
+                id="wa-phone"
+                type="tel"
+                value={whatsappPhone}
+                onChange={(e) => setWhatsappPhone(e.target.value)}
+                placeholder="+447700900000"
+                autoComplete="tel"
+              />
+              <small className="text-secondary">
+                International format starting with + and country code.
+              </small>
+            </div>
+            <label className="notification-toggle">
+              <input
+                type="checkbox"
+                checked={whatsappEnabled}
+                onChange={(e) => setWhatsappEnabled(e.target.checked)}
+              />
+              <span>Enable WhatsApp reminders</span>
+            </label>
+            <label className="notification-toggle">
+              <input
+                type="checkbox"
+                checked={whatsappWeeklyDigest}
+                onChange={(e) => setWhatsappWeeklyDigest(e.target.checked)}
+              />
+              <span>Send weekly digest on Sunday evenings</span>
+            </label>
+            {whatsappMessage && (
+              <p className={`settings-msg ${whatsappMessage.type}`}>
+                {whatsappMessage.text}
+              </p>
+            )}
+            <div className="set-password-actions">
+              <button
+                type="submit"
+                className="invite-btn"
+                disabled={whatsappSaving}
+              >
+                {whatsappSaving ? "Saving..." : "Save"}
+              </button>
+              <button
+                type="button"
+                className="set-password-btn"
+                onClick={handleWhatsappTestSend}
+                disabled={
+                  whatsappTesting ||
+                  whatsappSaving ||
+                  !whatsappPhone.trim() ||
+                  !whatsappEnabled
+                }
+                title={
+                  !whatsappPhone.trim()
+                    ? "Save a phone number first"
+                    : !whatsappEnabled
+                      ? "Enable WhatsApp reminders first"
+                      : "Send a test message to your saved number"
+                }
+              >
+                {whatsappTesting ? "Sending..." : "Send test message"}
+              </button>
+            </div>
+          </form>
+      </section>
 
       <section className="settings-section whatsapp-config">
         <h3>WhatsApp Bot Configuration</h3>

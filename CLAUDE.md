@@ -83,6 +83,9 @@ npx vite build       # Production build to dist/
 
 - **Gmail Monitor:** gBJb0RH6dfvpLi21 (detects Arbor notifications, routes to Skyvern)
 - **Arbor Scraper:** y6vFVjpnwzr4qGMo (orchestrates Skyvern tasks)
+- **WhatsApp Event Reminders:** every 15 min, sends day-before (20:00 UK) + morning-of (07:00 UK) per-event reminders via Twilio. Calls Supabase RPC `get_due_event_reminders` and writes to `event_reminders`. JSON at `docs/n8n-snapshots/whatsapp-event-reminders.json`.
+- **WhatsApp Weekly Digest:** Sundays 18:00 UK, sends upcoming-week digest via Twilio. Calls Supabase RPC `get_due_weekly_digest` and writes to `weekly_digest_log`. JSON at `docs/n8n-snapshots/whatsapp-weekly-digest.json`.
+- Both reminder workflows support a dry-run mode via env `WHATSAPP_REMINDERS_DRY_RUN=true` — useful while waiting on Twilio WhatsApp sender approval. See `docs/n8n-snapshots/README-whatsapp-reminders.md` for env vars and smoke tests.
 
 ## Conventions
 
