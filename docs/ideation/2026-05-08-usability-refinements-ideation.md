@@ -23,7 +23,7 @@ mode: repo-grounded
 - `toasts` state already exists in `App.jsx` line 176.
 - No optimistic UI for read-state toggling, no `prefers-reduced-motion` compliance, no `viewport-fit=cover` / safe-area-inset handling, no tab-title unread count.
 
-**Past learnings (from `docs/solutions/`):** No prior frontend learnings exist. Custom SW uses `injectManifest` strategy (`push-notifications-vite-workbox-integration-2026-04-26.md`); preserve when adding update toast.
+**Past learnings (from `docs/solutions/`):** No prior frontend learnings exist. Custom SW uses Workbox `generateSW` strategy with `workbox.importScripts: ['/push-sw.js']` to inject push/notificationclick handlers into the generated SW (`docs/solutions/best-practices/push-notifications-workbox-import-scripts-2026-05-12.md`); preserve when adding update toast.
 
 **External patterns (from web research):** Radix/shadcn Dialog primitives ship with focus traps + ESC built in. `nuqs` is the emergent React standard for URL filter state. Mark-as-unread as snooze proxy (Linear, Notion). Optimistic UI drops perceived latency to ~0ms. Smashing Mag notification UX (dot for new uncounted, numeric ≤99+, snooze 1h/tomorrow/custom). Auto-reload on SW update is anti-pattern; toast with reload button is the canonical move. WCAG 2.1 SC 2.3.3 reduced-motion; Apple HIG safe-area.
 
@@ -80,9 +80,9 @@ mode: repo-grounded
 
 ### 6. Service-worker update toast ("Update available — reload")
 **Description:** Wire `vite-plugin-pwa`'s `registerSW({ onNeedRefresh })` to a small toast with a "Reload" button that calls `updateSW(true)`. Reuses the existing `toasts` state in `App.jsx` line 176.
-**Warrant:** `direct:` Custom SW already wired via `injectManifest` (per `docs/solutions/.../push-notifications-vite-workbox-integration-2026-04-26.md`). No update affordance exists today. `external:` Standard Workbox/`vite-plugin-pwa` pattern; auto-reloading on update is a known anti-pattern.
+**Warrant:** `direct:` Custom SW already wired via `generateSW` + `workbox.importScripts: ['/push-sw.js']` (per `docs/solutions/best-practices/push-notifications-workbox-import-scripts-2026-05-12.md`). No update affordance exists today. `external:` Standard Workbox/`vite-plugin-pwa` pattern; auto-reloading on update is a known anti-pattern.
 **Rationale:** Bug-fix commits (the recent NoteModal/calendar regressions) don't reach users until they happen to fully close the PWA. A toast closes that gap with the existing toast state.
-**Downsides:** Adds one async listener at boot. Test against the existing `injectManifest` strategy so it doesn't conflict with the custom `push`/`notificationclick` handlers.
+**Downsides:** Adds one async listener at boot. Test against the existing `generateSW` + `importScripts` setup so it doesn't conflict with the custom `push`/`notificationclick` handlers in `public/push-sw.js`.
 **Confidence:** 95%
 **Complexity:** Low
 **Status:** Unexplored

@@ -167,6 +167,5 @@ Insert Message [onError: continueErrorOutput]
 
 ## Related
 
-- `memory/project_n8n_workflow_hardening.md` — full CE review finding list with status
 - `docs/plans/2026-04-26-001-fix-n8n-workflow-reliability-plan.md` — implementation plan
-- `supabase/schema.sql` lines 79–88 — sync_log schema
+- `supabase/schema.sql` `sync_log` table (around lines 83–93) — schema for the table written by the error-routing nodes
