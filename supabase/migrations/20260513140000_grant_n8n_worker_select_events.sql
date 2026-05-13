@@ -1,0 +1,22 @@
+-- Allow n8n_worker to SELECT events so PostgREST's INSERT-with-RETURNING
+-- can return the new row.
+--
+-- The Gmail Monitor workflow's "Insert Events" node uses PostgREST's default
+-- Prefer: return=representation. PostgREST runs an implicit SELECT after the
+-- INSERT to return the new row to the caller. Without table-level SELECT
+-- grant on events for n8n_worker, that returning step fails with
+-- 42501 "permission denied for table events" — even though the INSERT itself
+-- has all the privileges it needs.
+--
+-- The downstream "Save Tags" node depends on receiving the new event ID to
+-- attach event_tags, so we cannot switch the Insert Events node to
+-- Prefer: return=minimal — we need the returning behaviour to work.
+--
+-- This mirrors the long-standing grant shape on public.messages where
+-- n8n_worker already has both INSERT and SELECT and the same
+-- INSERT-with-RETURNING pattern has been working without issue.
+--
+-- Row-Level Security policies on events are unchanged. PostgreSQL still
+-- evaluates the existing SELECT policies on top of this table-level grant.
+
+GRANT SELECT ON public.events TO n8n_worker;
