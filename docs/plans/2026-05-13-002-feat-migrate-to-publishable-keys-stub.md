@@ -9,34 +9,38 @@ date: 2026-05-13
 
 > **This is a stub, not a ready-to-execute plan.** Captured so the work is not forgotten. Run `/ce-plan` against this file when you are ready to implement — the stub gives planning agents the context they need to expand it.
 
+> **Edge-function portion already shipped on 2026-05-13** (commit `8adc8b7` on `fix/edge-fn-auth-rag-coverage`). Diagnostics in that branch revealed the project had silently migrated to opaque keys: `SUPABASE_ANON_KEY` in the function runtime had been remapped to the new `sb_publishable_*` value, breaking `auth.getUser()`. The fix uses `auth.getClaims()` against `SUPABASE_JWKS` and reads `SUPABASE_PUBLISHABLE_KEYS.default`. **Remaining scope below covers only frontend + legacy-key cleanup.**
+
 ---
 
 ## Why this exists
 
-Supabase has deprecated the legacy anonymous JWT (`SUPABASE_ANON_KEY`) and is steering projects toward the new JWT Signing Keys system, surfaced as `SUPABASE_PUBLISHABLE_KEYS` (plural — supports rotation). The dashboard now displays a "Deprecated — use SUPABASE_PUBLISHABLE_KEYS issued through JWT Signing Keys instead" warning next to the legacy slot.
+Supabase deprecated the legacy anonymous JWT (`SUPABASE_ANON_KEY`) in favour of the new JWT Signing Keys system, surfaced as `SUPABASE_PUBLISHABLE_KEYS` (plural — JSON object, supports rotation). The dashboard now displays a "Deprecated — use SUPABASE_PUBLISHABLE_KEYS issued through JWT Signing Keys instead" warning next to the legacy slot and locks it from editing.
 
-The 2026-05-13 edge-function-auth fix (see `docs/plans/2026-05-13-001-fix-edge-fn-auth-rag-coverage-plan.md`) deliberately stays on the legacy key because every edge function reads `Deno.env.get("SUPABASE_ANON_KEY")`. The legacy key is still functional — Supabase MCP reports `disabled: false` — but the migration should happen before Supabase actually disables it.
+The 2026-05-13 edge-function-auth fix (see `docs/plans/2026-05-13-001-fix-edge-fn-auth-rag-coverage-plan.md`) handled the edge-function side end-to-end. The frontend Supabase client still uses the legacy anon JWT (`VITE_SUPABASE_ANON_KEY`); migrating it to the publishable key is the remaining gap before the legacy key can be fully retired.
 
 ---
 
 ## Scope (rough sketch — to be refined by `/ce-plan`)
 
-**In:**
+**Done (2026-05-13, commit `8adc8b7`):**
 
-- Update every edge function that reads `SUPABASE_ANON_KEY` to read from `SUPABASE_PUBLISHABLE_KEYS` instead. Confirmed call sites at the time of writing:
-  - `supabase/functions/rag-chat/index.ts`
-  - `supabase/functions/index-message/index.ts`
-  - `supabase/functions/index-document/index.ts`
-  - `supabase/functions/extract-dates/index.ts`
+- ~~Update every edge function that reads `SUPABASE_ANON_KEY` to read from `SUPABASE_PUBLISHABLE_KEYS` instead.~~ Done for `rag-chat`, `index-message`, `index-document`, `extract-dates`.
+- ~~Replace `auth.getUser()` with `auth.getClaims()` against JWKS.~~ Done.
+- ~~Bump supabase-js to `npm:@supabase/supabase-js@2` (latest).~~ Done.
+
+**Still in scope:**
+
+- Audit the remaining edge functions for any lingering `SUPABASE_ANON_KEY` references or `auth.getUser()` calls. Likely candidates:
   - `supabase/functions/invite-user/index.ts`
   - `supabase/functions/set-user-password/index.ts`
-  - `supabase/functions/whatsapp-webhook/index.ts` (if relevant)
-  - `supabase/functions/whatsapp-test-send/index.ts` (if relevant)
-  - `supabase/functions/notify-action-required/index.ts` (if relevant)
-  - `supabase/functions/notify-new-message/index.ts` (if relevant)
-- Decide on a helper module under `supabase/functions/_shared/` that picks the active key from the publishable-keys list (the list supports rotation — older keys remain valid during a grace window).
-- Update the frontend Supabase client (`src/lib/supabase.js` and any env-var docs) to use the publishable key (`sb_publishable_eBTCRd4xC_2ooU2pLRZVSQ_SgAc4MPE` at time of writing) instead of the legacy anon JWT — and update `VITE_SUPABASE_ANON_KEY` references in `.env` / Vercel env to match (or rename the env var to `VITE_SUPABASE_PUBLISHABLE_KEY` for clarity).
-- Once everything migrated, rotate or disable the legacy anon key in Supabase Dashboard → API Settings.
+  - `supabase/functions/whatsapp-webhook/index.ts`
+  - `supabase/functions/whatsapp-test-send/index.ts`
+  - `supabase/functions/notify-action-required/index.ts`
+  - `supabase/functions/notify-new-message/index.ts`
+- Consider extracting the auth-check pattern (`SUPABASE_PUBLISHABLE_KEYS.default` + `getClaims()`) into a helper module under `supabase/functions/_shared/auth.ts` so future functions inherit it.
+- Update the frontend Supabase client (`src/lib/supabase.js`) to use the publishable key (`sb_publishable_eBTCRd4xC_2ooU2pLRZVSQ_SgAc4MPE` at time of writing) instead of the legacy anon JWT. Update `VITE_SUPABASE_ANON_KEY` references in `.env` / Vercel env to match (or rename the env var to `VITE_SUPABASE_PUBLISHABLE_KEY` for clarity).
+- Once frontend is migrated, rotate or disable the legacy anon key in Supabase Dashboard → API Settings.
 - Update `CLAUDE.md` and `MEMORY.md` to reflect the new key system.
 
 **Out (for this stub — call out during full planning if relevant):**
