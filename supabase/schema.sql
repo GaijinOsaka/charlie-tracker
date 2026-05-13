@@ -51,9 +51,14 @@ ALTER TABLE attachments ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Authenticated users can read attachments" ON attachments FOR SELECT
   USING (auth.role() = 'authenticated');
 
--- Trigger: auto-create document row when attachment is inserted
+-- Trigger: auto-create document row when attachment is inserted.
+-- SECURITY DEFINER so callers (e.g. the n8n_worker role) don't need INSERT on documents.
 CREATE OR REPLACE FUNCTION sync_attachment_to_document()
-RETURNS TRIGGER AS $$
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, pg_temp
+AS $$
 BEGIN
   INSERT INTO documents (filename, file_path, source_type, source_url, category, tags, file_size_bytes)
   VALUES (
@@ -68,7 +73,7 @@ BEGIN
   ON CONFLICT DO NOTHING;
   RETURN NEW;
 END;
-$$ LANGUAGE plpgsql;
+$$;
 
 CREATE TRIGGER trg_sync_attachment_to_document
   AFTER INSERT ON attachments
