@@ -1,4 +1,4 @@
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.38.0";
+import { createClient } from "npm:@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -45,16 +45,20 @@ Deno.serve(async (req) => {
       });
     }
 
-    const supabaseAuth = createClient(
-      supabaseUrl,
-      Deno.env.get("SUPABASE_ANON_KEY")!,
-      { global: { headers: { Authorization: authHeader } } },
+    // Validate user JWT via JWKS (new JWT Signing Keys system).
+    // Project uses opaque publishable keys; supabase-js auth.getUser() against
+    // /auth/v1/user does not work with the new key format. getClaims() verifies
+    // the JWT signature against SUPABASE_JWKS without needing a working apikey.
+    const publishableKeys = JSON.parse(
+      Deno.env.get("SUPABASE_PUBLISHABLE_KEYS")!,
     );
-    const {
-      data: { user },
-      error: authError,
-    } = await supabaseAuth.auth.getUser();
-    if (authError || !user) {
+    const supabaseAuth = createClient(supabaseUrl, publishableKeys.default, {
+      global: { headers: { Authorization: authHeader } },
+    });
+    const jwt = authHeader.replace(/^Bearer\s+/i, "");
+    const { data: claimsData, error: authError } =
+      await supabaseAuth.auth.getClaims(jwt);
+    if (authError || !claimsData?.claims?.sub) {
       return new Response(JSON.stringify({ error: "Not authenticated" }), {
         status: 401,
         headers: { ...corsHeaders, "Content-Type": "application/json" },

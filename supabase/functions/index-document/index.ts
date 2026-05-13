@@ -1,4 +1,4 @@
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.38.0";
+import { createClient } from "npm:@supabase/supabase-js@2";
 
 const CHUNK_SIZE = 800;
 const CHUNK_OVERLAP = 100;
@@ -204,38 +204,23 @@ Deno.serve(async (req) => {
     const isServiceRole = authHeader === `Bearer ${supabaseKey}`;
 
     if (!isServiceRole) {
-      const anonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
-      const supabaseAuth = createClient(supabaseUrl, anonKey);
-      const token = authHeader.replace("Bearer ", "");
+      // Validate user JWT via JWKS (new JWT Signing Keys system).
+      const publishableKeys = JSON.parse(
+        Deno.env.get("SUPABASE_PUBLISHABLE_KEYS")!,
+      );
+      const supabaseAuth = createClient(supabaseUrl, publishableKeys.default, {
+        global: { headers: { Authorization: authHeader } },
+      });
+      const token = authHeader.replace(/^Bearer\s+/i, "");
 
-      console.log("Token validation starting...");
-      console.log("Token length:", token.length);
-      console.log("Token prefix:", token.substring(0, 30) + "...");
+      const { data: claimsData, error: authError } =
+        await supabaseAuth.auth.getClaims(token);
 
-      const authResult = await supabaseAuth.auth.getUser(token);
-      console.log("Auth result:", JSON.stringify(authResult));
-
-      const { data, error: authError } = authResult;
-      const user = data?.user;
-
-      console.log("Auth result data:", JSON.stringify(data));
-      console.log("Auth result error:", JSON.stringify(authError));
-      console.log("User from data:", JSON.stringify(user));
-
-      if (authError || !user) {
-        console.error("Auth validation failed!");
-        console.error("Full error object:", authError);
-        console.error("Error message:", authError?.message);
-        console.error("Error name:", authError?.name);
-        console.error("User is null/undefined:", !user);
-
+      if (authError || !claimsData?.claims?.sub) {
         return new Response(
           JSON.stringify({
             error: "Auth validation failed",
             detail: authError?.message || "No user returned",
-            errorName: authError?.name,
-            tokenPrefix: authHeader.substring(0, 20) + "...",
-            userNull: !user,
           }),
           {
             status: 401,
