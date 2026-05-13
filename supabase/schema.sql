@@ -615,3 +615,29 @@ CREATE TRIGGER notes_updated_at_trigger
   FOR EACH ROW
   EXECUTE FUNCTION update_notes_updated_at();
 
+-- 24. Event tags (free-form labels applied to events for filtering)
+CREATE TABLE event_tags (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  event_id UUID NOT NULL REFERENCES events(id) ON DELETE CASCADE,
+  tag TEXT NOT NULL,
+  UNIQUE (event_id, tag)
+);
+
+ALTER TABLE event_tags ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Authenticated users can read event_tags"
+  ON event_tags FOR SELECT
+  USING (auth.role() = 'authenticated');
+
+CREATE POLICY "Authenticated users can insert event_tags"
+  ON event_tags FOR INSERT
+  WITH CHECK (auth.role() = 'authenticated');
+
+CREATE POLICY "Authenticated users can update event_tags"
+  ON event_tags FOR UPDATE
+  USING (auth.role() = 'authenticated');
+
+CREATE POLICY "Authenticated users can delete event_tags"
+  ON event_tags FOR DELETE
+  USING (auth.role() = 'authenticated');
+
