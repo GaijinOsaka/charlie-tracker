@@ -1247,6 +1247,17 @@ function App() {
                               evt.event_date + "T00:00:00",
                             ).toLocaleDateString("en-GB", { month: "short" })}
                           </span>
+                          {evt.event_end_date &&
+                            evt.event_end_date !== evt.event_date && (
+                              <span className="event-end-date">
+                                → {new Date(
+                                  evt.event_end_date + "T00:00:00",
+                                ).toLocaleDateString("en-GB", {
+                                  day: "numeric",
+                                  month: "short",
+                                })}
+                              </span>
+                            )}
                           {evt.event_time && (
                             <span className="event-time">
                               {evt.event_time.slice(0, 5)}
