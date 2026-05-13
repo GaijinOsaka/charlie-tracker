@@ -1,4 +1,5 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
+import { authenticate } from "../_shared/auth.ts";
 
 const CHUNK_SIZE = 800;
 const CHUNK_OVERLAP = 100;
@@ -187,48 +188,16 @@ Deno.serve(async (req) => {
   }
 
   try {
-    // Verify authentication (accepts user tokens and service role key)
-    const authHeader = req.headers.get("Authorization");
-    if (!authHeader) {
-      return new Response(
-        JSON.stringify({ error: "No Authorization header present" }),
-        {
-          status: 401,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        },
-      );
+    const auth = await authenticate(req);
+    if (!auth.ok) {
+      return new Response(JSON.stringify(auth.body), {
+        status: auth.status,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const isServiceRole = authHeader === `Bearer ${supabaseKey}`;
-
-    if (!isServiceRole) {
-      // Validate user JWT via JWKS (new JWT Signing Keys system).
-      const publishableKeys = JSON.parse(
-        Deno.env.get("SUPABASE_PUBLISHABLE_KEYS")!,
-      );
-      const supabaseAuth = createClient(supabaseUrl, publishableKeys.default, {
-        global: { headers: { Authorization: authHeader } },
-      });
-      const token = authHeader.replace(/^Bearer\s+/i, "");
-
-      const { data: claimsData, error: authError } =
-        await supabaseAuth.auth.getClaims(token);
-
-      if (authError || !claimsData?.claims?.sub) {
-        return new Response(
-          JSON.stringify({
-            error: "Auth validation failed",
-            detail: authError?.message || "No user returned",
-          }),
-          {
-            status: 401,
-            headers: { ...corsHeaders, "Content-Type": "application/json" },
-          },
-        );
-      }
-    }
 
     const { doc_id, action } = await req.json();
 
