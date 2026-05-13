@@ -28,11 +28,14 @@ CREATE ROLE n8n_worker NOLOGIN BYPASSRLS;
 GRANT n8n_worker TO authenticator;
 ```
 
-The `GRANT TO authenticator` is required — without it, PostgREST cannot switch to the role and rejects the JWT.
+`BYPASSRLS` is required because n8n has no authenticated user session, so it cannot satisfy `auth.uid()` checks in RLS policies — without `BYPASSRLS`, every query against an RLS-protected table would fail. `NOLOGIN` prevents direct login: the role is only reachable via PostgREST's `SET ROLE` after JWT validation.
+
+The `GRANT TO authenticator` is required — PostgREST runs as the `authenticator` role and impersonates the role named in the JWT's `role` claim via `SET ROLE`. Without membership, the switch is rejected and PostgREST returns a permission error.
 
 ### 2. Grant only the tables n8n needs
 
 ```sql
+GRANT USAGE ON SCHEMA public TO n8n_worker;
 GRANT SELECT, INSERT ON public.messages TO n8n_worker;
 GRANT INSERT ON public.attachments TO n8n_worker;
 GRANT INSERT ON public.sync_log TO n8n_worker;
@@ -44,7 +47,7 @@ GRANT SELECT, INSERT, UPDATE, DELETE ON public.document_chunks TO n8n_worker;
 GRANT USAGE ON ALL SEQUENCES IN SCHEMA public TO n8n_worker;
 ```
 
-Sequence usage is required for INSERT on tables with serial/bigserial primary keys.
+`USAGE ON SCHEMA public` is the prerequisite for accessing any object inside that schema — without it, PostgREST returns "permission denied for schema public" before even reaching the table-level grants. Sequence usage is required for `INSERT` on tables with `serial`/`bigserial` primary keys; without it, inserts fail with "permission denied for sequence".
 
 ### 3. Generate the JWT with Node.js (not jwt.io)
 

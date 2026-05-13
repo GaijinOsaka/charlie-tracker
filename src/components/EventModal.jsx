@@ -17,6 +17,7 @@ export default function EventModal({
   const [description, setDescription] = useState("");
   const [actionRequired, setActionRequired] = useState(false);
   const [actionDetail, setActionDetail] = useState("");
+  const [reminder, setReminder] = useState("none");
   const [error, setError] = useState("");
 
   // Pre-fill form if editing
@@ -30,6 +31,7 @@ export default function EventModal({
       setDescription(editingEvent.description || "");
       setActionRequired(editingEvent.action_required || false);
       setActionDetail(editingEvent.action_detail || "");
+      setReminder(editingEvent.reminder || "none");
     } else {
       setTitle("");
       setEventDate(initialDate || "");
@@ -39,6 +41,7 @@ export default function EventModal({
       setDescription("");
       setActionRequired(false);
       setActionDetail("");
+      setReminder("none");
     }
     setError("");
   }, [editingEvent, initialDate, isOpen]);
@@ -66,6 +69,7 @@ export default function EventModal({
         description: description.trim() || null,
         action_required: actionRequired,
         action_detail: actionDetail.trim() || null,
+        reminder,
       });
       // Form reset happens in parent on successful submission
     } catch (err) {
@@ -149,6 +153,20 @@ export default function EventModal({
                 onChange={(e) => setEventEndTime(e.target.value)}
               />
             </div>
+          </div>
+
+          <div className="form-group">
+            <label htmlFor="reminder">WhatsApp reminder</label>
+            <select
+              id="reminder"
+              value={reminder}
+              onChange={(e) => setReminder(e.target.value)}
+            >
+              <option value="none">None</option>
+              <option value="day_before">Day before (8pm)</option>
+              <option value="morning_of">Morning of (7am)</option>
+              <option value="both">Both</option>
+            </select>
           </div>
 
           <div className="form-group">

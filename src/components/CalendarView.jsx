@@ -215,7 +215,24 @@ function CalendarView({
             </div>
           )}
           <div className="cal-event-info">
-            <h5 className="cal-event-title">{evt.title}</h5>
+            <h5 className="cal-event-title">
+              {evt.title}
+              {evt.reminder && evt.reminder !== "none" && (
+                <span
+                  className="event-reminder-bell"
+                  title={
+                    evt.reminder === "both"
+                      ? "WhatsApp reminder: day before (8pm) and morning of (7am)"
+                      : evt.reminder === "day_before"
+                        ? "WhatsApp reminder: day before (8pm)"
+                        : "WhatsApp reminder: morning of (7am)"
+                  }
+                  aria-label="WhatsApp reminder set"
+                >
+                  {"\u{1F514}"}
+                </span>
+              )}
+            </h5>
             {evt.event_time && (
               <span className="cal-event-time">
                 {evt.event_time.slice(0, 5)}
