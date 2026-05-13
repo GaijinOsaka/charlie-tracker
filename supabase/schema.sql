@@ -98,6 +98,7 @@ CREATE TABLE events (
   message_id UUID REFERENCES messages(id) ON DELETE CASCADE,
   document_id UUID REFERENCES documents(id) ON DELETE CASCADE,
   event_date DATE NOT NULL,
+  event_end_date DATE,
   event_time TIME,
   event_end_time TIME,
   title TEXT NOT NULL,

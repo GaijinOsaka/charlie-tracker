@@ -103,17 +103,35 @@ Deno.serve(async (req) => {
     // Call OpenAI to extract dates/events
     const prompt = `You are a date and event extraction assistant. Analyze the following document and extract all dates, deadlines, events, and scheduled items.
 
-Today's date is ${today}. Use this to resolve any relative dates (e.g., "next Monday", "in 2 weeks").
+Today's date is ${today}. Use this to resolve any relative dates (e.g., "next Monday", "in 2 weeks"). Dates in the document use UK convention (DD/MM/YYYY) — do not interpret "10/05" as October 5th; it is 10 May.
 
 Document filename: ${doc.filename || "unknown"}
 
 For each event or date found, return:
 - title: short descriptive title (required)
-- event_date: date in YYYY-MM-DD format (required)
-- event_time: time in HH:MM format, or null if no specific time
+- event_date: start date in YYYY-MM-DD format (required)
+- event_end_date: end date in YYYY-MM-DD format when the source states a multi-day range, otherwise null
+- event_time: start time in HH:MM (24h) format, or null if no specific time
+- event_end_time: end time in HH:MM (24h) format when the source states a finish time, otherwise null
 - description: brief description or context from the document
 - action_required: boolean, true if something needs to be done by/on this date
 - action_detail: what action is needed, or null if no action required
+
+When a date range is stated (e.g. "1st–13th June", "12 May to 14 May", "Mon 9 Jun – Fri 13 Jun"), populate BOTH event_date AND event_end_date. Single-day events leave event_end_date as null — do not duplicate the start date into end_date.
+
+Examples:
+
+Single-day with time range:
+  Source: "School Holiday Tennis Camp on Tuesday 27 May, 09:00–15:00"
+  Output: { "title": "School Holiday Tennis Camp", "event_date": "2026-05-27", "event_end_date": null, "event_time": "09:00", "event_end_time": "15:00" }
+
+Multi-day exhibition:
+  Source: "Rotary Art Competition Exhibition: winning entries displayed at Bingham Library from 1st–13th June 2026"
+  Output: { "title": "Rotary Art Competition Exhibition", "event_date": "2026-06-01", "event_end_date": "2026-06-13", "event_time": null, "event_end_time": null }
+
+Single-day no time:
+  Source: "Y6 Residential Returns on Monday 18 May"
+  Output: { "title": "Y6 Residential Returns", "event_date": "2026-05-18", "event_end_date": null, "event_time": null, "event_end_time": null }
 
 Return a JSON object with an "events" array. If no dates or events are found, return {"events": []}.
 
@@ -162,7 +180,9 @@ ${contentText}`;
     const extractedEvents: Array<{
       title: string;
       event_date: string;
+      event_end_date?: string | null;
       event_time?: string | null;
+      event_end_time?: string | null;
       description?: string | null;
       action_required?: boolean;
       action_detail?: string | null;
@@ -179,7 +199,12 @@ ${contentText}`;
         document_id: document_id,
         title: evt.title,
         event_date: evt.event_date,
+        event_end_date:
+          evt.event_end_date && evt.event_end_date !== evt.event_date
+            ? evt.event_end_date
+            : null,
         event_time: evt.event_time || null,
+        event_end_time: evt.event_end_time || null,
         description: evt.description || null,
         action_required: evt.action_required ?? false,
         action_detail: evt.action_detail || null,
