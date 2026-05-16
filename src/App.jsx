@@ -21,6 +21,7 @@ import { ActionsBox } from "./components/ActionsBox";
 import { ActionButton } from "./components/ActionButton";
 import ActionModal from "./components/ActionModal";
 import NoteModal from "./components/NoteModal";
+import RagScopeModal from "./components/RagScopeModal";
 import NotesTab from "./components/NotesTab";
 import EventModal from "./components/EventModal";
 import { Agentation } from "agentation";
@@ -184,6 +185,7 @@ function App() {
   const [expandedEvents, setExpandedEvents] = useState(new Set());
   const [expandedActionMessageId, setExpandedActionMessageId] = useState(null);
   const [indexingMessages, setIndexingMessages] = useState(new Set());
+  const [ragScopeModal, setRagScopeModal] = useState(null);
   const [profiles, setProfiles] = useState({});
   const [viewerAttachment, setViewerAttachment] = useState(null);
   const [viewerOpen, setViewerOpen] = useState(false);
@@ -912,13 +914,29 @@ function App() {
 
   async function toggleMessageRag(msg) {
     const action = msg.indexed_for_rag ? "remove" : "index";
+    if (msg.attachments && msg.attachments.length > 0) {
+      setRagScopeModal({ msg, action });
+      return;
+    }
+    await runMessageRag(msg, action, {
+      includeMessage: true,
+      attachmentIds: [],
+    });
+  }
+
+  async function runMessageRag(msg, action, scope) {
     setIndexingMessages((prev) => new Set(prev).add(msg.id));
     try {
       const {
         data: { session: sess },
       } = await supabase.auth.getSession();
       const { data, error } = await supabase.functions.invoke("index-message", {
-        body: { message_id: msg.id, action },
+        body: {
+          message_id: msg.id,
+          action,
+          include_message: scope.includeMessage,
+          attachment_ids: scope.attachmentIds,
+        },
         headers: sess?.access_token
           ? { Authorization: `Bearer ${sess.access_token}` }
           : {},
@@ -937,20 +955,32 @@ function App() {
 
       if (data?.error) throw new Error(data.error);
 
-      setMessages((prev) =>
-        prev.map((m) =>
-          m.id === msg.id ? { ...m, indexed_for_rag: action === "index" } : m,
-        ),
-      );
-      addToast(
-        action === "index"
-          ? `Indexed message${data?.attachments_dispatched ? ` + ${data.attachments_dispatched} attachment(s)` : ""}`
-          : "Removed from RAG",
-        "success",
-      );
+      if (scope.includeMessage) {
+        setMessages((prev) =>
+          prev.map((m) =>
+            m.id === msg.id
+              ? { ...m, indexed_for_rag: action === "index" }
+              : m,
+          ),
+        );
+      }
+
+      const attachmentCount = scope.attachmentIds?.length ?? 0;
+      if (action === "index") {
+        const parts = [];
+        if (scope.includeMessage) parts.push("message");
+        if (attachmentCount > 0) parts.push(`${attachmentCount} attachment(s)`);
+        addToast(`Indexed ${parts.join(" + ")}`, "success");
+      } else {
+        const parts = [];
+        if (scope.includeMessage) parts.push("message");
+        if (attachmentCount > 0) parts.push(`${attachmentCount} attachment(s)`);
+        addToast(`Removed ${parts.join(" + ")} from RAG`, "success");
+      }
     } catch (err) {
       console.error("RAG toggle error:", err);
       addToast(`Failed to ${action} message: ${err.message}`, "error");
+      throw err;
     } finally {
       setIndexingMessages((prev) => {
         const next = new Set(prev);
@@ -1660,7 +1690,13 @@ function App() {
                             onShowActionModal={handleShowActionModal}
                           />
                           {msg.indexed_for_rag && (
-                            <span className="indexed-badge">RAG</span>
+                            <span
+                              className="indexed-badge"
+                              title="Indexed for RAG"
+                              aria-label="Indexed for RAG"
+                            >
+                              R
+                            </span>
                           )}
                           <span className="message-time">
                             {new Date(msg.received_at).toLocaleString()}
@@ -1835,6 +1871,19 @@ function App() {
           onCancel={handleActionModalCancel}
         />
       )}
+
+      <RagScopeModal
+        isOpen={!!ragScopeModal}
+        message={ragScopeModal?.msg}
+        action={ragScopeModal?.action}
+        onConfirm={async (scope) => {
+          const { msg, action } = ragScopeModal;
+          setRagScopeModal(null);
+          await runMessageRag(msg, action, scope);
+        }}
+        onCancel={() => setRagScopeModal(null)}
+      />
+
 
       <NoteModal
         isOpen={noteModalOpen}

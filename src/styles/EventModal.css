@@ -205,3 +205,88 @@
     width: 100%;
   }
 }
+
+.rag-scope-intro {
+  margin: 0 20px 12px;
+  padding-top: 16px;
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+}
+
+.rag-scope-detail {
+  color: var(--text-secondary);
+  font-weight: normal;
+  font-size: 0.85rem;
+}
+
+.rag-scope-attachments {
+  padding: 8px 20px 4px;
+}
+
+.rag-scope-attachments-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+  margin-bottom: 6px;
+}
+
+.rag-scope-bulk {
+  display: flex;
+  gap: 12px;
+}
+
+.btn-link {
+  background: none;
+  border: none;
+  color: var(--primary);
+  cursor: pointer;
+  font-size: 0.85rem;
+  padding: 0;
+}
+
+.btn-link:hover:not(:disabled) {
+  text-decoration: underline;
+}
+
+.btn-link:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.rag-scope-attachment-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  max-height: 220px;
+  overflow-y: auto;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+
+.rag-scope-attachment-list li {
+  border-bottom: 1px solid var(--border);
+}
+
+.rag-scope-attachment-list li:last-child {
+  border-bottom: none;
+}
+
+.rag-scope-attachment-list label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  cursor: pointer;
+  color: var(--text);
+  font-size: 0.9rem;
+}
+
+.rag-scope-attachment-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+  flex: 1;
+}

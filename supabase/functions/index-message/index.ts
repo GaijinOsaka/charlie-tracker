@@ -14,6 +14,7 @@ async function indexMessage(
   openaiKey: string,
   supabaseUrl: string,
   supabaseKey: string,
+  scope: { includeMessage: boolean; attachmentIds: string[] | null },
 ): Promise<{
   success: boolean;
   chunks_created: number;
@@ -36,175 +37,191 @@ async function indexMessage(
     };
   }
 
-  if (!msg.content || msg.content.trim().length < 20) {
-    return {
-      success: false,
-      chunks_created: 0,
-      attachments_dispatched: 0,
-      error: "Message has no content to index",
-    };
-  }
+  let totalCreated = 0;
+  let messageDocId: string | null = null;
 
-  // 2. Upsert a documents row for the message content
-  const syntheticPath = `email_message/${messageId}`;
+  if (scope.includeMessage) {
+    if (!msg.content || msg.content.trim().length < 20) {
+      return {
+        success: false,
+        chunks_created: 0,
+        attachments_dispatched: 0,
+        error: "Message has no content to index",
+      };
+    }
 
-  const { data: existingDoc } = await supabase
-    .from("documents")
-    .select("id")
-    .eq("file_path", syntheticPath)
-    .maybeSingle();
+    // 2. Upsert a documents row for the message content
+    const syntheticPath = `email_message/${messageId}`;
 
-  let docId: string;
+    const { data: existingDoc } = await supabase
+      .from("documents")
+      .select("id")
+      .eq("file_path", syntheticPath)
+      .maybeSingle();
 
-  if (existingDoc) {
-    // Update existing document
-    const { error: updateErr } = await supabase
+    let docId: string;
+
+    if (existingDoc) {
+      const { error: updateErr } = await supabase
+        .from("documents")
+        .update({
+          filename: msg.subject || "(no subject)",
+          content_text: msg.content,
+          source_type: "email_message",
+          tags: ["email", "message"],
+          category: "other",
+        })
+        .eq("id", existingDoc.id);
+
+      if (updateErr) {
+        return {
+          success: false,
+          chunks_created: 0,
+          attachments_dispatched: 0,
+          error: `Failed to update document: ${updateErr.message}`,
+        };
+      }
+      docId = existingDoc.id;
+    } else {
+      const { data: newDoc, error: insertDocErr } = await supabase
+        .from("documents")
+        .insert({
+          filename: msg.subject || "(no subject)",
+          file_path: syntheticPath,
+          content_text: msg.content,
+          source_type: "email_message",
+          tags: ["email", "message"],
+          category: "other",
+        })
+        .select("id")
+        .single();
+
+      if (insertDocErr || !newDoc) {
+        return {
+          success: false,
+          chunks_created: 0,
+          attachments_dispatched: 0,
+          error: `Failed to create document: ${insertDocErr?.message}`,
+        };
+      }
+      docId = newDoc.id;
+    }
+
+    // 3. Delete existing chunks for re-index, then chunk and embed
+    await supabase.from("document_chunks").delete().eq("document_id", docId);
+
+    const chunks = chunkText(msg.content);
+    const batchSize = 20;
+
+    for (let i = 0; i < chunks.length; i += batchSize) {
+      const batch = chunks.slice(i, i + batchSize);
+      const texts = batch.map((c) => c.content);
+
+      const embeddings = await generateEmbeddings(texts, openaiKey);
+
+      const rows = batch.map((chunk, idx) => ({
+        document_id: docId,
+        chunk_index: i + idx,
+        content: chunk.content,
+        embedding: JSON.stringify(embeddings[idx]),
+        char_start: chunk.char_start,
+        char_end: chunk.char_end,
+      }));
+
+      const { error: insertErr } = await supabase
+        .from("document_chunks")
+        .insert(rows);
+
+      if (insertErr) {
+        return {
+          success: false,
+          chunks_created: totalCreated,
+          attachments_dispatched: 0,
+          error: `Insert failed: ${insertErr.message}`,
+        };
+      }
+
+      totalCreated += batch.length;
+    }
+
+    // 4. Mark document as indexed
+    await supabase
       .from("documents")
       .update({
-        filename: msg.subject || "(no subject)",
-        content_text: msg.content,
-        source_type: "email_message",
-        tags: ["email", "message"],
-        category: "other",
+        indexed_for_rag: true,
+        last_indexed_at: new Date().toISOString(),
+        rag_status: "indexed",
+        rag_error: null,
       })
-      .eq("id", existingDoc.id);
+      .eq("id", docId);
 
-    if (updateErr) {
-      return {
-        success: false,
-        chunks_created: 0,
-        attachments_dispatched: 0,
-        error: `Failed to update document: ${updateErr.message}`,
-      };
-    }
-    docId = existingDoc.id;
-  } else {
-    // Insert new document
-    const { data: newDoc, error: insertDocErr } = await supabase
-      .from("documents")
-      .insert({
-        filename: msg.subject || "(no subject)",
-        file_path: syntheticPath,
-        content_text: msg.content,
-        source_type: "email_message",
-        tags: ["email", "message"],
-        category: "other",
-      })
-      .select("id")
-      .single();
-
-    if (insertDocErr || !newDoc) {
-      return {
-        success: false,
-        chunks_created: 0,
-        attachments_dispatched: 0,
-        error: `Failed to create document: ${insertDocErr?.message}`,
-      };
-    }
-    docId = newDoc.id;
+    messageDocId = docId;
   }
 
-  // 3. Delete existing chunks for re-index, then chunk and embed
-  await supabase.from("document_chunks").delete().eq("document_id", docId);
-
-  const chunks = chunkText(msg.content);
-
-  let totalCreated = 0;
-  const batchSize = 20;
-
-  for (let i = 0; i < chunks.length; i += batchSize) {
-    const batch = chunks.slice(i, i + batchSize);
-    const texts = batch.map((c) => c.content);
-
-    const embeddings = await generateEmbeddings(texts, openaiKey);
-
-    const rows = batch.map((chunk, idx) => ({
-      document_id: docId,
-      chunk_index: i + idx,
-      content: chunk.content,
-      embedding: JSON.stringify(embeddings[idx]),
-      char_start: chunk.char_start,
-      char_end: chunk.char_end,
-    }));
-
-    const { error: insertErr } = await supabase
-      .from("document_chunks")
-      .insert(rows);
-
-    if (insertErr) {
-      return {
-        success: false,
-        chunks_created: totalCreated,
-        attachments_dispatched: 0,
-        error: `Insert failed: ${insertErr.message}`,
-      };
-    }
-
-    totalCreated += batch.length;
-  }
-
-  // 4. Mark document as indexed
-  await supabase
-    .from("documents")
-    .update({
-      indexed_for_rag: true,
-      last_indexed_at: new Date().toISOString(),
-      rag_status: "indexed",
-      rag_error: null,
-    })
-    .eq("id", docId);
-
-  // 5. For each attachment: find its documents row and fire index-document
-  const { data: attachments } = await supabase
-    .from("attachments")
-    .select("id, file_path")
-    .eq("message_id", messageId);
-
+  // 5. Resolve attachments in scope, then fire index-document for each
   let attachmentsDispatched = 0;
+  const attachmentIdsInScope = scope.attachmentIds;
 
-  if (attachments && attachments.length > 0) {
-    const indexDocumentUrl = `${supabaseUrl}/functions/v1/index-document`;
+  if (attachmentIdsInScope === null || attachmentIdsInScope.length > 0) {
+    let query = supabase
+      .from("attachments")
+      .select("id, file_path")
+      .eq("message_id", messageId);
 
-    for (const att of attachments) {
-      if (!att.file_path) continue;
+    if (attachmentIdsInScope !== null) {
+      query = query.in("id", attachmentIdsInScope);
+    }
 
-      const { data: attDoc } = await supabase
-        .from("documents")
-        .select("id")
-        .eq("file_path", att.file_path)
-        .maybeSingle();
+    const { data: attachments } = await query;
 
-      if (attDoc) {
-        fetch(indexDocumentUrl, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${supabaseKey}`,
-          },
-          body: JSON.stringify({ doc_id: attDoc.id, action: "index" }),
-        }).catch(() => {});
+    if (attachments && attachments.length > 0) {
+      const indexDocumentUrl = `${supabaseUrl}/functions/v1/index-document`;
 
-        attachmentsDispatched++;
+      for (const att of attachments) {
+        if (!att.file_path) continue;
+
+        const { data: attDoc } = await supabase
+          .from("documents")
+          .select("id")
+          .eq("file_path", att.file_path)
+          .maybeSingle();
+
+        if (attDoc) {
+          fetch(indexDocumentUrl, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${supabaseKey}`,
+            },
+            body: JSON.stringify({ doc_id: attDoc.id, action: "index" }),
+          }).catch(() => {});
+
+          attachmentsDispatched++;
+        }
       }
     }
   }
 
-  // 6. Update messages.indexed_for_rag
-  await supabase
-    .from("messages")
-    .update({ indexed_for_rag: true })
-    .eq("id", messageId);
+  // 6. Update messages.indexed_for_rag only when the body was (re-)indexed
+  if (scope.includeMessage) {
+    await supabase
+      .from("messages")
+      .update({ indexed_for_rag: true })
+      .eq("id", messageId);
+  }
 
-  // 7. Fire extract-dates for the message document
-  const extractDatesUrl = `${supabaseUrl}/functions/v1/extract-dates`;
-  fetch(extractDatesUrl, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${supabaseKey}`,
-    },
-    body: JSON.stringify({ document_id: docId }),
-  }).catch(() => {});
+  // 7. Fire extract-dates for the message document if we indexed it
+  if (messageDocId) {
+    const extractDatesUrl = `${supabaseUrl}/functions/v1/extract-dates`;
+    fetch(extractDatesUrl, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${supabaseKey}`,
+      },
+      body: JSON.stringify({ document_id: messageDocId }),
+    }).catch(() => {});
+  }
 
   return {
     success: true,
@@ -216,70 +233,81 @@ async function indexMessage(
 async function removeMessage(
   supabase: ReturnType<typeof createClient>,
   messageId: string,
+  scope: { includeMessage: boolean; attachmentIds: string[] | null },
 ): Promise<{ success: boolean; error?: string }> {
-  // 1. Find the synthetic document
-  const syntheticPath = `email_message/${messageId}`;
-  const { data: doc } = await supabase
-    .from("documents")
-    .select("id")
-    .eq("file_path", syntheticPath)
-    .maybeSingle();
+  if (scope.includeMessage) {
+    // 1. Find the synthetic document and clear its index
+    const syntheticPath = `email_message/${messageId}`;
+    const { data: doc } = await supabase
+      .from("documents")
+      .select("id")
+      .eq("file_path", syntheticPath)
+      .maybeSingle();
 
-  if (doc) {
-    // Delete chunks and reset flag on the message document
-    await supabase.from("document_chunks").delete().eq("document_id", doc.id);
+    if (doc) {
+      await supabase.from("document_chunks").delete().eq("document_id", doc.id);
+
+      await supabase
+        .from("documents")
+        .update({
+          indexed_for_rag: false,
+          last_indexed_at: null,
+          rag_status: "idle",
+          rag_error: null,
+        })
+        .eq("id", doc.id);
+    }
 
     await supabase
-      .from("documents")
-      .update({
-        indexed_for_rag: false,
-        last_indexed_at: null,
-        rag_status: "idle",
-        rag_error: null,
-      })
-      .eq("id", doc.id);
+      .from("messages")
+      .update({ indexed_for_rag: false })
+      .eq("id", messageId);
   }
 
-  // 2. For each attachment document: delete chunks, reset flag
-  const { data: attachments } = await supabase
-    .from("attachments")
-    .select("id, file_path")
-    .eq("message_id", messageId);
+  // 2. For each attachment in scope: delete chunks, reset flag
+  const attachmentIdsInScope = scope.attachmentIds;
 
-  if (attachments && attachments.length > 0) {
-    for (const att of attachments) {
-      if (!att.file_path) continue;
+  if (attachmentIdsInScope === null || attachmentIdsInScope.length > 0) {
+    let query = supabase
+      .from("attachments")
+      .select("id, file_path")
+      .eq("message_id", messageId);
 
-      const { data: attDoc } = await supabase
-        .from("documents")
-        .select("id")
-        .eq("file_path", att.file_path)
-        .maybeSingle();
+    if (attachmentIdsInScope !== null) {
+      query = query.in("id", attachmentIdsInScope);
+    }
 
-      if (attDoc) {
-        await supabase
-          .from("document_chunks")
-          .delete()
-          .eq("document_id", attDoc.id);
+    const { data: attachments } = await query;
 
-        await supabase
+    if (attachments && attachments.length > 0) {
+      for (const att of attachments) {
+        if (!att.file_path) continue;
+
+        const { data: attDoc } = await supabase
           .from("documents")
-          .update({
-            indexed_for_rag: false,
-            last_indexed_at: null,
-            rag_status: "idle",
-            rag_error: null,
-          })
-          .eq("id", attDoc.id);
+          .select("id")
+          .eq("file_path", att.file_path)
+          .maybeSingle();
+
+        if (attDoc) {
+          await supabase
+            .from("document_chunks")
+            .delete()
+            .eq("document_id", attDoc.id);
+
+          await supabase
+            .from("documents")
+            .update({
+              indexed_for_rag: false,
+              last_indexed_at: null,
+              rag_status: "idle",
+              rag_error: null,
+            })
+            .eq("id", attDoc.id);
+        }
       }
     }
   }
-
-  // 3. Update messages.indexed_for_rag
-  await supabase
-    .from("messages")
-    .update({ indexed_for_rag: false })
-    .eq("id", messageId);
 
   return { success: true };
 }
@@ -302,7 +330,8 @@ Deno.serve(async (req) => {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
-    const { message_id, action } = await req.json();
+    const body = await req.json();
+    const { message_id, action } = body;
 
     if (!message_id || !action) {
       return new Response(
@@ -313,19 +342,43 @@ Deno.serve(async (req) => {
         },
       );
     }
+
+    // Backwards-compatible scope: defaults reproduce the original
+    // "do everything" behaviour when the caller omits the new fields.
+    const includeMessage =
+      typeof body.include_message === "boolean" ? body.include_message : true;
+    const attachmentIds = Array.isArray(body.attachment_ids)
+      ? body.attachment_ids.filter((v: unknown) => typeof v === "string")
+      : null;
+    const scope = { includeMessage, attachmentIds };
+
+    if (
+      !scope.includeMessage &&
+      scope.attachmentIds !== null &&
+      scope.attachmentIds.length === 0
+    ) {
+      return new Response(
+        JSON.stringify({ error: "Nothing selected: pick the message or at least one attachment" }),
+        {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
+      );
+    }
+
     const openaiKey = Deno.env.get("OPENAI_API_KEY");
 
     const supabase = createClient(supabaseUrl, supabaseKey);
 
     if (action === "remove") {
-      const result = await removeMessage(supabase, message_id);
+      const result = await removeMessage(supabase, message_id, scope);
       return new Response(JSON.stringify(result), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
     if (action === "index") {
-      if (!openaiKey) {
+      if (scope.includeMessage && !openaiKey) {
         return new Response(
           JSON.stringify({ error: "OPENAI_API_KEY not configured" }),
           {
@@ -338,9 +391,10 @@ Deno.serve(async (req) => {
       const result = await indexMessage(
         supabase,
         message_id,
-        openaiKey,
+        openaiKey ?? "",
         supabaseUrl,
         supabaseKey,
+        scope,
       );
       return new Response(JSON.stringify(result), {
         status: result.success ? 200 : 400,
