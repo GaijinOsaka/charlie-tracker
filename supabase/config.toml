@@ -1,0 +1,16 @@
+# Per-function deployment configuration. Used by `supabase functions deploy`
+# (CLI) and read by maintainers as the source-of-truth for non-default flags.
+#
+# Functions called *internally* by other edge functions (service-to-service)
+# must run with `verify_jwt = false` because the platform gateway rejects the
+# opaque `sb_secret_*` service-role key — it accepts JWTs only. The in-function
+# `_shared/auth.ts` still authenticates every request (user JWT via JWKS,
+# opaque service-role match, legacy HS256 service-role fallback), so the
+# gateway gate is redundant. See:
+#   docs/solutions/integration-issues/supabase-edge-fn-verify-jwt-blocks-opaque-keys-2026-05-16.md
+
+[functions.index-document]
+verify_jwt = false
+
+[functions.extract-dates]
+verify_jwt = false
