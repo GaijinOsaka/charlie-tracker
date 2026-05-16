@@ -149,6 +149,8 @@ async function indexMessage(
     .update({
       indexed_for_rag: true,
       last_indexed_at: new Date().toISOString(),
+      rag_status: "indexed",
+      rag_error: null,
     })
     .eq("id", docId);
 
@@ -229,7 +231,12 @@ async function removeMessage(
 
     await supabase
       .from("documents")
-      .update({ indexed_for_rag: false, last_indexed_at: null })
+      .update({
+        indexed_for_rag: false,
+        last_indexed_at: null,
+        rag_status: "idle",
+        rag_error: null,
+      })
       .eq("id", doc.id);
   }
 
@@ -257,7 +264,12 @@ async function removeMessage(
 
         await supabase
           .from("documents")
-          .update({ indexed_for_rag: false, last_indexed_at: null })
+          .update({
+            indexed_for_rag: false,
+            last_indexed_at: null,
+            rag_status: "idle",
+            rag_error: null,
+          })
           .eq("id", attDoc.id);
       }
     }
