@@ -186,6 +186,7 @@ function App() {
   const [expandedActionMessageId, setExpandedActionMessageId] = useState(null);
   const [indexingMessages, setIndexingMessages] = useState(new Set());
   const [ragScopeModal, setRagScopeModal] = useState(null);
+  const [attachmentRagMap, setAttachmentRagMap] = useState({});
   const [profiles, setProfiles] = useState({});
   const [viewerAttachment, setViewerAttachment] = useState(null);
   const [viewerOpen, setViewerOpen] = useState(false);
@@ -430,6 +431,25 @@ function App() {
             setNotes((prev) => prev.filter((n) => n.id !== payload.old.id));
           },
         )
+        .on(
+          "postgres_changes",
+          { event: "UPDATE", schema: "public", table: "documents" },
+          (payload) => {
+            const path = payload.new?.file_path;
+            if (!path) return;
+            setAttachmentRagMap((prev) =>
+              path in prev || payload.new.indexed_for_rag
+                ? {
+                    ...prev,
+                    [path]: {
+                      indexed_for_rag: !!payload.new.indexed_for_rag,
+                      rag_status: payload.new.rag_status,
+                    },
+                  }
+                : prev,
+            );
+          },
+        )
         .subscribe((status) => {
           if (import.meta.env.DEV) console.log("[Realtime] Status:", status);
           if (status === "CHANNEL_ERROR" || status === "TIMED_OUT") {
@@ -488,6 +508,38 @@ function App() {
     setCurrentPage(1);
   }, [statusFilter, sourceFilter, actionFilter, searchQuery, categoryFilter]);
 
+  async function refreshAttachmentRagMap(msgs) {
+    const paths = Array.from(
+      new Set(
+        (msgs || [])
+          .flatMap((m) => (m.attachments || []).map((a) => a.file_path))
+          .filter(Boolean),
+      ),
+    );
+    if (paths.length === 0) {
+      setAttachmentRagMap({});
+      return;
+    }
+    const { data, error } = await supabase
+      .from("documents")
+      .select("file_path, indexed_for_rag, rag_status")
+      .in("file_path", paths);
+    if (error) {
+      console.warn("Failed to load attachment RAG state:", error.message);
+      return;
+    }
+    const map = {};
+    for (const d of data || []) {
+      if (d.file_path) {
+        map[d.file_path] = {
+          indexed_for_rag: !!d.indexed_for_rag,
+          rag_status: d.rag_status,
+        };
+      }
+    }
+    setAttachmentRagMap(map);
+  }
+
   async function loadMessages() {
     let retrying = false;
     try {
@@ -544,6 +596,7 @@ function App() {
         }));
 
       setMessages(annotated);
+      refreshAttachmentRagMap(annotated);
       lastLoadedAt.current = Date.now();
       loadRetryCount.current = 0;
       if (loadRetryTimer.current) {
@@ -963,6 +1016,22 @@ function App() {
               : m,
           ),
         );
+      }
+
+      if (action === "remove" && scope.attachmentIds?.length > 0) {
+        setAttachmentRagMap((prev) => {
+          const next = { ...prev };
+          for (const attId of scope.attachmentIds) {
+            const att = msg.attachments?.find((a) => a.id === attId);
+            if (att?.file_path) {
+              next[att.file_path] = {
+                indexed_for_rag: false,
+                rag_status: "idle",
+              };
+            }
+          }
+          return next;
+        });
       }
 
       const attachmentCount = scope.attachmentIds?.length ?? 0;
@@ -1744,31 +1813,44 @@ function App() {
                           <span className="attachments-label">
                             Attachments:
                           </span>
-                          {msg.attachments.map((att) => (
-                            <button
-                              key={att.id}
-                              className="attachment-link"
-                              onClick={() => openAttachmentViewer(att)}
-                              title={att.filename}
-                            >
-                              <span
-                                className="attachment-icon"
-                                aria-hidden="true"
+                          {msg.attachments.map((att) => {
+                            const ragState =
+                              attachmentRagMap[att.file_path];
+                            return (
+                              <button
+                                key={att.id}
+                                className="attachment-link"
+                                onClick={() => openAttachmentViewer(att)}
+                                title={att.filename}
                               >
-                                {att.mime_type?.includes("pdf")
-                                  ? "\u{1F4C4}"
-                                  : "\u{1F4CE}"}
-                              </span>
-                              <span className="attachment-name">
-                                {att.filename}
-                              </span>
-                              {att.file_size && (
-                                <span className="attachment-size">
-                                  ({Math.round(att.file_size / 1024)}KB)
+                                <span
+                                  className="attachment-icon"
+                                  aria-hidden="true"
+                                >
+                                  {att.mime_type?.includes("pdf")
+                                    ? "\u{1F4C4}"
+                                    : "\u{1F4CE}"}
                                 </span>
-                              )}
-                            </button>
-                          ))}
+                                <span className="attachment-name">
+                                  {att.filename}
+                                </span>
+                                {att.file_size && (
+                                  <span className="attachment-size">
+                                    ({Math.round(att.file_size / 1024)}KB)
+                                  </span>
+                                )}
+                                {ragState?.indexed_for_rag && (
+                                  <span
+                                    className="indexed-badge attachment-indexed-badge"
+                                    title="Indexed for RAG"
+                                    aria-label="Indexed for RAG"
+                                  >
+                                    R
+                                  </span>
+                                )}
+                              </button>
+                            );
+                          })}
                         </div>
                       )}
 
