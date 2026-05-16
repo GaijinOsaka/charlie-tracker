@@ -172,12 +172,16 @@ function PDFPage({ pdf, pageNum, containerWidth }) {
         const page = await pdf.getPage(pageNum);
         // Get page viewport at scale 1 to know its natural width
         const baseViewport = page.getViewport({ scale: 1 });
-        // Calculate scale to fit container width (account for padding: 8px on mobile, 20px on desktop)
-        const padding = window.innerWidth < 480 ? 16 : 40; // 8px * 2 or 20px * 2
+        // Calculate CSS-pixel scale to fit container width (padding: 8px mobile, 20px desktop)
+        const padding = window.innerWidth < 480 ? 16 : 40;
         const availableWidth = (containerWidth || window.innerWidth) - padding;
-        const scale = availableWidth / baseViewport.width;
+        const cssScale = availableWidth / baseViewport.width;
+        // Render at device-pixel scale so canvas pixels map 1:1 to physical pixels
+        // on HiDPI/Retina screens. Cap to avoid OOM on huge pages.
+        const dpr = window.devicePixelRatio || 1;
+        const renderScale = Math.min(cssScale * dpr, 6);
 
-        const viewport = page.getViewport({ scale: Math.min(scale, 3) }); // Cap at 3x to prevent excessive memory use
+        const viewport = page.getViewport({ scale: renderScale });
         const canvas = document.createElement("canvas");
         canvas.width = viewport.width;
         canvas.height = viewport.height;
