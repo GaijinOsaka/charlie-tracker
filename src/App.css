@@ -2818,6 +2818,24 @@ header h1 {
   border-left: 3px solid var(--ct-success) !important;
 }
 
+@media (max-width: 768px) {
+  .notification-dropdown {
+    position: fixed;
+    top: 64px;
+    left: 8px;
+    right: 8px;
+    width: auto;
+    max-width: none;
+    max-height: calc(100vh - 80px);
+    margin-top: 0;
+  }
+
+  .notification-summary {
+    word-break: break-word;
+    overflow-wrap: anywhere;
+  }
+}
+
 /* Modal */
 .modal-overlay {
   position: fixed;
@@ -2847,6 +2865,13 @@ header h1 {
 .modal-subject {
   color: var(--ct-muted);
   font-size: 0.9rem;
+  margin: 0 0 1rem;
+}
+
+.modal-body-text {
+  color: var(--ct-ink-muted);
+  font-size: 0.9rem;
+  line-height: 1.4;
   margin: 0 0 1rem;
 }
 

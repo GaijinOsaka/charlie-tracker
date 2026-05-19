@@ -19,6 +19,7 @@ import { AttachmentViewer } from "./components/AttachmentViewer";
 import SetPassword from "./components/SetPassword";
 import { ActionsBox } from "./components/ActionsBox";
 import { ActionButton } from "./components/ActionButton";
+import EventActionModal from "./components/EventActionModal";
 import ActionModal from "./components/ActionModal";
 import NoteModal from "./components/NoteModal";
 import RagScopeModal from "./components/RagScopeModal";
@@ -194,6 +195,7 @@ function App() {
   const [actionModalOpen, setActionModalOpen] = useState(false);
   const [actionModalMessage, setActionModalMessage] = useState(null);
   const [actionModalType, setActionModalType] = useState(null);
+  const [eventActionModal, setEventActionModal] = useState(null);
   const [categories, setCategories] = useState([]);
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [notes, setNotes] = useState([]);
@@ -753,6 +755,56 @@ function App() {
       console.error("Error updating event:", err);
       addToast("Failed to update event: " + err.message, "error");
     }
+  }
+
+  // TODO: action buttons (Add Note / Mark as Actioned / Clear) only succeed on
+  // events where created_by === current user (RLS via updateManualEvent). For
+  // extracted events (source_type === "extracted", created_by === null) the
+  // update fails and the user sees an error toast. Decide later whether to:
+  //   - hide the buttons on extracted events, or
+  //   - relax the RLS check / add a separate update path so any user can flag
+  //     an extracted event as actioned.
+  function eventFormDataFrom(evt, overrides = {}) {
+    return {
+      title: evt.title,
+      event_date: evt.event_date,
+      event_end_date: evt.event_end_date,
+      event_time: evt.event_time,
+      event_end_time: evt.event_end_time,
+      description: evt.description,
+      action_required: evt.action_required,
+      action_detail: evt.action_detail,
+      reminder: evt.reminder,
+      ...overrides,
+    };
+  }
+
+  function handleEventAddNote(evt) {
+    setEventActionModal({ event: evt, mode: "add_note" });
+  }
+
+  function handleEventMarkActioned(evt) {
+    setEventActionModal({ event: evt, mode: "mark_actioned" });
+  }
+
+  function handleEventClear(evt) {
+    setEventActionModal({ event: evt, mode: "clear" });
+  }
+
+  async function handleEventActionConfirm(note) {
+    if (!eventActionModal) return;
+    const { event: evt, mode } = eventActionModal;
+    const overrides =
+      mode === "add_note"
+        ? { action_detail: note }
+        : mode === "mark_actioned"
+          ? {
+              action_required: false,
+              action_detail: note || evt.action_detail,
+            }
+          : { action_required: false };
+    setEventActionModal(null);
+    await handleUpdateEvent(evt.id, eventFormDataFrom(evt, overrides));
   }
 
   async function handleDeleteEvent(eventId) {
@@ -1571,6 +1623,7 @@ function App() {
             pendingEvents={events
               .filter((e) => e.action_required && notes.some((n) => n.event_id === e.id))
               .sort((a, b) => new Date(a.event_date) - new Date(b.event_date))}
+            events={events}
             profiles={profiles}
             onMessageClick={(msgId) => {
               setExpandedMessages(new Set([...expandedMessages, msgId]));
@@ -1581,6 +1634,9 @@ function App() {
               setCalendarFocusDate(evt.event_date);
               setActiveTab("calendar");
             }}
+            onEventAddNote={handleEventAddNote}
+            onEventMarkActioned={handleEventMarkActioned}
+            onEventClear={handleEventClear}
             onStatusChange={toggleActionStatus}
             onShowActionModal={handleShowActionModal}
             onAttachmentClick={openAttachmentViewer}
@@ -1692,6 +1748,7 @@ function App() {
                   pendingEvents={events
                     .filter((e) => e.action_required && notes.some((n) => n.event_id === e.id))
                     .sort((a, b) => new Date(a.event_date) - new Date(b.event_date))}
+                  events={events}
                   profiles={profiles}
                   showRecentlyActioned={true}
                   onMessageClick={(msgId) => {
@@ -1701,6 +1758,9 @@ function App() {
                     setCalendarFocusDate(evt.event_date);
                     setActiveTab("calendar");
                   }}
+                  onEventAddNote={handleEventAddNote}
+                  onEventMarkActioned={handleEventMarkActioned}
+                  onEventClear={handleEventClear}
                   onStatusChange={toggleActionStatus}
                   onShowActionModal={handleShowActionModal}
                   onAttachmentClick={openAttachmentViewer}
@@ -1951,6 +2011,15 @@ function App() {
           type={actionModalType}
           onConfirm={handleActionModalConfirm}
           onCancel={handleActionModalCancel}
+        />
+      )}
+
+      {eventActionModal && (
+        <EventActionModal
+          event={eventActionModal.event}
+          mode={eventActionModal.mode}
+          onConfirm={handleEventActionConfirm}
+          onCancel={() => setEventActionModal(null)}
         />
       )}
 

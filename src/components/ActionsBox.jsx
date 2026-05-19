@@ -2,13 +2,76 @@ import React, { useState } from "react";
 import { ACTION_STATUS } from "../lib/constants";
 import "./ActionsBox.css";
 
+const MONTHS = [
+  "january",
+  "february",
+  "march",
+  "april",
+  "may",
+  "june",
+  "july",
+  "august",
+  "september",
+  "october",
+  "november",
+  "december",
+];
+
+const STOP_WORDS = new Set([
+  "the","a","an","and","or","of","in","on","for","to","at","by","with","from",
+  "is","be","are","was","were","this","that","these","those","your","you","we",
+  "us","our","me","my","it","its","as","but","if","not","no","yes","any","all",
+  "some","new","day","days","update","info","school","term","fwd","re","subject",
+  "received","message","email","mon","tue","wed","thu","fri","sat","sun","week",
+  "weeks","year","years","please","note",
+]);
+
+function tokenize(str, dropMonths) {
+  return (str || "")
+    .toLowerCase()
+    .replace(/[^a-z0-9\s]/g, " ")
+    .split(/\s+/)
+    .filter((t) => t.length >= 3 && !STOP_WORDS.has(t))
+    .filter((t) => !dropMonths || !MONTHS.includes(t))
+    .map((t) => (t.endsWith("s") && t.length > 4 ? t.slice(0, -1) : t));
+}
+
+function findEventsByTitleOverlap(subject, events) {
+  const subjectTokens = new Set(tokenize(subject, true));
+  if (subjectTokens.size < 2) return [];
+  const subjectLower = (subject || "").toLowerCase();
+  const subjectMonths = MONTHS.filter((m) =>
+    new RegExp(`\\b${m}\\b`).test(subjectLower),
+  );
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  return events.filter((e) => {
+    const titleTokens = tokenize(e.title, true);
+    let overlap = 0;
+    for (const t of titleTokens) if (subjectTokens.has(t)) overlap++;
+    if (overlap < 2) return false;
+    const eventStart = new Date(e.event_date + "T00:00:00");
+    if (eventStart < today) return false;
+    if (subjectMonths.length > 0) {
+      const eventMonth = MONTHS[eventStart.getMonth()];
+      if (!subjectMonths.includes(eventMonth)) return false;
+    }
+    return true;
+  });
+}
+
 export function ActionsBox({
   pendingMessages,
   actionedMessages,
   pendingEvents = [],
+  events = [],
   profiles,
   onMessageClick,
   onEventClick,
+  onEventAddNote,
+  onEventMarkActioned,
+  onEventClear,
   onStatusChange,
   onShowActionModal,
   onAttachmentClick,
@@ -22,6 +85,50 @@ export function ActionsBox({
   const handleShowActionModal = onShowActionModal || (() => {});
 
   const getUserName = (userId) => profiles[userId]?.display_name || "Unknown";
+
+  const formatDateRange = (linked) => {
+    if (!linked || linked.length === 0) return null;
+    const sorted = [...linked].sort(
+      (a, b) => new Date(a.event_date) - new Date(b.event_date),
+    );
+    const startStr = sorted[0].event_date;
+    const last = sorted[sorted.length - 1];
+    const endStr = last.event_end_date || last.event_date;
+
+    const start = new Date(startStr + "T00:00:00");
+    const end = new Date(endStr + "T00:00:00");
+    const sameDay = startStr === endStr;
+    const sameMonth =
+      start.getMonth() === end.getMonth() &&
+      start.getFullYear() === end.getFullYear();
+    const fmt = (d, opts) => d.toLocaleDateString("en-GB", opts);
+
+    if (sameDay) {
+      return fmt(start, { day: "numeric", month: "short" });
+    }
+    if (sameMonth) {
+      return `${start.getDate()}–${fmt(end, { day: "numeric", month: "short" })}`;
+    }
+    return `${fmt(start, { day: "numeric", month: "short" })} – ${fmt(end, { day: "numeric", month: "short" })}`;
+  };
+
+  const formatEventDateLabel = (msg) => {
+    const attachmentPaths = new Set(
+      (msg.attachments || []).map((a) => a.file_path).filter(Boolean),
+    );
+    let linked = events.filter((e) => {
+      if (e.message_id === msg.id) return true;
+      const docPath = e.documents?.file_path;
+      return docPath && attachmentPaths.has(docPath);
+    });
+
+    // Fallback: no FK link to a message/document — try fuzzy title overlap.
+    if (linked.length === 0) {
+      linked = findEventsByTitleOverlap(msg.subject, events);
+    }
+
+    return formatDateRange(linked);
+  };
 
   const formatNoteDate = (dateStr) => {
     const d = new Date(dateStr);
@@ -76,7 +183,15 @@ export function ActionsBox({
         <div className="action-row-status-dot" />
         <div className="action-row-info">
           <div className="action-row-subject">
-            {msg.subject || "(No subject)"}
+            <span className="action-row-subject-text">
+              {msg.subject || "(No subject)"}
+            </span>
+            {(() => {
+              const label = formatEventDateLabel(msg);
+              return label ? (
+                <strong className="action-row-event-dates">{label}</strong>
+              ) : null;
+            })()}
           </div>
           <div className="action-row-meta">
             <span className="action-row-source">{msg.source}</span>
@@ -180,13 +295,22 @@ export function ActionsBox({
       <div className="action-row-header">
         <div className="action-row-status-dot" />
         <div className="action-row-info">
-          <div className="action-row-subject">{evt.title}</div>
+          <div className="action-row-subject">
+            <span className="action-row-subject-text">{evt.title}</span>
+            {(() => {
+              const label = formatDateRange([evt]);
+              return label ? (
+                <strong className="action-row-event-dates">{label}</strong>
+              ) : null;
+            })()}
+          </div>
           <div className="action-row-meta">
             <span className="action-row-source">Calendar</span>
-            <span className="action-row-date">
-              {new Date(evt.event_date + "T00:00:00").toLocaleDateString()}
-              {evt.event_time && ` · ${evt.event_time.slice(0, 5)}`}
-            </span>
+            {evt.event_time && (
+              <span className="action-row-date">
+                {evt.event_time.slice(0, 5)}
+              </span>
+            )}
           </div>
           {evt.action_detail && (
             <div className="action-notes-chain">
@@ -200,6 +324,39 @@ export function ActionsBox({
           )}
         </div>
         <div className="action-row-buttons">
+          {onEventAddNote && (
+            <button
+              className="action-row-btn action-row-btn-note"
+              onClick={(e) => {
+                e.stopPropagation();
+                onEventAddNote(evt);
+              }}
+            >
+              Add Note
+            </button>
+          )}
+          {onEventMarkActioned && (
+            <button
+              className="action-row-btn action-row-btn-action"
+              onClick={(e) => {
+                e.stopPropagation();
+                onEventMarkActioned(evt);
+              }}
+            >
+              Mark as Actioned
+            </button>
+          )}
+          {onEventClear && (
+            <button
+              className="action-row-btn action-row-btn-clear"
+              onClick={(e) => {
+                e.stopPropagation();
+                onEventClear(evt);
+              }}
+            >
+              Clear
+            </button>
+          )}
           <button
             className="action-row-btn action-row-btn-view"
             onClick={(e) => {
