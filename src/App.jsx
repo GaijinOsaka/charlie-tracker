@@ -1621,7 +1621,7 @@ function App() {
               .filter((m) => m.action_status === ACTION_STATUS.ACTIONED)
               .sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at))}
             pendingEvents={events
-              .filter((e) => e.action_required && notes.some((n) => n.event_id === e.id))
+              .filter((e) => e.action_required)
               .sort((a, b) => new Date(a.event_date) - new Date(b.event_date))}
             events={events}
             profiles={profiles}
@@ -1746,7 +1746,7 @@ function App() {
                   pendingMessages={actionsPending}
                   actionedMessages={actionsCompleted}
                   pendingEvents={events
-                    .filter((e) => e.action_required && notes.some((n) => n.event_id === e.id))
+                    .filter((e) => e.action_required)
                     .sort((a, b) => new Date(a.event_date) - new Date(b.event_date))}
                   events={events}
                   profiles={profiles}
