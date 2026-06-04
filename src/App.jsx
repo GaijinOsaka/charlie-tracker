@@ -1621,7 +1621,10 @@ function App() {
               .filter((m) => m.action_status === ACTION_STATUS.ACTIONED)
               .sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at))}
             pendingEvents={events
-              .filter((e) => e.action_required)
+              // User-created events only (manual or note-promoted, created_by set).
+              // AI-extracted events (created_by null) keep their calendar badge but
+              // don't flood the Actions box.
+              .filter((e) => e.action_required && e.created_by)
               .sort((a, b) => new Date(a.event_date) - new Date(b.event_date))}
             events={events}
             profiles={profiles}
@@ -1746,7 +1749,8 @@ function App() {
                   pendingMessages={actionsPending}
                   actionedMessages={actionsCompleted}
                   pendingEvents={events
-                    .filter((e) => e.action_required)
+                    // User-created events only — see actions-tab filter above.
+                    .filter((e) => e.action_required && e.created_by)
                     .sort((a, b) => new Date(a.event_date) - new Date(b.event_date))}
                   events={events}
                   profiles={profiles}
