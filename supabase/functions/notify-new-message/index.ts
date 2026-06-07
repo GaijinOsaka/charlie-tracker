@@ -111,6 +111,10 @@ Deno.serve(async (req) => {
             keys: { p256dh: pushSub.keys.p256dh, auth: pushSub.keys.auth },
           },
           notificationPayload,
+          // High urgency breaks through Android Doze so notifications show
+          // immediately on a locked phone; TTL keeps undelivered pushes
+          // queued at FCM for a day instead of the web-push default 4 weeks
+          { TTL: 86400, urgency: "high" },
         );
         pushResults.push({ id: sub.id, success: true });
       } catch (error: any) {

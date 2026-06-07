@@ -29,8 +29,16 @@ import { Agentation } from "agentation";
 import { getPaginatedMessages, calculateTotalPages } from "./lib/pagination";
 import "./App.css";
 
+// Guard against overlapping runs — the auth effect can re-fire on token
+// refreshes, and concurrent unsubscribe/subscribe races strand the device
+// with an endpoint that never reaches the database.
+let pushSubscribeInFlight = false;
+
 async function subscribeToPushNotifications(user) {
   if (!("Notification" in window) || !navigator.serviceWorker) {
+    return;
+  }
+  if (pushSubscribeInFlight) {
     return;
   }
 
@@ -43,6 +51,7 @@ async function subscribeToPushNotifications(user) {
     return;
   }
 
+  pushSubscribeInFlight = true;
   try {
     // Get permission if not already granted
     if (Notification.permission === "default") {
@@ -64,19 +73,25 @@ async function subscribeToPushNotifications(user) {
       return;
     }
 
-    // Unsubscribe existing subscription if VAPID key changed
-    const existingSub = await registration.pushManager.getSubscription();
-    if (existingSub) {
-      await existingSub.unsubscribe();
+    const appServerKey = urlBase64ToUint8Array(vapidKey);
+
+    // Reuse the existing subscription when the VAPID key is unchanged.
+    // Only unsubscribe when the key actually changed — subscribe() rejects
+    // a different applicationServerKey on an existing subscription.
+    let subscription = await registration.pushManager.getSubscription();
+    if (subscription && !subscriptionKeyMatches(subscription, appServerKey)) {
+      await subscription.unsubscribe();
+      subscription = null;
     }
 
-    // Subscribe to push
-    const subscription = await registration.pushManager.subscribe({
-      userVisibleOnly: true,
-      applicationServerKey: urlBase64ToUint8Array(vapidKey),
-    });
+    if (!subscription) {
+      subscription = await registration.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: appServerKey,
+      });
+    }
 
-    // Send subscription to Supabase
+    // Always upsert — heals rows lost to earlier failed saves
     const { error } = await supabase.from("push_subscriptions").upsert(
       {
         user_id: user.id,
@@ -91,7 +106,19 @@ async function subscribeToPushNotifications(user) {
     }
   } catch (error) {
     console.error("Failed to subscribe to push:", error);
+  } finally {
+    pushSubscribeInFlight = false;
   }
+}
+
+// Compare an existing subscription's applicationServerKey with the current
+// VAPID key (both as raw bytes)
+function subscriptionKeyMatches(subscription, appServerKey) {
+  const existingKey = subscription.options?.applicationServerKey;
+  if (!existingKey) return false;
+  const existingBytes = new Uint8Array(existingKey);
+  if (existingBytes.length !== appServerKey.length) return false;
+  return existingBytes.every((byte, i) => byte === appServerKey[i]);
 }
 
 // Helper function to convert VAPID key from URL-safe base64 to Uint8Array
