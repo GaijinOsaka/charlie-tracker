@@ -3960,6 +3960,7 @@ header h1 {
 
 .btn-note-edit,
 .btn-note-delete,
+.btn-note-reply,
 .btn-note-promote {
   padding: 0.3rem 0.75rem;
   border-radius: var(--ct-radius-md);
@@ -3967,6 +3968,16 @@ header h1 {
   cursor: pointer;
   border: 1px solid var(--ct-line);
   background: transparent;
+}
+
+.btn-note-reply {
+  color: var(--ct-ink-muted);
+  border-color: var(--ct-line);
+}
+
+.btn-note-reply:hover {
+  background: var(--ct-surface-soft);
+  color: var(--ct-ink);
 }
 
 .btn-note-edit {
@@ -3994,6 +4005,121 @@ header h1 {
 
 .btn-note-promote:hover {
   background: var(--ct-success-soft);
+}
+
+.note-replies {
+  list-style: none;
+  margin: 0.5rem 0 0.75rem;
+  padding: 0 0 0 0.75rem;
+  border-left: 2px solid var(--ct-line);
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.note-reply {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.note-reply-body {
+  margin: 0;
+  color: var(--ct-ink);
+  font-size: 0.9rem;
+  line-height: 1.4;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+}
+
+.note-reply-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.7rem;
+  color: var(--ct-muted);
+}
+
+.note-reply-author {
+  font-weight: 500;
+}
+
+.btn-note-reply-delete {
+  background: transparent;
+  border: none;
+  color: var(--ct-danger);
+  cursor: pointer;
+  font-size: 0.7rem;
+  padding: 0;
+}
+
+.btn-note-reply-delete:hover {
+  text-decoration: underline;
+}
+
+.note-reply-composer {
+  margin: 0.5rem 0 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.note-reply-input {
+  width: 100%;
+  padding: 0.5rem 0.6rem;
+  border: 1px solid var(--ct-line);
+  border-radius: var(--ct-radius-md);
+  background: var(--ct-surface);
+  color: var(--ct-ink);
+  font-size: 0.9rem;
+  font-family: inherit;
+  resize: vertical;
+}
+
+.note-reply-input:focus {
+  outline: none;
+  border-color: var(--ct-accent);
+}
+
+.note-reply-composer-actions {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: flex-end;
+}
+
+.btn-note-reply-cancel,
+.btn-note-reply-post {
+  padding: 0.3rem 0.75rem;
+  border-radius: var(--ct-radius-md);
+  font-size: 0.8rem;
+  cursor: pointer;
+  border: 1px solid var(--ct-line);
+}
+
+.btn-note-reply-cancel {
+  background: transparent;
+  color: var(--ct-ink-muted);
+}
+
+.btn-note-reply-cancel:hover {
+  background: var(--ct-surface-soft);
+}
+
+.btn-note-reply-post {
+  background: var(--ct-accent);
+  border-color: var(--ct-accent);
+  color: #fff;
+}
+
+.btn-note-reply-post:hover:not(:disabled) {
+  background: var(--ct-accent-hover);
+  border-color: var(--ct-accent-hover);
+}
+
+.btn-note-reply-post:disabled,
+.btn-note-reply-cancel:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 /* form-error used in NoteModal */

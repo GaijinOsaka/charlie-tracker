@@ -265,7 +265,7 @@ function App() {
       setNotesLoading(true);
       const { data, error } = await supabase
         .from("notes")
-        .select("id, title, body, author_id, event_id, created_at, updated_at, events!event_id(id, event_date, title)")
+        .select("id, title, body, author_id, event_id, created_at, updated_at, events!event_id(id, event_date, title), note_replies(id, author_id, body, created_at)")
         .order("created_at", { ascending: false });
       if (error) throw error;
       setNotes(data || []);
@@ -871,6 +871,54 @@ function App() {
     } catch (err) {
       console.error("Error deleting note:", err);
       addToast("Failed to delete note", "error");
+    }
+  }
+
+  async function handleAddNoteReply(noteId, body) {
+    const trimmed = (body || "").trim();
+    if (!trimmed || !user) return;
+    try {
+      const { data, error } = await supabase
+        .from("note_replies")
+        .insert({ note_id: noteId, author_id: user.id, body: trimmed })
+        .select("id, author_id, body, created_at")
+        .single();
+      if (error) throw error;
+      setNotes((prev) =>
+        prev.map((n) =>
+          n.id === noteId
+            ? { ...n, note_replies: [...(n.note_replies || []), data] }
+            : n,
+        ),
+      );
+    } catch (err) {
+      console.error("Error adding reply:", err);
+      addToast("Failed to add reply", "error");
+    }
+  }
+
+  async function handleDeleteNoteReply(noteId, replyId) {
+    try {
+      const { error } = await supabase
+        .from("note_replies")
+        .delete()
+        .eq("id", replyId);
+      if (error) throw error;
+      setNotes((prev) =>
+        prev.map((n) =>
+          n.id === noteId
+            ? {
+                ...n,
+                note_replies: (n.note_replies || []).filter(
+                  (r) => r.id !== replyId,
+                ),
+              }
+            : n,
+        ),
+      );
+    } catch (err) {
+      console.error("Error deleting reply:", err);
+      addToast("Failed to delete reply", "error");
     }
   }
 
@@ -1682,6 +1730,9 @@ function App() {
             onEdit={handleEditNote}
             onDelete={handleDeleteNote}
             onPromote={handlePromoteNote}
+            onAddReply={handleAddNoteReply}
+            onDeleteReply={handleDeleteNoteReply}
+            currentUserId={user?.id}
             onNavigateToCalendar={() => setActiveTab("calendar")}
           />
         )}
