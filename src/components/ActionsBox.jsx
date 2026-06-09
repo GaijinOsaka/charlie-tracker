@@ -1,6 +1,8 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { ACTION_STATUS } from "../lib/constants";
 import "./ActionsBox.css";
+
+const ACTIONED_PAGE_SIZE = 10;
 
 const MONTHS = [
   "january",
@@ -80,6 +82,24 @@ export function ActionsBox({
   const [expandedId, setExpandedId] = useState(null);
   const [pendingCollapsed, setPendingCollapsed] = useState(true);
   const [actionedCollapsed, setActionedCollapsed] = useState(true);
+  const [actionedPage, setActionedPage] = useState(0);
+
+  const totalActioned = actionedMessages.length;
+  const totalActionedPages = Math.max(
+    1,
+    Math.ceil(totalActioned / ACTIONED_PAGE_SIZE),
+  );
+  const paginateActioned = !showRecentlyActioned;
+  const pagedActioned = paginateActioned
+    ? actionedMessages.slice(
+        actionedPage * ACTIONED_PAGE_SIZE,
+        (actionedPage + 1) * ACTIONED_PAGE_SIZE,
+      )
+    : actionedMessages;
+
+  useEffect(() => {
+    if (actionedPage >= totalActionedPages) setActionedPage(0);
+  }, [totalActioned, totalActionedPages, actionedPage]);
 
   const handleStatusChange = onStatusChange || (() => {});
   const handleShowActionModal = onShowActionModal || (() => {});
@@ -416,9 +436,41 @@ export function ActionsBox({
             {actionedMessages.length})
           </div>
           {!actionedCollapsed && (
-            <div className="actions-list">
-              {actionedMessages.map((msg) => renderCompactRow(msg, "actioned"))}
-            </div>
+            <>
+              <div className="actions-list">
+                {pagedActioned.map((msg) => renderCompactRow(msg, "actioned"))}
+              </div>
+              {paginateActioned && totalActioned > ACTIONED_PAGE_SIZE && (
+                <div className="actions-pagination">
+                  <button
+                    className="action-row-btn"
+                    disabled={actionedPage === 0}
+                    onClick={() => setActionedPage((p) => Math.max(0, p - 1))}
+                  >
+                    ‹ Prev
+                  </button>
+                  <span className="actions-pagination-info">
+                    Page {actionedPage + 1} of {totalActionedPages} ·{" "}
+                    {Math.min(
+                      (actionedPage + 1) * ACTIONED_PAGE_SIZE,
+                      totalActioned,
+                    )}{" "}
+                    of {totalActioned}
+                  </span>
+                  <button
+                    className="action-row-btn"
+                    disabled={actionedPage >= totalActionedPages - 1}
+                    onClick={() =>
+                      setActionedPage((p) =>
+                        Math.min(totalActionedPages - 1, p + 1),
+                      )
+                    }
+                  >
+                    Next ›
+                  </button>
+                </div>
+              )}
+            </>
           )}
         </div>
       )}
