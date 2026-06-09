@@ -180,9 +180,9 @@ export function ActionsBox({
       onClick={() => setExpandedId(expandedId === msg.id ? null : msg.id)}
     >
       <div className="action-row-header">
-        <div className="action-row-status-dot" />
         <div className="action-row-info">
           <div className="action-row-subject">
+            <span className="action-row-status-dot" />
             <span className="action-row-subject-text">
               {msg.subject || "(No subject)"}
             </span>
@@ -293,9 +293,9 @@ export function ActionsBox({
       onClick={() => onEventClick && onEventClick(evt)}
     >
       <div className="action-row-header">
-        <div className="action-row-status-dot" />
         <div className="action-row-info">
           <div className="action-row-subject">
+            <span className="action-row-status-dot" />
             <span className="action-row-subject-text">{evt.title}</span>
             {(() => {
               const label = formatDateRange([evt]);
