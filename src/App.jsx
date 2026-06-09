@@ -671,7 +671,7 @@ function App() {
       const { data, error } = await supabase
         .from("events")
         .select(
-          "*, messages(id, subject, sender_name, sender_email, content, source, received_at, attachments(id, filename, file_path, mime_type, file_size)), documents(id, filename, file_path), event_tags(tag)",
+          "*, messages(id, subject, sender_name, sender_email, content, source, received_at, attachments(id, filename, file_path, mime_type, file_size)), documents(id, filename, file_path), event_tags(tag), event_notes(id, user_id, note, action_type, created_at)",
         )
         .order("event_date", { ascending: true });
       if (error) throw error;
@@ -1141,6 +1141,57 @@ function App() {
               ),
             }
           : m,
+      ),
+    );
+  }
+
+  // Append a conversational reply to an event's action chain WITHOUT
+  // changing its action_required status (action_type = 'comment').
+  async function handleAddEventComment(event, body) {
+    const text = body?.trim();
+    if (!text) return;
+    const { data, error } = await supabase
+      .from("event_notes")
+      .insert({
+        event_id: event.id,
+        user_id: user.id,
+        note: text,
+        action_type: ACTION_NOTE_COMMENT,
+      })
+      .select("id, user_id, note, action_type, created_at")
+      .single();
+    if (error) {
+      console.error("Failed to add reply:", error);
+      addToast("Failed to add reply", "error");
+      return;
+    }
+    setEvents((prev) =>
+      prev.map((e) =>
+        e.id === event.id
+          ? { ...e, event_notes: [...(e.event_notes || []), data] }
+          : e,
+      ),
+    );
+  }
+
+  async function handleDeleteEventComment(event, noteId) {
+    const { error } = await supabase
+      .from("event_notes")
+      .delete()
+      .eq("id", noteId);
+    if (error) {
+      console.error("Failed to delete reply:", error);
+      addToast("Failed to delete reply", "error");
+      return;
+    }
+    setEvents((prev) =>
+      prev.map((e) =>
+        e.id === event.id
+          ? {
+              ...e,
+              event_notes: (e.event_notes || []).filter((n) => n.id !== noteId),
+            }
+          : e,
       ),
     );
   }
@@ -1773,6 +1824,8 @@ function App() {
             onAttachmentClick={openAttachmentViewer}
             onAddComment={handleAddActionComment}
             onDeleteComment={handleDeleteActionComment}
+            onAddEventComment={handleAddEventComment}
+            onDeleteEventComment={handleDeleteEventComment}
             currentUserId={user?.id}
           />
         )}
@@ -1904,6 +1957,8 @@ function App() {
                   onAttachmentClick={openAttachmentViewer}
                   onAddComment={handleAddActionComment}
                   onDeleteComment={handleDeleteActionComment}
+                  onAddEventComment={handleAddEventComment}
+                  onDeleteEventComment={handleDeleteEventComment}
                   currentUserId={user?.id}
                 />
               );

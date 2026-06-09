@@ -1,6 +1,11 @@
 import React, { useEffect, useState } from "react";
 import { ACTION_STATUS } from "../lib/constants";
-import { buildChain, getLatestPreview, ENTRY_KIND } from "../lib/actionChain";
+import {
+  buildChain,
+  buildEventChain,
+  getLatestPreview,
+  ENTRY_KIND,
+} from "../lib/actionChain";
 import "./ActionsBox.css";
 
 const ENTRY_CLASS = {
@@ -87,6 +92,8 @@ export function ActionsBox({
   onAttachmentClick,
   onAddComment,
   onDeleteComment,
+  onAddEventComment,
+  onDeleteEventComment,
   currentUserId,
   showRecentlyActioned = false,
 }) {
@@ -97,17 +104,41 @@ export function ActionsBox({
   const [replyDrafts, setReplyDrafts] = useState({});
   const [postingId, setPostingId] = useState(null);
 
-  const postReply = async (msg) => {
-    const body = (replyDrafts[msg.id] || "").trim();
-    if (!body || !onAddComment) return;
-    setPostingId(msg.id);
+  const postReply = async (recordKey, record, onAdd) => {
+    const body = (replyDrafts[recordKey] || "").trim();
+    if (!body || !onAdd) return;
+    setPostingId(recordKey);
     try {
-      await onAddComment(msg, body);
-      setReplyDrafts((d) => ({ ...d, [msg.id]: "" }));
+      await onAdd(record, body);
+      setReplyDrafts((d) => ({ ...d, [recordKey]: "" }));
     } finally {
       setPostingId(null);
     }
   };
+
+  const renderComposer = (recordKey, record, onAdd) =>
+    onAdd ? (
+      <div className="action-reply-composer">
+        <textarea
+          className="action-reply-input"
+          placeholder="Reply…"
+          rows={2}
+          value={replyDrafts[recordKey] || ""}
+          onChange={(e) =>
+            setReplyDrafts((d) => ({ ...d, [recordKey]: e.target.value }))
+          }
+        />
+        <button
+          className="action-row-btn action-row-btn-action"
+          disabled={
+            postingId === recordKey || !(replyDrafts[recordKey] || "").trim()
+          }
+          onClick={() => postReply(recordKey, record, onAdd)}
+        >
+          {postingId === recordKey ? "Posting…" : "Post Reply"}
+        </button>
+      </div>
+    ) : null;
 
   const totalActioned = actionedMessages.length;
   const totalActionedPages = Math.max(
@@ -180,7 +211,7 @@ export function ActionsBox({
     return `${d.toLocaleDateString()} ${d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`;
   };
 
-  const renderChain = (chain, msg) => {
+  const renderChain = (chain, record, onDelete) => {
     if (chain.length === 0) return null;
     return (
       <div className="action-notes-chain">
@@ -189,7 +220,7 @@ export function ActionsBox({
             e.kind === ENTRY_KIND.COMMENT &&
             currentUserId &&
             e.author_id === currentUserId &&
-            onDeleteComment;
+            onDelete;
           return (
             <div
               key={e.id}
@@ -208,7 +239,7 @@ export function ActionsBox({
                       className="action-note-delete"
                       onClick={(ev) => {
                         ev.stopPropagation();
-                        onDeleteComment(msg, e.id);
+                        onDelete(record, e.id);
                       }}
                     >
                       Delete
@@ -352,40 +383,24 @@ export function ActionsBox({
 
       {isExpanded && (
         <div className="action-row-expanded" onClick={(e) => e.stopPropagation()}>
-          {renderChain(chain, msg)}
-          {onAddComment && (
-            <div className="action-reply-composer">
-              <textarea
-                className="action-reply-input"
-                placeholder="Reply…"
-                rows={2}
-                value={replyDrafts[msg.id] || ""}
-                onChange={(e) =>
-                  setReplyDrafts((d) => ({ ...d, [msg.id]: e.target.value }))
-                }
-              />
-              <button
-                className="action-row-btn action-row-btn-action"
-                disabled={
-                  postingId === msg.id || !(replyDrafts[msg.id] || "").trim()
-                }
-                onClick={() => postReply(msg)}
-              >
-                {postingId === msg.id ? "Posting…" : "Post Reply"}
-              </button>
-            </div>
-          )}
+          {renderChain(chain, msg, onDeleteComment)}
+          {renderComposer(msg.id, msg, onAddComment)}
         </div>
       )}
     </div>
     );
   };
 
-  const renderEventRow = (evt) => (
+  const renderEventRow = (evt) => {
+    const chain = buildEventChain(evt);
+    const rowKey = `evt-${evt.id}`;
+    const isExpanded = expandedId === rowKey;
+    const preview = getLatestPreview(chain, getUserName);
+    return (
     <div
       key={evt.id}
       className="action-row action-row-pending"
-      onClick={() => onEventClick && onEventClick(evt)}
+      onClick={() => setExpandedId(isExpanded ? null : rowKey)}
     >
       <div className="action-row-header">
         <div className="action-row-info">
@@ -398,6 +413,14 @@ export function ActionsBox({
                 <strong className="action-row-event-dates">{label}</strong>
               ) : null;
             })()}
+            {chain.length > 0 && (
+              <span
+                className={`action-row-chevron ${isExpanded ? "open" : ""}`}
+                aria-hidden="true"
+              >
+                ▸
+              </span>
+            )}
           </div>
           <div className="action-row-meta">
             <span className="action-row-source">Calendar</span>
@@ -407,29 +430,19 @@ export function ActionsBox({
               </span>
             )}
           </div>
-          {evt.action_detail && (
-            <div className="action-notes-chain">
-              <div className="action-note-entry action-note-required">
-                <span className="action-note-type-dot" />
-                <div className="action-note-body">
-                  <span className="action-note-text">{evt.action_detail}</span>
-                </div>
-              </div>
+          {!isExpanded && preview && (
+            <div className="action-row-preview">
+              <span className="action-row-preview-icon">💬</span>
+              {preview.name ? (
+                <span className="action-row-preview-author">
+                  {preview.name}:
+                </span>
+              ) : null}{" "}
+              <span className="action-row-preview-text">{preview.snippet}</span>
             </div>
           )}
         </div>
         <div className="action-row-buttons">
-          {onEventAddNote && (
-            <button
-              className="action-row-btn action-row-btn-note"
-              onClick={(e) => {
-                e.stopPropagation();
-                onEventAddNote(evt);
-              }}
-            >
-              Add Note
-            </button>
-          )}
           {onEventMarkActioned && (
             <button
               className="action-row-btn action-row-btn-action"
@@ -459,13 +472,23 @@ export function ActionsBox({
               onEventClick && onEventClick(evt);
             }}
           >
-            View
+            Calendar
           </button>
         </div>
       </div>
-    </div>
-  );
 
+      {isExpanded && (
+        <div
+          className="action-row-expanded"
+          onClick={(e) => e.stopPropagation()}
+        >
+          {renderChain(chain, evt, onDeleteEventComment)}
+          {renderComposer(rowKey, evt, onAddEventComment)}
+        </div>
+      )}
+    </div>
+    );
+  };
   const totalPending = pendingMessages.length + pendingEvents.length;
 
   if (totalPending === 0 && actionedMessages.length === 0) {
