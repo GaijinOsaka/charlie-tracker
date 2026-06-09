@@ -1,6 +1,14 @@
 import React, { useEffect, useState } from "react";
 import { ACTION_STATUS } from "../lib/constants";
+import { buildChain, getLatestPreview, ENTRY_KIND } from "../lib/actionChain";
 import "./ActionsBox.css";
+
+const ENTRY_CLASS = {
+  [ENTRY_KIND.STATUS_REQUIRED]: "action-note-required",
+  [ENTRY_KIND.STATUS_ACTIONED]: "action-note-actioned",
+  [ENTRY_KIND.COMMENT]: "action-note-comment",
+  [ENTRY_KIND.SYSTEM]: "action-note-system",
+};
 
 const ACTIONED_PAGE_SIZE = 10;
 
@@ -77,12 +85,29 @@ export function ActionsBox({
   onStatusChange,
   onShowActionModal,
   onAttachmentClick,
+  onAddComment,
+  onDeleteComment,
+  currentUserId,
   showRecentlyActioned = false,
 }) {
   const [expandedId, setExpandedId] = useState(null);
   const [pendingCollapsed, setPendingCollapsed] = useState(true);
   const [actionedCollapsed, setActionedCollapsed] = useState(true);
   const [actionedPage, setActionedPage] = useState(0);
+  const [replyDrafts, setReplyDrafts] = useState({});
+  const [postingId, setPostingId] = useState(null);
+
+  const postReply = async (msg) => {
+    const body = (replyDrafts[msg.id] || "").trim();
+    if (!body || !onAddComment) return;
+    setPostingId(msg.id);
+    try {
+      await onAddComment(msg, body);
+      setReplyDrafts((d) => ({ ...d, [msg.id]: "" }));
+    } finally {
+      setPostingId(null);
+    }
+  };
 
   const totalActioned = actionedMessages.length;
   const totalActionedPages = Math.max(
@@ -155,45 +180,54 @@ export function ActionsBox({
     return `${d.toLocaleDateString()} ${d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`;
   };
 
-  const renderNotes = (msg) => {
-    const notes = msg.action_notes || [];
-    if (notes.length === 0 && msg.action_note) {
-      // Fallback to legacy single note
-      return (
-        <div className="action-notes-chain">
-          <div className="action-note-entry">
-            <span className="action-note-text">{msg.action_note}</span>
-          </div>
-        </div>
-      );
-    }
-    if (notes.length === 0) return null;
-
-    const sorted = [...notes].sort(
-      (a, b) => new Date(a.created_at) - new Date(b.created_at),
-    );
-
+  const renderChain = (chain, msg) => {
+    if (chain.length === 0) return null;
     return (
       <div className="action-notes-chain">
-        {sorted.map((n) => (
-          <div
-            key={n.id}
-            className={`action-note-entry action-note-${n.action_type === "actioned" ? "actioned" : "required"}`}
-          >
-            <span className="action-note-type-dot" />
-            <div className="action-note-body">
-              <span className="action-note-text">{n.note}</span>
-              <span className="action-note-meta">
-                {getUserName(n.user_id)} &bull; {formatNoteDate(n.created_at)}
-              </span>
+        {chain.map((e) => {
+          const canDelete =
+            e.kind === ENTRY_KIND.COMMENT &&
+            currentUserId &&
+            e.author_id === currentUserId &&
+            onDeleteComment;
+          return (
+            <div
+              key={e.id}
+              className={`action-note-entry ${ENTRY_CLASS[e.kind]}`}
+            >
+              <span className="action-note-type-dot" />
+              <div className="action-note-body">
+                <span className="action-note-text">{e.body}</span>
+                <span className="action-note-meta">
+                  {e.author_id ? getUserName(e.author_id) : "—"}
+                  {e.created_at ? (
+                    <> &bull; {formatNoteDate(e.created_at)}</>
+                  ) : null}
+                  {canDelete && (
+                    <button
+                      className="action-note-delete"
+                      onClick={(ev) => {
+                        ev.stopPropagation();
+                        onDeleteComment(msg, e.id);
+                      }}
+                    >
+                      Delete
+                    </button>
+                  )}
+                </span>
+              </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
     );
   };
 
-  const renderCompactRow = (msg, status) => (
+  const renderCompactRow = (msg, status) => {
+    const chain = buildChain(msg);
+    const isExpanded = expandedId === msg.id;
+    const preview = getLatestPreview(chain, getUserName);
+    return (
     <div
       key={msg.id}
       className={`action-row action-row-${status}`}
@@ -212,6 +246,14 @@ export function ActionsBox({
                 <strong className="action-row-event-dates">{label}</strong>
               ) : null;
             })()}
+            {chain.length > 0 && (
+              <span
+                className={`action-row-chevron ${isExpanded ? "open" : ""}`}
+                aria-hidden="true"
+              >
+                ▸
+              </span>
+            )}
           </div>
           <div className="action-row-meta">
             <span className="action-row-source">{msg.source}</span>
@@ -219,7 +261,17 @@ export function ActionsBox({
               {new Date(msg.received_at).toLocaleDateString()}
             </span>
           </div>
-          {renderNotes(msg)}
+          {!isExpanded && preview && (
+            <div className="action-row-preview">
+              <span className="action-row-preview-icon">💬</span>
+              {preview.name ? (
+                <span className="action-row-preview-author">
+                  {preview.name}:
+                </span>
+              ) : null}{" "}
+              <span className="action-row-preview-text">{preview.snippet}</span>
+            </div>
+          )}
           {msg.attachments && msg.attachments.length > 0 && (
             <div className="action-row-attachments">
               <span className="attachments-label">Attachments:</span>
@@ -298,13 +350,36 @@ export function ActionsBox({
         </div>
       </div>
 
-      {expandedId === msg.id && (
-        <div className="action-row-expanded">
-          <div className="action-row-content">{msg.content}</div>
+      {isExpanded && (
+        <div className="action-row-expanded" onClick={(e) => e.stopPropagation()}>
+          {renderChain(chain, msg)}
+          {onAddComment && (
+            <div className="action-reply-composer">
+              <textarea
+                className="action-reply-input"
+                placeholder="Reply…"
+                rows={2}
+                value={replyDrafts[msg.id] || ""}
+                onChange={(e) =>
+                  setReplyDrafts((d) => ({ ...d, [msg.id]: e.target.value }))
+                }
+              />
+              <button
+                className="action-row-btn action-row-btn-action"
+                disabled={
+                  postingId === msg.id || !(replyDrafts[msg.id] || "").trim()
+                }
+                onClick={() => postReply(msg)}
+              >
+                {postingId === msg.id ? "Posting…" : "Post Reply"}
+              </button>
+            </div>
+          )}
         </div>
       )}
     </div>
-  );
+    );
+  };
 
   const renderEventRow = (evt) => (
     <div

@@ -433,11 +433,120 @@
   cursor: not-allowed;
 }
 
+/* Expand chevron beside the subject */
+.action-row-chevron {
+  flex: 0 0 auto;
+  color: var(--ct-muted);
+  font-size: 11px;
+  transition: transform var(--ct-dur-fast);
+}
+
+.action-row-chevron.open {
+  transform: rotate(90deg);
+}
+
+/* Collapsed latest-reply preview */
+.action-row-preview {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  margin-top: 4px;
+  min-width: 0;
+  font-size: 13px;
+  color: var(--ct-muted);
+}
+
+.action-row-preview-icon {
+  flex: 0 0 auto;
+  font-size: 11px;
+}
+
+.action-row-preview-author {
+  flex: 0 0 auto;
+  font-weight: 600;
+  color: var(--ct-ink);
+}
+
+.action-row-preview-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+
+/* Neutral styling for conversational comment + legacy system entries */
+.action-note-entry.action-note-comment {
+  border-left: 2px solid var(--ct-line);
+}
+
+.action-note-comment .action-note-type-dot {
+  background: var(--ct-muted);
+}
+
+.action-note-entry.action-note-system {
+  border-left: 2px solid var(--ct-line-soft);
+}
+
+.action-note-system .action-note-type-dot {
+  background: var(--ct-line);
+}
+
+.action-note-system .action-note-text {
+  font-style: italic;
+  color: var(--ct-muted);
+}
+
+.action-note-delete {
+  margin-left: 8px;
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--ct-muted);
+  font-size: 11px;
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+.action-note-delete:hover {
+  color: var(--ct-accent);
+}
+
+/* Inline reply composer */
+.action-reply-composer {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.action-reply-input {
+  flex: 1 1 auto;
+  min-width: 0;
+  resize: vertical;
+  padding: 8px 10px;
+  border: 1px solid var(--ct-line);
+  border-radius: var(--ct-radius-sm);
+  background: var(--ct-surface-soft);
+  color: var(--ct-ink);
+  font-family: var(--ct-font-body);
+  font-size: 13px;
+}
+
+.action-reply-input:focus {
+  outline: none;
+  border-color: var(--ct-accent);
+}
+
 @media (max-width: 768px) {
   .action-row-header {
     flex-direction: column;
     align-items: flex-start;
     gap: 12px;
+  }
+
+  .action-reply-composer {
+    flex-direction: column;
+    align-items: stretch;
   }
 
   .action-row-meta {

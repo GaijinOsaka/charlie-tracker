@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from "react";
-import { ACTION_STATUS } from "./lib/constants";
+import { ACTION_STATUS, ACTION_NOTE_COMMENT } from "./lib/constants";
 import {
   supabase,
   createManualEvent,
@@ -1092,6 +1092,59 @@ function App() {
     setActionModalType(null);
   }
 
+  // Append a conversational reply to a message's action chain WITHOUT
+  // changing its action status (action_type = 'comment').
+  async function handleAddActionComment(message, body) {
+    const text = body?.trim();
+    if (!text) return;
+    const { data, error } = await supabase
+      .from("action_notes")
+      .insert({
+        message_id: message.id,
+        user_id: user.id,
+        note: text,
+        action_type: ACTION_NOTE_COMMENT,
+      })
+      .select("id, user_id, note, action_type, created_at")
+      .single();
+    if (error) {
+      console.error("Failed to add reply:", error);
+      addToast("Failed to add reply", "error");
+      return;
+    }
+    setMessages((prev) =>
+      prev.map((m) =>
+        m.id === message.id
+          ? { ...m, action_notes: [...(m.action_notes || []), data] }
+          : m,
+      ),
+    );
+  }
+
+  async function handleDeleteActionComment(message, noteId) {
+    const { error } = await supabase
+      .from("action_notes")
+      .delete()
+      .eq("id", noteId);
+    if (error) {
+      console.error("Failed to delete reply:", error);
+      addToast("Failed to delete reply", "error");
+      return;
+    }
+    setMessages((prev) =>
+      prev.map((m) =>
+        m.id === message.id
+          ? {
+              ...m,
+              action_notes: (m.action_notes || []).filter(
+                (n) => n.id !== noteId,
+              ),
+            }
+          : m,
+      ),
+    );
+  }
+
   async function toggleMessageRag(msg) {
     const action = msg.indexed_for_rag ? "remove" : "index";
     if (msg.attachments && msg.attachments.length > 0) {
@@ -1718,6 +1771,9 @@ function App() {
             onStatusChange={toggleActionStatus}
             onShowActionModal={handleShowActionModal}
             onAttachmentClick={openAttachmentViewer}
+            onAddComment={handleAddActionComment}
+            onDeleteComment={handleDeleteActionComment}
+            currentUserId={user?.id}
           />
         )}
 
@@ -1846,6 +1902,9 @@ function App() {
                   onStatusChange={toggleActionStatus}
                   onShowActionModal={handleShowActionModal}
                   onAttachmentClick={openAttachmentViewer}
+                  onAddComment={handleAddActionComment}
+                  onDeleteComment={handleDeleteActionComment}
+                  currentUserId={user?.id}
                 />
               );
             })()}
