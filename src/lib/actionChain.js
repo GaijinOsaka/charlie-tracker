@@ -14,16 +14,16 @@ export function classifyEntry(actionType) {
   return ENTRY_KIND.COMMENT; // null / unknown → treat as a neutral comment
 }
 
-export function buildChain(msg) {
-  const notes = msg?.action_notes || [];
-
-  if (notes.length === 0 && msg?.action_note) {
+// Shared core: turn a record's note rows (+ optional legacy single field) into
+// a normalized, sorted chain. Used by both messages and events.
+function buildChainCore({ notes, legacyId, legacyBody, legacyDate }) {
+  if (notes.length === 0 && legacyBody) {
     return [
       {
-        id: `legacy-${msg.id}`,
+        id: legacyId,
         author_id: null,
-        body: msg.action_note,
-        created_at: msg.received_at || null,
+        body: legacyBody,
+        created_at: legacyDate || null,
         kind: ENTRY_KIND.SYSTEM,
       },
     ];
@@ -38,6 +38,24 @@ export function buildChain(msg) {
       kind: classifyEntry(n.action_type),
     }))
     .sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+}
+
+export function buildChain(msg) {
+  return buildChainCore({
+    notes: msg?.action_notes || [],
+    legacyId: `legacy-${msg?.id}`,
+    legacyBody: msg?.action_note,
+    legacyDate: msg?.received_at,
+  });
+}
+
+export function buildEventChain(evt) {
+  return buildChainCore({
+    notes: evt?.event_notes || [],
+    legacyId: `legacy-evt-${evt?.id}`,
+    legacyBody: evt?.action_detail,
+    legacyDate: evt?.created_at,
+  });
 }
 
 function truncate(text, maxLen) {

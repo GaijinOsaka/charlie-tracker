@@ -3,6 +3,7 @@ import {
   ENTRY_KIND,
   classifyEntry,
   buildChain,
+  buildEventChain,
   getLatestPreview,
 } from "./actionChain";
 
@@ -93,6 +94,75 @@ describe("actionChain", () => {
 
     it("returns an empty array when there are no notes", () => {
       expect(buildChain({ id: "m4" })).toEqual([]);
+    });
+  });
+
+  describe("buildEventChain", () => {
+    it("normalizes and sorts event_notes oldest-first", () => {
+      const evt = {
+        id: "e1",
+        event_notes: [
+          {
+            id: "b",
+            user_id: "u2",
+            note: "on it",
+            action_type: "comment",
+            created_at: "2026-06-09T10:00:00Z",
+          },
+          {
+            id: "a",
+            user_id: "u1",
+            note: "need a packed lunch",
+            action_type: "action_required",
+            created_at: "2026-06-08T09:00:00Z",
+          },
+        ],
+      };
+      const chain = buildEventChain(evt);
+      expect(chain.map((e) => e.id)).toEqual(["a", "b"]);
+      expect(chain[1]).toMatchObject({
+        author_id: "u2",
+        body: "on it",
+        kind: ENTRY_KIND.COMMENT,
+      });
+    });
+
+    it("renders a legacy action_detail as a single system entry", () => {
+      const evt = {
+        id: "e2",
+        action_detail: "bring wellies",
+        created_at: "2026-06-01T00:00:00Z",
+      };
+      const chain = buildEventChain(evt);
+      expect(chain).toHaveLength(1);
+      expect(chain[0]).toMatchObject({
+        author_id: null,
+        body: "bring wellies",
+        kind: ENTRY_KIND.SYSTEM,
+      });
+    });
+
+    it("prefers event_notes rows over the legacy action_detail", () => {
+      const evt = {
+        id: "e3",
+        action_detail: "legacy detail",
+        event_notes: [
+          {
+            id: "x",
+            user_id: "u1",
+            note: "real",
+            action_type: "comment",
+            created_at: "2026-06-09T10:00:00Z",
+          },
+        ],
+      };
+      const chain = buildEventChain(evt);
+      expect(chain).toHaveLength(1);
+      expect(chain[0].body).toBe("real");
+    });
+
+    it("returns an empty array when there are no notes", () => {
+      expect(buildEventChain({ id: "e4" })).toEqual([]);
     });
   });
 
