@@ -16,15 +16,25 @@ export function classifyEntry(actionType) {
 
 // Shared core: turn a record's note rows (+ optional legacy single field) into
 // a normalized, sorted chain. Used by both messages and events.
-function buildChainCore({ notes, legacyId, legacyBody, legacyDate }) {
+function buildChainCore({
+  notes,
+  legacyId,
+  legacyBody,
+  legacyDate,
+  legacyAuthorId,
+}) {
   if (notes.length === 0 && legacyBody) {
+    // A legacy single-field note (event action_detail / message action_note)
+    // has no per-note author column. When the parent record exposes a sensible
+    // author (e.g. an event's creator), attribute the entry to them so it shows
+    // a name rather than an anonymous "system" entry.
     return [
       {
         id: legacyId,
-        author_id: null,
+        author_id: legacyAuthorId || null,
         body: legacyBody,
         created_at: legacyDate || null,
-        kind: ENTRY_KIND.SYSTEM,
+        kind: legacyAuthorId ? ENTRY_KIND.STATUS_REQUIRED : ENTRY_KIND.SYSTEM,
       },
     ];
   }
@@ -55,6 +65,7 @@ export function buildEventChain(evt) {
     legacyId: `legacy-evt-${evt?.id}`,
     legacyBody: evt?.action_detail,
     legacyDate: evt?.created_at,
+    legacyAuthorId: evt?.created_by,
   });
 }
 

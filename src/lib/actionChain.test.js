@@ -127,9 +127,24 @@ describe("actionChain", () => {
       });
     });
 
-    it("renders a legacy action_detail as a single system entry", () => {
+    it("attributes a legacy action_detail to the event creator", () => {
       const evt = {
         id: "e2",
+        action_detail: "bring wellies",
+        created_by: "u1",
+        created_at: "2026-06-01T00:00:00Z",
+      };
+      const chain = buildEventChain(evt);
+      expect(chain).toHaveLength(1);
+      expect(chain[0]).toMatchObject({
+        author_id: "u1",
+        body: "bring wellies",
+      });
+    });
+
+    it("falls back to a null-author system entry when no creator", () => {
+      const evt = {
+        id: "e2b",
         action_detail: "bring wellies",
         created_at: "2026-06-01T00:00:00Z",
       };
@@ -137,7 +152,6 @@ describe("actionChain", () => {
       expect(chain).toHaveLength(1);
       expect(chain[0]).toMatchObject({
         author_id: null,
-        body: "bring wellies",
         kind: ENTRY_KIND.SYSTEM,
       });
     });
