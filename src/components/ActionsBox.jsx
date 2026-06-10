@@ -208,7 +208,8 @@ export function ActionsBox({
 
   const formatNoteDate = (dateStr) => {
     const d = new Date(dateStr);
-    return `${d.toLocaleDateString()} ${d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`;
+    // Match the en-GB "8 Jun 20:06" style used across the app (e.g. NotesTab)
+    return `${d.toLocaleDateString("en-GB", { day: "numeric", month: "short" })} ${d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`;
   };
 
   const renderChain = (chain, record, onDelete) => {
