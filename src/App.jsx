@@ -1427,6 +1427,34 @@ function App() {
     return <SetPassword />;
   }
 
+  // Props shared by both <ActionsBox> mounts (Actions tab + Messages dashboard).
+  // Only pendingMessages / actionedMessages / onMessageClick / showRecentlyActioned
+  // differ between the two sites.
+  const commonActionsBoxProps = {
+    // User-created events only (manual or note-promoted, created_by set).
+    // AI-extracted events (created_by null) keep their calendar badge but
+    // don't flood the Actions box.
+    pendingEvents: events
+      .filter((e) => e.action_required && e.created_by)
+      .sort((a, b) => new Date(a.event_date) - new Date(b.event_date)),
+    events,
+    profiles,
+    onEventClick: (evt) => {
+      setCalendarFocusDate(evt.event_date);
+      setActiveTab("calendar");
+    },
+    onEventMarkActioned: handleEventMarkActioned,
+    onEventClear: handleEventClear,
+    onStatusChange: toggleActionStatus,
+    onShowActionModal: handleShowActionModal,
+    onAttachmentClick: openAttachmentViewer,
+    onAddComment: handleAddActionComment,
+    onDeleteComment: handleDeleteActionComment,
+    onAddEventComment: handleAddEventComment,
+    onDeleteEventComment: handleDeleteEventComment,
+    currentUserId: user?.id,
+  };
+
   return (
     <div className="app">
       <header>
@@ -1787,39 +1815,18 @@ function App() {
 
         {activeTab === "actions" && (
           <ActionsBox
+            {...commonActionsBoxProps}
             pendingMessages={messages
               .filter((m) => m.action_status === ACTION_STATUS.REQUIRED)
               .sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at))}
             actionedMessages={messages
               .filter((m) => m.action_status === ACTION_STATUS.ACTIONED)
               .sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at))}
-            pendingEvents={events
-              // User-created events only (manual or note-promoted, created_by set).
-              // AI-extracted events (created_by null) keep their calendar badge but
-              // don't flood the Actions box.
-              .filter((e) => e.action_required && e.created_by)
-              .sort((a, b) => new Date(a.event_date) - new Date(b.event_date))}
-            events={events}
-            profiles={profiles}
             onMessageClick={(msgId) => {
               setExpandedMessages(new Set([...expandedMessages, msgId]));
               setActiveTab("messages");
               navigateToMessage(msgId);
             }}
-            onEventClick={(evt) => {
-              setCalendarFocusDate(evt.event_date);
-              setActiveTab("calendar");
-            }}
-            onEventMarkActioned={handleEventMarkActioned}
-            onEventClear={handleEventClear}
-            onStatusChange={toggleActionStatus}
-            onShowActionModal={handleShowActionModal}
-            onAttachmentClick={openAttachmentViewer}
-            onAddComment={handleAddActionComment}
-            onDeleteComment={handleDeleteActionComment}
-            onAddEventComment={handleAddEventComment}
-            onDeleteEventComment={handleDeleteEventComment}
-            currentUserId={user?.id}
           />
         )}
 
@@ -1926,32 +1933,13 @@ function App() {
 
               return (
                 <ActionsBox
+                  {...commonActionsBoxProps}
                   pendingMessages={actionsPending}
                   actionedMessages={actionsCompleted}
-                  pendingEvents={events
-                    // User-created events only — see actions-tab filter above.
-                    .filter((e) => e.action_required && e.created_by)
-                    .sort((a, b) => new Date(a.event_date) - new Date(b.event_date))}
-                  events={events}
-                  profiles={profiles}
                   showRecentlyActioned={true}
                   onMessageClick={(msgId) => {
                     setExpandedMessages(new Set([...expandedMessages, msgId]));
                   }}
-                  onEventClick={(evt) => {
-                    setCalendarFocusDate(evt.event_date);
-                    setActiveTab("calendar");
-                  }}
-                  onEventMarkActioned={handleEventMarkActioned}
-                  onEventClear={handleEventClear}
-                  onStatusChange={toggleActionStatus}
-                  onShowActionModal={handleShowActionModal}
-                  onAttachmentClick={openAttachmentViewer}
-                  onAddComment={handleAddActionComment}
-                  onDeleteComment={handleDeleteActionComment}
-                  onAddEventComment={handleAddEventComment}
-                  onDeleteEventComment={handleDeleteEventComment}
-                  currentUserId={user?.id}
                 />
               );
             })()}
