@@ -84,7 +84,6 @@ export function ActionsBox({
   profiles,
   onMessageClick,
   onEventClick,
-  onEventAddNote,
   onEventMarkActioned,
   onEventClear,
   onStatusChange,

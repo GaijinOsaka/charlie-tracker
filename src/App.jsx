@@ -806,10 +806,6 @@ function App() {
     };
   }
 
-  function handleEventAddNote(evt) {
-    setEventActionModal({ event: evt, mode: "add_note" });
-  }
-
   function handleEventMarkActioned(evt) {
     setEventActionModal({ event: evt, mode: "mark_actioned" });
   }
@@ -822,14 +818,12 @@ function App() {
     if (!eventActionModal) return;
     const { event: evt, mode } = eventActionModal;
     const overrides =
-      mode === "add_note"
-        ? { action_detail: note }
-        : mode === "mark_actioned"
-          ? {
-              action_required: false,
-              action_detail: note || evt.action_detail,
-            }
-          : { action_required: false };
+      mode === "mark_actioned"
+        ? {
+            action_required: false,
+            action_detail: note || evt.action_detail,
+          }
+        : { action_required: false };
     setEventActionModal(null);
     await handleUpdateEvent(evt.id, eventFormDataFrom(evt, overrides));
   }
@@ -1816,7 +1810,6 @@ function App() {
               setCalendarFocusDate(evt.event_date);
               setActiveTab("calendar");
             }}
-            onEventAddNote={handleEventAddNote}
             onEventMarkActioned={handleEventMarkActioned}
             onEventClear={handleEventClear}
             onStatusChange={toggleActionStatus}
@@ -1949,7 +1942,6 @@ function App() {
                     setCalendarFocusDate(evt.event_date);
                     setActiveTab("calendar");
                   }}
-                  onEventAddNote={handleEventAddNote}
                   onEventMarkActioned={handleEventMarkActioned}
                   onEventClear={handleEventClear}
                   onStatusChange={toggleActionStatus}

@@ -1,13 +1,6 @@
 import React, { useState, useRef, useEffect } from "react";
 
 const MODES = {
-  add_note: {
-    title: "Add Note",
-    label: "Note for this event",
-    placeholder: "e.g. Confirm with school office",
-    confirmText: "Save Note",
-    requiresInput: true,
-  },
   mark_actioned: {
     title: "Mark as Actioned",
     label: "Closing note (optional)",
