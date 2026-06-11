@@ -69,6 +69,34 @@ export function buildEventChain(evt) {
   });
 }
 
+// Notes use `note_replies` (author_id/body, no action_type) as their chain, and
+// the note body itself as the opening entry. Normalise to the same shape.
+export function buildNoteChain(note) {
+  const opening = note?.body
+    ? [
+        {
+          id: `note-body-${note.id}`,
+          author_id: note.author_id || null,
+          body: note.body,
+          created_at: note.created_at || null,
+          kind: ENTRY_KIND.STATUS_REQUIRED,
+        },
+      ]
+    : [];
+
+  const replies = (note?.note_replies || [])
+    .map((r) => ({
+      id: r.id,
+      author_id: r.author_id,
+      body: r.body,
+      created_at: r.created_at,
+      kind: ENTRY_KIND.COMMENT,
+    }))
+    .sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+
+  return [...opening, ...replies];
+}
+
 function truncate(text, maxLen) {
   if (!text) return "";
   return text.length > maxLen ? text.slice(0, maxLen).trimEnd() + "…" : text;

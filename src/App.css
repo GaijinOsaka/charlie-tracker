@@ -3961,13 +3961,73 @@ header h1 {
 .btn-note-edit,
 .btn-note-delete,
 .btn-note-reply,
-.btn-note-promote {
+.btn-note-promote,
+.btn-note-action,
+.btn-note-clear,
+.btn-note-flag {
   padding: 0.3rem 0.75rem;
   border-radius: var(--ct-radius-md);
   font-size: 0.8rem;
   cursor: pointer;
   border: 1px solid var(--ct-line);
   background: transparent;
+}
+
+.btn-note-action {
+  color: #fff;
+  background: var(--ct-accent);
+  border-color: var(--ct-accent);
+}
+
+.btn-note-action:hover {
+  background: var(--ct-accent-hover);
+}
+
+.btn-note-flag {
+  color: var(--ct-warn-ink);
+  border-color: var(--ct-warn-ink);
+}
+
+.btn-note-flag:hover {
+  background: var(--ct-surface-warn);
+}
+
+.btn-note-clear {
+  color: var(--ct-muted);
+}
+
+.btn-note-clear:hover {
+  background: var(--ct-danger-soft);
+  border-color: var(--ct-danger);
+  color: var(--ct-danger);
+}
+
+/* Action-state badges on note cards */
+.note-action-badge {
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 2px 8px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+
+.note-action-badge.required {
+  background: var(--ct-surface-warn);
+  color: var(--ct-warn-ink);
+}
+
+.note-action-badge.actioned {
+  background: var(--ct-success-soft);
+  color: var(--ct-success);
+}
+
+/* Hint text under a checkbox in modals */
+.checkbox-hint {
+  margin: 4px 0 0 1.6rem;
+  font-size: 0.75rem;
+  color: var(--ct-muted);
 }
 
 .btn-note-reply {

@@ -1,5 +1,8 @@
 import React, { useState, useRef, useEffect } from "react";
 
+// Lightweight confirm modal shared by the "Mark as Actioned" / "Clear" flows
+// for calendar events and notes. Pass a `title` (the item's subject) and an
+// optional `detail` to pre-fill the closing note.
 const MODES = {
   mark_actioned: {
     title: "Mark as Actioned",
@@ -16,11 +19,16 @@ const MODES = {
   },
 };
 
-export default function EventActionModal({ event, mode, onConfirm, onCancel }) {
+export default function EventActionModal({
+  title,
+  detail = "",
+  mode,
+  clearHint = "This removes the action-required flag. The item is not recorded as actioned.",
+  onConfirm,
+  onCancel,
+}) {
   const config = MODES[mode];
-  const [note, setNote] = useState(
-    mode === "clear" ? "" : event.action_detail || "",
-  );
+  const [note, setNote] = useState(mode === "clear" ? "" : detail || "");
   const inputRef = useRef(null);
 
   useEffect(() => {
@@ -39,7 +47,7 @@ export default function EventActionModal({ event, mode, onConfirm, onCancel }) {
     <div className="modal-overlay" onClick={onCancel}>
       <div className="modal-card" onClick={(e) => e.stopPropagation()}>
         <h3>{config.title}</h3>
-        <p className="modal-subject">{event.title}</p>
+        <p className="modal-subject">{title}</p>
         <form onSubmit={handleSubmit}>
           {config.label && (
             <div className="form-group">
@@ -54,12 +62,7 @@ export default function EventActionModal({ event, mode, onConfirm, onCancel }) {
               />
             </div>
           )}
-          {mode === "clear" && (
-            <p className="modal-body-text">
-              This removes the action-required flag from the event. The event
-              stays on the calendar.
-            </p>
-          )}
+          {mode === "clear" && <p className="modal-body-text">{clearHint}</p>}
           <div className="modal-actions">
             <button
               type="button"

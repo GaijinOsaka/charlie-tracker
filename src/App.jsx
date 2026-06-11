@@ -6,8 +6,11 @@ import {
   updateManualEvent,
   deleteManualEvent,
   updateActionStatus,
+  setEventActionState,
+  setNoteActionState,
   triggerPushNotifications,
 } from "./lib/supabase";
+import { buildActionItems } from "./lib/actionItems";
 import { useAuth } from "./lib/AuthContext";
 import LoginPage from "./components/LoginPage";
 import DocumentBrowser from "./components/DocumentBrowser";
@@ -223,6 +226,7 @@ function App() {
   const [actionModalMessage, setActionModalMessage] = useState(null);
   const [actionModalType, setActionModalType] = useState(null);
   const [eventActionModal, setEventActionModal] = useState(null);
+  const [noteActionModal, setNoteActionModal] = useState(null);
   const [categories, setCategories] = useState([]);
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [notes, setNotes] = useState([]);
@@ -265,7 +269,7 @@ function App() {
       setNotesLoading(true);
       const { data, error } = await supabase
         .from("notes")
-        .select("id, title, body, author_id, event_id, created_at, updated_at, events!event_id(id, event_date, title), note_replies(id, author_id, body, created_at)")
+        .select("id, title, body, author_id, event_id, action_required, actioned_at, actioned_by, created_at, updated_at, events!event_id(id, event_date, title), note_replies(id, author_id, body, created_at)")
         .order("created_at", { ascending: false });
       if (error) throw error;
       setNotes(data || []);
@@ -784,27 +788,6 @@ function App() {
     }
   }
 
-  // TODO: action buttons (Add Note / Mark as Actioned / Clear) only succeed on
-  // events where created_by === current user (RLS via updateManualEvent). For
-  // extracted events (source_type === "extracted", created_by === null) the
-  // update fails and the user sees an error toast. Decide later whether to:
-  //   - hide the buttons on extracted events, or
-  //   - relax the RLS check / add a separate update path so any user can flag
-  //     an extracted event as actioned.
-  function eventFormDataFrom(evt, overrides = {}) {
-    return {
-      title: evt.title,
-      event_date: evt.event_date,
-      event_end_date: evt.event_end_date,
-      event_time: evt.event_time,
-      event_end_time: evt.event_end_time,
-      description: evt.description,
-      action_required: evt.action_required,
-      action_detail: evt.action_detail,
-      reminder: evt.reminder,
-      ...overrides,
-    };
-  }
 
   function handleEventMarkActioned(evt) {
     setEventActionModal({ event: evt, mode: "mark_actioned" });
@@ -817,15 +800,92 @@ function App() {
   async function handleEventActionConfirm(note) {
     if (!eventActionModal) return;
     const { event: evt, mode } = eventActionModal;
-    const overrides =
-      mode === "mark_actioned"
-        ? {
-            action_required: false,
-            action_detail: note || evt.action_detail,
-          }
-        : { action_required: false };
     setEventActionModal(null);
-    await handleUpdateEvent(evt.id, eventFormDataFrom(evt, overrides));
+    try {
+      const updated = await setEventActionState(evt.id, {
+        actioned: mode === "mark_actioned",
+        note,
+      });
+      // Merge scalar columns onto the existing row, preserving relations
+      // (event_notes, documents, etc.) so the chain/preview stay intact.
+      setEvents((prev) =>
+        prev.map((e) => (e.id === evt.id ? { ...e, ...updated } : e)),
+      );
+      addToast(
+        mode === "mark_actioned"
+          ? "Event marked as actioned"
+          : "Action cleared",
+        "success",
+      );
+    } catch (err) {
+      console.error("Error updating event action:", err);
+      addToast("Failed to update event: " + err.message, "error");
+    }
+  }
+
+  // --- Note action workflow (mirrors events) ------------------------------
+  function handleNoteMarkActioned(note) {
+    setNoteActionModal({ note, mode: "mark_actioned" });
+  }
+
+  function handleNoteClear(note) {
+    setNoteActionModal({ note, mode: "clear" });
+  }
+
+  async function handleSetNoteActionRequired(note, flag) {
+    try {
+      const updated = await setNoteActionState(note.id, {
+        actionRequired: flag,
+      });
+      setNotes((prev) =>
+        prev.map((n) => (n.id === note.id ? { ...n, ...updated } : n)),
+      );
+      addToast(flag ? "Note flagged as action required" : "Action cleared", "success");
+    } catch (err) {
+      console.error("Error flagging note:", err);
+      addToast("Failed to update note: " + err.message, "error");
+    }
+  }
+
+  async function handleNoteActionConfirm(closingNote) {
+    if (!noteActionModal) return;
+    const { note, mode } = noteActionModal;
+    setNoteActionModal(null);
+    try {
+      const updated = await setNoteActionState(note.id, {
+        actioned: mode === "mark_actioned",
+      });
+      // Record an optional closing note as a reply so it appears in the chain.
+      let extraReply = null;
+      if (mode === "mark_actioned" && closingNote) {
+        const { data } = await supabase
+          .from("note_replies")
+          .insert({ note_id: note.id, author_id: user.id, body: closingNote })
+          .select("id, author_id, body, created_at")
+          .single();
+        extraReply = data;
+      }
+      setNotes((prev) =>
+        prev.map((n) =>
+          n.id === note.id
+            ? {
+                ...n,
+                ...updated,
+                note_replies: extraReply
+                  ? [...(n.note_replies || []), extraReply]
+                  : n.note_replies,
+              }
+            : n,
+        ),
+      );
+      addToast(
+        mode === "mark_actioned" ? "Note marked as actioned" : "Action cleared",
+        "success",
+      );
+    } catch (err) {
+      console.error("Error updating note action:", err);
+      addToast("Failed to update note: " + err.message, "error");
+    }
   }
 
   async function handleDeleteEvent(eventId) {
@@ -986,11 +1046,23 @@ function App() {
       const previousStatus = msg.action_status;
       await updateActionStatus(msg.id, targetStatus, note);
 
-      // Update local state optimistically
+      // Update local state optimistically. Stamp actioned_at locally so the
+      // unified action list sorts correctly without waiting for a refetch.
+      const nowIso = new Date().toISOString();
       setMessages((prev) =>
         prev.map((m) =>
           m.id === msg.id
-            ? { ...m, action_status: targetStatus, action_note: note }
+            ? {
+                ...m,
+                action_status: targetStatus,
+                action_note: note,
+                actioned_at:
+                  targetStatus === ACTION_STATUS.ACTIONED
+                    ? nowIso
+                    : targetStatus === null
+                      ? null
+                      : m.actioned_at,
+              }
             : m,
         ),
       );
@@ -1415,6 +1487,19 @@ function App() {
     [messages],
   );
 
+  // Unified action items across messages, events, and notes. Only user-created
+  // events (created_by set) participate — AI-extracted events keep their
+  // calendar badge but don't flow into the Actions workflow.
+  const actionItems = useMemo(
+    () =>
+      buildActionItems({
+        messages,
+        events: events.filter((e) => e.created_by),
+        notes,
+      }),
+    [messages, events, notes],
+  );
+
   if (authLoading) {
     return <div className="loading-screen">Loading...</div>;
   }
@@ -1428,15 +1513,11 @@ function App() {
   }
 
   // Props shared by both <ActionsBox> mounts (Actions tab + Messages dashboard).
-  // Only pendingMessages / actionedMessages / onMessageClick / showRecentlyActioned
-  // differ between the two sites.
+  // Both consume the same unified pending/actioned lists; only `mode`,
+  // `onViewAll`, and `onMessageClick` differ between the two sites.
   const commonActionsBoxProps = {
-    // User-created events only (manual or note-promoted, created_by set).
-    // AI-extracted events (created_by null) keep their calendar badge but
-    // don't flood the Actions box.
-    pendingEvents: events
-      .filter((e) => e.action_required && e.created_by)
-      .sort((a, b) => new Date(a.event_date) - new Date(b.event_date)),
+    pendingItems: actionItems.pending,
+    actionedItems: actionItems.actioned,
     events,
     profiles,
     onEventClick: (evt) => {
@@ -1452,6 +1533,12 @@ function App() {
     onDeleteComment: handleDeleteActionComment,
     onAddEventComment: handleAddEventComment,
     onDeleteEventComment: handleDeleteEventComment,
+    onNoteMarkActioned: handleNoteMarkActioned,
+    onNoteClear: handleNoteClear,
+    onAddNoteReply: (note, body) => handleAddNoteReply(note.id, body),
+    onDeleteNoteReply: (note, replyId) =>
+      handleDeleteNoteReply(note.id, replyId),
+    onNoteClick: () => setActiveTab("notes"),
     currentUserId: user?.id,
   };
 
@@ -1816,12 +1903,7 @@ function App() {
         {activeTab === "actions" && (
           <ActionsBox
             {...commonActionsBoxProps}
-            pendingMessages={messages
-              .filter((m) => m.action_status === ACTION_STATUS.REQUIRED)
-              .sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at))}
-            actionedMessages={messages
-              .filter((m) => m.action_status === ACTION_STATUS.ACTIONED)
-              .sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at))}
+            mode="full"
             onMessageClick={(msgId) => {
               setExpandedMessages(new Set([...expandedMessages, msgId]));
               setActiveTab("messages");
@@ -1841,6 +1923,9 @@ function App() {
             onPromote={handlePromoteNote}
             onAddReply={handleAddNoteReply}
             onDeleteReply={handleDeleteNoteReply}
+            onFlagAction={(note) => handleSetNoteActionRequired(note, true)}
+            onMarkActioned={handleNoteMarkActioned}
+            onClearAction={handleNoteClear}
             currentUserId={user?.id}
             onNavigateToCalendar={() => setActiveTab("calendar")}
           />
@@ -1915,34 +2000,14 @@ function App() {
               )}
             </div>
 
-            {(() => {
-              const actionsPending = messages
-                .filter(
-                  (m) =>
-                    m.action_status === ACTION_STATUS.REQUIRED ||
-                    m.action_status === "pending",
-                )
-                .sort(
-                  (a, b) => new Date(b.updated_at) - new Date(a.updated_at),
-                );
-
-              const actionsCompleted = messages
-                .filter((m) => m.action_status === ACTION_STATUS.ACTIONED)
-                .sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at))
-                .slice(0, 3);
-
-              return (
-                <ActionsBox
-                  {...commonActionsBoxProps}
-                  pendingMessages={actionsPending}
-                  actionedMessages={actionsCompleted}
-                  showRecentlyActioned={true}
-                  onMessageClick={(msgId) => {
-                    setExpandedMessages(new Set([...expandedMessages, msgId]));
-                  }}
-                />
-              );
-            })()}
+            <ActionsBox
+              {...commonActionsBoxProps}
+              mode="summary"
+              onViewAll={() => setActiveTab("actions")}
+              onMessageClick={(msgId) => {
+                setExpandedMessages(new Set([...expandedMessages, msgId]));
+              }}
+            />
 
             {loading && (
               <div className="skeleton-list">
@@ -2192,10 +2257,23 @@ function App() {
 
       {eventActionModal && (
         <EventActionModal
-          event={eventActionModal.event}
+          title={eventActionModal.event.title}
+          detail={eventActionModal.event.action_detail}
           mode={eventActionModal.mode}
+          clearHint="This removes the action-required flag from the event. The event stays on the calendar."
           onConfirm={handleEventActionConfirm}
           onCancel={() => setEventActionModal(null)}
+        />
+      )}
+
+      {noteActionModal && (
+        <EventActionModal
+          title={noteActionModal.note.title}
+          detail=""
+          mode={noteActionModal.mode}
+          clearHint="This removes the action-required flag from the note. The note is kept."
+          onConfirm={handleNoteActionConfirm}
+          onCancel={() => setNoteActionModal(null)}
         />
       )}
 
@@ -2216,16 +2294,22 @@ function App() {
         isOpen={noteModalOpen}
         note={editingNote}
         onSave={async (noteData) => {
-          const { addToCalendar, eventDate, eventEndDate, eventTime, eventEndTime, actionRequired, actionDetail, ...noteFields } = noteData;
+          const { addToCalendar, eventDate, eventEndDate, eventTime, eventEndTime, actionRequired, ...noteFields } = noteData;
+          // The action flag lives on the NOTE. A promoted event is linked via
+          // event_id but is not auto-flagged, so the note stays the single
+          // action item for this intent.
+          const notePayload = { ...noteFields, action_required: actionRequired };
           if (editingNote) {
             const { data, error } = await supabase
               .from("notes")
-              .update(noteFields)
+              .update(notePayload)
               .eq("id", editingNote.id)
               .select()
               .single();
             if (error) throw error;
-            let saved = data;
+            // Preserve relations (note_replies, events) that the slim update
+            // select doesn't return.
+            let saved = { ...editingNote, ...data };
             if (addToCalendar) {
               const newEvent = await createManualEvent({
                 title: noteFields.title,
@@ -2234,8 +2318,8 @@ function App() {
                 event_time: eventTime,
                 event_end_time: eventEndTime,
                 description: noteFields.body,
-                action_required: actionRequired,
-                action_detail: actionDetail,
+                action_required: false,
+                action_detail: null,
               });
               const { error: linkErr } = await supabase
                 .from("notes")
@@ -2248,7 +2332,7 @@ function App() {
           } else {
             const { data, error } = await supabase
               .from("notes")
-              .insert({ ...noteFields, author_id: user.id })
+              .insert({ ...notePayload, author_id: user.id })
               .select()
               .single();
             if (error) throw error;
@@ -2261,8 +2345,8 @@ function App() {
                 event_time: eventTime,
                 event_end_time: eventEndTime,
                 description: noteFields.body,
-                action_required: actionRequired,
-                action_detail: actionDetail,
+                action_required: false,
+                action_detail: null,
               });
               const { error: linkErr } = await supabase
                 .from("notes")

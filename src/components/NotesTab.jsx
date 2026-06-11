@@ -10,6 +10,9 @@ export default function NotesTab({
   onPromote,
   onAddReply,
   onDeleteReply,
+  onFlagAction,
+  onMarkActioned,
+  onClearAction,
   currentUserId,
   onNavigateToCalendar,
 }) {
@@ -108,6 +111,14 @@ export default function NotesTab({
               <li key={note.id} className="note-card">
                 <div className="note-card-header">
                   <h4 className="note-title">{note.title}</h4>
+                  {note.action_required && (
+                    <span className="note-action-badge required">
+                      Action required
+                    </span>
+                  )}
+                  {note.actioned_at && (
+                    <span className="note-action-badge actioned">Actioned</span>
+                  )}
                   {note.event_id && (
                     <button
                       className="note-calendar-badge"
@@ -209,6 +220,30 @@ export default function NotesTab({
                   {!note.event_id && (
                     <button className="btn-note-promote" onClick={() => onPromote(note)}>
                       Add to Calendar
+                    </button>
+                  )}
+                  {note.action_required && onMarkActioned && (
+                    <button
+                      className="btn-note-action"
+                      onClick={() => onMarkActioned(note)}
+                    >
+                      Mark Actioned
+                    </button>
+                  )}
+                  {(note.action_required || note.actioned_at) && onClearAction && (
+                    <button
+                      className="btn-note-clear"
+                      onClick={() => onClearAction(note)}
+                    >
+                      Clear Action
+                    </button>
+                  )}
+                  {!note.action_required && !note.actioned_at && onFlagAction && (
+                    <button
+                      className="btn-note-flag"
+                      onClick={() => onFlagAction(note)}
+                    >
+                      Flag Action
                     </button>
                   )}
                 </div>

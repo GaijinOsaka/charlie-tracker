@@ -10,7 +10,6 @@ export default function NoteModal({ isOpen, note, onSave, onCancel }) {
   const [eventTime, setEventTime] = useState("");
   const [eventEndTime, setEventEndTime] = useState("");
   const [actionRequired, setActionRequired] = useState(false);
-  const [actionDetail, setActionDetail] = useState("");
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
   const titleRef = useRef(null);
@@ -24,8 +23,7 @@ export default function NoteModal({ isOpen, note, onSave, onCancel }) {
       setEventEndDate("");
       setEventTime("");
       setEventEndTime("");
-      setActionRequired(false);
-      setActionDetail("");
+      setActionRequired(note?.action_required || false);
       setError("");
       setSaving(false);
       setTimeout(() => titleRef.current?.focus(), 50);
@@ -53,7 +51,6 @@ export default function NoteModal({ isOpen, note, onSave, onCancel }) {
         eventTime: eventTime || null,
         eventEndTime: eventEndTime || null,
         actionRequired,
-        actionDetail: actionDetail.trim() || null,
       });
     } catch (err) {
       setError(err.message || "Failed to save note");
@@ -95,6 +92,21 @@ export default function NoteModal({ isOpen, note, onSave, onCancel }) {
               placeholder="Add more detail..."
               rows={3}
             />
+          </div>
+
+          <div className="form-group checkbox-group">
+            <label htmlFor="note-action-required">
+              <input
+                id="note-action-required"
+                type="checkbox"
+                checked={actionRequired}
+                onChange={(e) => setActionRequired(e.target.checked)}
+              />
+              Action Required
+            </label>
+            <p className="checkbox-hint">
+              Flags this note in Action Required until you mark it actioned.
+            </p>
           </div>
 
           <div className="form-group checkbox-group">
@@ -154,26 +166,6 @@ export default function NoteModal({ isOpen, note, onSave, onCancel }) {
                 </div>
               </div>
 
-              <div className="form-group checkbox-group">
-                <label htmlFor="note-action-required">
-                  <input
-                    id="note-action-required"
-                    type="checkbox"
-                    checked={actionRequired}
-                    onChange={(e) => setActionRequired(e.target.checked)}
-                  />
-                  Action Required
-                </label>
-                {actionRequired && (
-                  <input
-                    type="text"
-                    value={actionDetail}
-                    onChange={(e) => setActionDetail(e.target.value)}
-                    placeholder="What action is needed?"
-                    className="action-detail-input"
-                  />
-                )}
-              </div>
             </>
           )}
 

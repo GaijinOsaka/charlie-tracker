@@ -537,6 +537,117 @@
   border-color: var(--ct-accent);
 }
 
+/* Type tag (Message / Event / Note) on each row */
+.action-row-type-tag {
+  flex: 0 0 auto;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 1px 6px;
+  border-radius: var(--ct-radius-sm);
+  background: var(--ct-surface-soft);
+  color: var(--ct-muted);
+  border: 1px solid var(--ct-line);
+}
+
+/* Filter bar (Actions tab, actioned list) */
+.actions-filter-bar {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--ct-line-soft);
+  background: var(--ct-surface-soft);
+}
+
+.actions-filter-search {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid var(--ct-line);
+  border-radius: var(--ct-radius-sm);
+  background: var(--ct-surface);
+  color: var(--ct-ink);
+  font-family: var(--ct-font-body);
+  font-size: 13px;
+}
+
+.actions-filter-search:focus {
+  outline: none;
+  border-color: var(--ct-accent);
+}
+
+.actions-filter-chips {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.actions-filter-chip {
+  padding: 4px 10px;
+  border: 1px solid var(--ct-line);
+  border-radius: 999px;
+  background: var(--ct-surface);
+  color: var(--ct-ink-muted);
+  font-size: 12px;
+  font-family: var(--ct-font-body);
+  cursor: pointer;
+  transition: all var(--ct-dur-fast);
+  white-space: nowrap;
+}
+
+.actions-filter-chip:hover {
+  background: var(--ct-surface-soft);
+  color: var(--ct-ink);
+}
+
+.actions-filter-chip.active {
+  background: var(--ct-accent);
+  border-color: var(--ct-accent);
+  color: #fff;
+}
+
+.actions-filter-divider {
+  width: 1px;
+  height: 18px;
+  background: var(--ct-line);
+  margin: 0 2px;
+}
+
+.actions-filter-clear {
+  color: var(--ct-muted);
+  text-decoration: underline;
+  border-color: transparent;
+}
+
+.actions-empty {
+  padding: 16px;
+  text-align: center;
+  font-size: 13px;
+  color: var(--ct-muted);
+}
+
+.actions-view-all {
+  display: block;
+  width: 100%;
+  padding: 10px 16px;
+  border: none;
+  border-top: 1px solid var(--ct-line-soft);
+  background: var(--ct-surface);
+  color: var(--ct-accent);
+  font-size: 13px;
+  font-weight: 600;
+  font-family: var(--ct-font-body);
+  cursor: pointer;
+  transition: background var(--ct-dur-fast);
+  text-align: left;
+}
+
+.actions-view-all:hover {
+  background: var(--ct-surface-soft);
+}
+
 @media (max-width: 768px) {
   .action-row-header {
     flex-direction: column;

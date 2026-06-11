@@ -85,12 +85,74 @@ export async function updateManualEvent(eventId, eventData) {
       action_required: eventData.action_required || false,
       action_detail: eventData.action_detail || null,
       reminder: eventData.reminder || "none",
+      // Re-flagging a previously-actioned event clears its actioned stamp so it
+      // returns to Action Required cleanly.
+      ...(eventData.action_required ? { actioned_at: null, actioned_by: null } : {}),
     })
     .eq("id", eventId)
     .select();
 
   if (error) throw error;
   return data[0];
+}
+
+// Mark a calendar event actioned (stamps actioned_at/actioned_by, drops the
+// action_required flag, optionally records a closing note in action_detail) or
+// clear its action state entirely. Mirrors updateActionStatus for messages.
+export async function setEventActionState(eventId, { actioned, note } = {}) {
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) throw new Error("User not authenticated");
+
+  const update = { action_required: false };
+  if (actioned) {
+    update.actioned_at = new Date().toISOString();
+    update.actioned_by = user.id;
+    if (note != null && note !== "") update.action_detail = note;
+  } else {
+    update.actioned_at = null;
+    update.actioned_by = null;
+  }
+
+  const { data, error } = await supabase
+    .from("events")
+    .update(update)
+    .eq("id", eventId)
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
+}
+
+// Set a note's action state: flag as action-required, mark actioned, or clear.
+//   { actionRequired: true }            -> flag (pending)
+//   { actioned: true, note }            -> mark actioned (stamps actioned_at)
+//   { actionRequired: false }           -> clear
+export async function setNoteActionState(noteId, opts = {}) {
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) throw new Error("User not authenticated");
+
+  let update;
+  if (opts.actioned) {
+    update = { action_required: false, actioned_at: new Date().toISOString(), actioned_by: user.id };
+  } else if (opts.actionRequired) {
+    // Flag (or re-flag) — clear any prior actioned stamp.
+    update = { action_required: true, actioned_at: null, actioned_by: null };
+  } else {
+    update = { action_required: false, actioned_at: null, actioned_by: null };
+  }
+
+  const { data, error } = await supabase
+    .from("notes")
+    .update(update)
+    .eq("id", noteId)
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
 }
 
 export async function deleteManualEvent(eventId) {

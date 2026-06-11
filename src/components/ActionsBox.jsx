@@ -3,9 +3,16 @@ import { ACTION_STATUS } from "../lib/constants";
 import {
   buildChain,
   buildEventChain,
+  buildNoteChain,
   getLatestPreview,
   ENTRY_KIND,
 } from "../lib/actionChain";
+import {
+  ITEM_TYPE,
+  SOURCE,
+  topActioned,
+  filterActionItems,
+} from "../lib/actionItems";
 import "./ActionsBox.css";
 
 const ENTRY_CLASS = {
@@ -16,6 +23,14 @@ const ENTRY_CLASS = {
 };
 
 const ACTIONED_PAGE_SIZE = 10;
+const RECENT_LIMIT = 3;
+
+const TYPE_OPTIONS = [
+  { value: ITEM_TYPE.MESSAGE, label: "Messages" },
+  { value: ITEM_TYPE.EVENT, label: "Events" },
+  { value: ITEM_TYPE.NOTE, label: "Notes" },
+];
+const SOURCE_OPTIONS = [SOURCE.ARBOR, SOURCE.GMAIL, SOURCE.CALENDAR, SOURCE.NOTE];
 
 const MONTHS = [
   "january",
@@ -77,31 +92,79 @@ function findEventsByTitleOverlap(subject, events) {
 }
 
 export function ActionsBox({
-  pendingMessages,
-  actionedMessages,
-  pendingEvents = [],
+  pendingItems = [],
+  actionedItems = [],
   events = [],
   profiles,
+  mode = "summary",
+  onViewAll,
+  // message callbacks
   onMessageClick,
-  onEventClick,
-  onEventMarkActioned,
-  onEventClear,
   onStatusChange,
   onShowActionModal,
   onAttachmentClick,
   onAddComment,
   onDeleteComment,
+  // event callbacks
+  onEventClick,
+  onEventMarkActioned,
+  onEventClear,
   onAddEventComment,
   onDeleteEventComment,
+  // note callbacks
+  onNoteClick,
+  onNoteMarkActioned,
+  onNoteClear,
+  onAddNoteReply,
+  onDeleteNoteReply,
   currentUserId,
-  showRecentlyActioned = false,
 }) {
+  const isSummary = mode === "summary";
   const [expandedId, setExpandedId] = useState(null);
-  const [pendingCollapsed, setPendingCollapsed] = useState(true);
-  const [actionedCollapsed, setActionedCollapsed] = useState(true);
+  const [pendingCollapsed, setPendingCollapsed] = useState(isSummary);
+  const [actionedCollapsed, setActionedCollapsed] = useState(isSummary);
   const [actionedPage, setActionedPage] = useState(0);
   const [replyDrafts, setReplyDrafts] = useState({});
   const [postingId, setPostingId] = useState(null);
+  const [filterTypes, setFilterTypes] = useState([]);
+  const [filterSources, setFilterSources] = useState([]);
+  const [search, setSearch] = useState("");
+
+  const toggleIn = (setter) => (value) =>
+    setter((prev) =>
+      prev.includes(value) ? prev.filter((v) => v !== value) : [...prev, value],
+    );
+
+  // Actioned list: filter (full mode only), then slice to recent (summary) or
+  // paginate (full).
+  const filteredActioned = isSummary
+    ? actionedItems
+    : filterActionItems(actionedItems, {
+        types: filterTypes,
+        sources: filterSources,
+        search,
+      });
+
+  const totalActioned = filteredActioned.length;
+  const totalActionedPages = Math.max(
+    1,
+    Math.ceil(totalActioned / ACTIONED_PAGE_SIZE),
+  );
+  const displayedActioned = isSummary
+    ? topActioned(actionedItems, RECENT_LIMIT)
+    : filteredActioned.slice(
+        actionedPage * ACTIONED_PAGE_SIZE,
+        (actionedPage + 1) * ACTIONED_PAGE_SIZE,
+      );
+
+  useEffect(() => {
+    if (actionedPage >= totalActionedPages) setActionedPage(0);
+  }, [totalActioned, totalActionedPages, actionedPage]);
+
+  const handleStatusChange = onStatusChange || (() => {});
+  const handleShowActionModal = onShowActionModal || (() => {});
+
+  const getUserName = (userId) => profiles[userId]?.display_name || "Unknown";
 
   const postReply = async (recordKey, record, onAdd) => {
     const body = (replyDrafts[recordKey] || "").trim();
@@ -138,28 +201,6 @@ export function ActionsBox({
         </button>
       </div>
     ) : null;
-
-  const totalActioned = actionedMessages.length;
-  const totalActionedPages = Math.max(
-    1,
-    Math.ceil(totalActioned / ACTIONED_PAGE_SIZE),
-  );
-  const paginateActioned = !showRecentlyActioned;
-  const pagedActioned = paginateActioned
-    ? actionedMessages.slice(
-        actionedPage * ACTIONED_PAGE_SIZE,
-        (actionedPage + 1) * ACTIONED_PAGE_SIZE,
-      )
-    : actionedMessages;
-
-  useEffect(() => {
-    if (actionedPage >= totalActionedPages) setActionedPage(0);
-  }, [totalActioned, totalActionedPages, actionedPage]);
-
-  const handleStatusChange = onStatusChange || (() => {});
-  const handleShowActionModal = onShowActionModal || (() => {});
-
-  const getUserName = (userId) => profiles[userId]?.display_name || "Unknown";
 
   const formatDateRange = (linked) => {
     if (!linked || linked.length === 0) return null;
@@ -207,7 +248,6 @@ export function ActionsBox({
 
   const formatNoteDate = (dateStr) => {
     const d = new Date(dateStr);
-    // Match the en-GB "8 Jun 20:06" style used across the app (e.g. NotesTab)
     return `${d.toLocaleDateString("en-GB", { day: "numeric", month: "short" })} ${d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`;
   };
 
@@ -254,244 +294,371 @@ export function ActionsBox({
     );
   };
 
-  const renderCompactRow = (msg, status) => {
+  // ---- Message row -------------------------------------------------------
+  const renderMessageRow = (msg, status) => {
     const chain = buildChain(msg);
     const isExpanded = expandedId === msg.id;
     const preview = getLatestPreview(chain, getUserName);
     return (
-    <div
-      key={msg.id}
-      className={`action-row action-row-${status}`}
-      onClick={() => setExpandedId(expandedId === msg.id ? null : msg.id)}
-    >
-      <div className="action-row-header">
-        <div className="action-row-info">
-          <div className="action-row-subject">
-            <span className="action-row-status-dot" />
-            <span className="action-row-subject-text">
-              {msg.subject || "(No subject)"}
-            </span>
-            {(() => {
-              const label = formatEventDateLabel(msg);
-              return label ? (
-                <strong className="action-row-event-dates">{label}</strong>
-              ) : null;
-            })()}
-            {chain.length > 0 && (
-              <span
-                className={`action-row-chevron ${isExpanded ? "open" : ""}`}
-                aria-hidden="true"
-              >
-                ▸
+      <div
+        key={`msg-${msg.id}`}
+        className={`action-row action-row-${status}`}
+        onClick={() => setExpandedId(expandedId === msg.id ? null : msg.id)}
+      >
+        <div className="action-row-header">
+          <div className="action-row-info">
+            <div className="action-row-subject">
+              <span className="action-row-status-dot" />
+              <span className="action-row-type-tag">Message</span>
+              <span className="action-row-subject-text">
+                {msg.subject || "(No subject)"}
               </span>
+              {(() => {
+                const label = formatEventDateLabel(msg);
+                return label ? (
+                  <strong className="action-row-event-dates">{label}</strong>
+                ) : null;
+              })()}
+              {chain.length > 0 && (
+                <span
+                  className={`action-row-chevron ${isExpanded ? "open" : ""}`}
+                  aria-hidden="true"
+                >
+                  ▸
+                </span>
+              )}
+            </div>
+            <div className="action-row-meta">
+              <span className="action-row-source">{msg.source}</span>
+              <span className="action-row-date">
+                {new Date(msg.received_at).toLocaleDateString()}
+              </span>
+            </div>
+            {!isExpanded && preview && (
+              <div className="action-row-preview">
+                <span className="action-row-preview-icon">💬</span>
+                {preview.name ? (
+                  <span className="action-row-preview-author">
+                    {preview.name}:
+                  </span>
+                ) : null}{" "}
+                <span className="action-row-preview-text">
+                  {preview.snippet}
+                </span>
+              </div>
+            )}
+            {msg.attachments && msg.attachments.length > 0 && (
+              <div className="action-row-attachments">
+                <span className="attachments-label">Attachments:</span>
+                <div className="attachments-list">
+                  {msg.attachments.map((att) => (
+                    <button
+                      key={att.id}
+                      className="attachment-link"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (onAttachmentClick) onAttachmentClick(att);
+                      }}
+                      title={att.filename}
+                    >
+                      <span className="attachment-icon">
+                        {att.mime_type?.includes("pdf")
+                          ? "\u{1F4C4}"
+                          : "\u{1F4CE}"}
+                      </span>
+                      <span className="attachment-name">{att.filename}</span>
+                      {att.file_size && (
+                        <span className="attachment-size">
+                          ({Math.round(att.file_size / 1024)}KB)
+                        </span>
+                      )}
+                    </button>
+                  ))}
+                </div>
+              </div>
             )}
           </div>
-          <div className="action-row-meta">
-            <span className="action-row-source">{msg.source}</span>
-            <span className="action-row-date">
-              {new Date(msg.received_at).toLocaleDateString()}
-            </span>
-          </div>
-          {!isExpanded && preview && (
-            <div className="action-row-preview">
-              <span className="action-row-preview-icon">💬</span>
-              {preview.name ? (
-                <span className="action-row-preview-author">
-                  {preview.name}:
-                </span>
-              ) : null}{" "}
-              <span className="action-row-preview-text">{preview.snippet}</span>
-            </div>
-          )}
-          {msg.attachments && msg.attachments.length > 0 && (
-            <div className="action-row-attachments">
-              <span className="attachments-label">Attachments:</span>
-              <div className="attachments-list">
-                {msg.attachments.map((att) => (
-                  <button
-                    key={att.id}
-                    className="attachment-link"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      if (onAttachmentClick) onAttachmentClick(att);
-                    }}
-                    title={att.filename}
-                  >
-                    <span className="attachment-icon">
-                      {att.mime_type?.includes("pdf")
-                        ? "\u{1F4C4}"
-                        : "\u{1F4CE}"}
-                    </span>
-                    <span className="attachment-name">{att.filename}</span>
-                    {att.file_size && (
-                      <span className="attachment-size">
-                        ({Math.round(att.file_size / 1024)}KB)
-                      </span>
-                    )}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
-        <div className="action-row-buttons">
-          <button
-            className="action-row-btn action-row-btn-note"
-            onClick={(e) => {
-              e.stopPropagation();
-              handleShowActionModal(
-                msg,
-                status === "pending"
-                  ? ACTION_STATUS.REQUIRED
-                  : ACTION_STATUS.ACTIONED,
-              );
-            }}
-          >
-            Add Note
-          </button>
-          {status === "pending" && (
+          <div className="action-row-buttons">
             <button
-              className="action-row-btn action-row-btn-action"
+              className="action-row-btn action-row-btn-note"
               onClick={(e) => {
                 e.stopPropagation();
-                handleShowActionModal(msg, ACTION_STATUS.ACTIONED);
+                handleShowActionModal(
+                  msg,
+                  status === "pending"
+                    ? ACTION_STATUS.REQUIRED
+                    : ACTION_STATUS.ACTIONED,
+                );
               }}
             >
-              Mark as Actioned
+              Add Note
             </button>
-          )}
-          <button
-            className="action-row-btn action-row-btn-clear"
-            onClick={(e) => {
-              e.stopPropagation();
-              handleStatusChange(msg, null);
-            }}
-          >
-            Clear
-          </button>
-          <button
-            className="action-row-btn action-row-btn-view"
-            onClick={(e) => {
-              e.stopPropagation();
-              onMessageClick(msg.id);
-            }}
-          >
-            View
-          </button>
+            {status === "pending" && (
+              <button
+                className="action-row-btn action-row-btn-action"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleShowActionModal(msg, ACTION_STATUS.ACTIONED);
+                }}
+              >
+                Mark as Actioned
+              </button>
+            )}
+            <button
+              className="action-row-btn action-row-btn-clear"
+              onClick={(e) => {
+                e.stopPropagation();
+                handleStatusChange(msg, null);
+              }}
+            >
+              Clear
+            </button>
+            <button
+              className="action-row-btn action-row-btn-view"
+              onClick={(e) => {
+                e.stopPropagation();
+                onMessageClick && onMessageClick(msg.id);
+              }}
+            >
+              View
+            </button>
+          </div>
         </div>
-      </div>
 
-      {isExpanded && (
-        <div className="action-row-expanded" onClick={(e) => e.stopPropagation()}>
-          {renderChain(chain, msg, onDeleteComment)}
-          {renderComposer(msg.id, msg, onAddComment)}
-        </div>
-      )}
-    </div>
+        {isExpanded && (
+          <div
+            className="action-row-expanded"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {renderChain(chain, msg, onDeleteComment)}
+            {renderComposer(msg.id, msg, onAddComment)}
+          </div>
+        )}
+      </div>
     );
   };
 
-  const renderEventRow = (evt) => {
+  // ---- Event row ---------------------------------------------------------
+  const renderEventRow = (evt, status) => {
     const chain = buildEventChain(evt);
     const rowKey = `evt-${evt.id}`;
     const isExpanded = expandedId === rowKey;
     const preview = getLatestPreview(chain, getUserName);
     return (
-    <div
-      key={evt.id}
-      className="action-row action-row-pending"
-      onClick={() => setExpandedId(isExpanded ? null : rowKey)}
-    >
-      <div className="action-row-header">
-        <div className="action-row-info">
-          <div className="action-row-subject">
-            <span className="action-row-status-dot" />
-            <span className="action-row-subject-text">{evt.title}</span>
-            {(() => {
-              const label = formatDateRange([evt]);
-              return label ? (
-                <strong className="action-row-event-dates">{label}</strong>
-              ) : null;
-            })()}
-            {chain.length > 0 && (
-              <span
-                className={`action-row-chevron ${isExpanded ? "open" : ""}`}
-                aria-hidden="true"
-              >
-                ▸
-              </span>
-            )}
-          </div>
-          <div className="action-row-meta">
-            <span className="action-row-source">Calendar</span>
-            {evt.event_time && (
-              <span className="action-row-date">
-                {evt.event_time.slice(0, 5)}
-              </span>
-            )}
-          </div>
-          {!isExpanded && preview && (
-            <div className="action-row-preview">
-              <span className="action-row-preview-icon">💬</span>
-              {preview.name ? (
-                <span className="action-row-preview-author">
-                  {preview.name}:
+      <div
+        key={rowKey}
+        className={`action-row action-row-${status}`}
+        onClick={() => setExpandedId(isExpanded ? null : rowKey)}
+      >
+        <div className="action-row-header">
+          <div className="action-row-info">
+            <div className="action-row-subject">
+              <span className="action-row-status-dot" />
+              <span className="action-row-type-tag">Event</span>
+              <span className="action-row-subject-text">{evt.title}</span>
+              {(() => {
+                const label = formatDateRange([evt]);
+                return label ? (
+                  <strong className="action-row-event-dates">{label}</strong>
+                ) : null;
+              })()}
+              {chain.length > 0 && (
+                <span
+                  className={`action-row-chevron ${isExpanded ? "open" : ""}`}
+                  aria-hidden="true"
+                >
+                  ▸
                 </span>
-              ) : null}{" "}
-              <span className="action-row-preview-text">{preview.snippet}</span>
+              )}
             </div>
-          )}
-        </div>
-        <div className="action-row-buttons">
-          {onEventMarkActioned && (
+            <div className="action-row-meta">
+              <span className="action-row-source">Calendar</span>
+              {evt.event_time && (
+                <span className="action-row-date">
+                  {evt.event_time.slice(0, 5)}
+                </span>
+              )}
+            </div>
+            {!isExpanded && preview && (
+              <div className="action-row-preview">
+                <span className="action-row-preview-icon">💬</span>
+                {preview.name ? (
+                  <span className="action-row-preview-author">
+                    {preview.name}:
+                  </span>
+                ) : null}{" "}
+                <span className="action-row-preview-text">
+                  {preview.snippet}
+                </span>
+              </div>
+            )}
+          </div>
+          <div className="action-row-buttons">
+            {status === "pending" && onEventMarkActioned && (
+              <button
+                className="action-row-btn action-row-btn-action"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onEventMarkActioned(evt);
+                }}
+              >
+                Mark as Actioned
+              </button>
+            )}
+            {onEventClear && (
+              <button
+                className="action-row-btn action-row-btn-clear"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onEventClear(evt);
+                }}
+              >
+                Clear
+              </button>
+            )}
             <button
-              className="action-row-btn action-row-btn-action"
+              className="action-row-btn action-row-btn-view"
               onClick={(e) => {
                 e.stopPropagation();
-                onEventMarkActioned(evt);
+                onEventClick && onEventClick(evt);
               }}
             >
-              Mark as Actioned
+              Calendar
             </button>
-          )}
-          {onEventClear && (
-            <button
-              className="action-row-btn action-row-btn-clear"
-              onClick={(e) => {
-                e.stopPropagation();
-                onEventClear(evt);
-              }}
-            >
-              Clear
-            </button>
-          )}
-          <button
-            className="action-row-btn action-row-btn-view"
-            onClick={(e) => {
-              e.stopPropagation();
-              onEventClick && onEventClick(evt);
-            }}
-          >
-            Calendar
-          </button>
+          </div>
         </div>
-      </div>
 
-      {isExpanded && (
-        <div
-          className="action-row-expanded"
-          onClick={(e) => e.stopPropagation()}
-        >
-          {renderChain(chain, evt, onDeleteEventComment)}
-          {renderComposer(rowKey, evt, onAddEventComment)}
-        </div>
-      )}
-    </div>
+        {isExpanded && (
+          <div
+            className="action-row-expanded"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {renderChain(chain, evt, onDeleteEventComment)}
+            {renderComposer(rowKey, evt, onAddEventComment)}
+          </div>
+        )}
+      </div>
     );
   };
-  const totalPending = pendingMessages.length + pendingEvents.length;
 
-  if (totalPending === 0 && actionedMessages.length === 0) {
+  // ---- Note row ----------------------------------------------------------
+  const renderNoteRow = (note, status) => {
+    const chain = buildNoteChain(note);
+    const rowKey = `note-${note.id}`;
+    const isExpanded = expandedId === rowKey;
+    const preview = getLatestPreview(chain, getUserName);
+    const eventDate = note.events?.event_date;
+    return (
+      <div
+        key={rowKey}
+        className={`action-row action-row-${status}`}
+        onClick={() => setExpandedId(isExpanded ? null : rowKey)}
+      >
+        <div className="action-row-header">
+          <div className="action-row-info">
+            <div className="action-row-subject">
+              <span className="action-row-status-dot" />
+              <span className="action-row-type-tag">Note</span>
+              <span className="action-row-subject-text">{note.title}</span>
+              {eventDate && (
+                <strong className="action-row-event-dates">
+                  {formatDateRange([{ event_date: eventDate }])}
+                </strong>
+              )}
+              {chain.length > 0 && (
+                <span
+                  className={`action-row-chevron ${isExpanded ? "open" : ""}`}
+                  aria-hidden="true"
+                >
+                  ▸
+                </span>
+              )}
+            </div>
+            <div className="action-row-meta">
+              <span className="action-row-source">Note</span>
+              <span className="action-row-date">
+                {new Date(note.created_at).toLocaleDateString()}
+              </span>
+            </div>
+            {!isExpanded && preview && (
+              <div className="action-row-preview">
+                <span className="action-row-preview-icon">💬</span>
+                {preview.name ? (
+                  <span className="action-row-preview-author">
+                    {preview.name}:
+                  </span>
+                ) : null}{" "}
+                <span className="action-row-preview-text">
+                  {preview.snippet}
+                </span>
+              </div>
+            )}
+          </div>
+          <div className="action-row-buttons">
+            {status === "pending" && onNoteMarkActioned && (
+              <button
+                className="action-row-btn action-row-btn-action"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onNoteMarkActioned(note);
+                }}
+              >
+                Mark as Actioned
+              </button>
+            )}
+            {onNoteClear && (
+              <button
+                className="action-row-btn action-row-btn-clear"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onNoteClear(note);
+                }}
+              >
+                Clear
+              </button>
+            )}
+            {onNoteClick && (
+              <button
+                className="action-row-btn action-row-btn-view"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onNoteClick(note);
+                }}
+              >
+                Open
+              </button>
+            )}
+          </div>
+        </div>
+
+        {isExpanded && (
+          <div
+            className="action-row-expanded"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {renderChain(chain, note, onDeleteNoteReply)}
+            {renderComposer(rowKey, note, onAddNoteReply)}
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  // ---- Dispatch ----------------------------------------------------------
+  const renderItem = (item, status) => {
+    if (item.type === ITEM_TYPE.MESSAGE)
+      return renderMessageRow(item.raw, status);
+    if (item.type === ITEM_TYPE.EVENT) return renderEventRow(item.raw, status);
+    if (item.type === ITEM_TYPE.NOTE) return renderNoteRow(item.raw, status);
+    return null;
+  };
+
+  const totalPending = pendingItems.length;
+  const totalActionedAll = actionedItems.length;
+  const hasFilter =
+    filterTypes.length > 0 || filterSources.length > 0 || search.trim() !== "";
+
+  if (totalPending === 0 && totalActionedAll === 0) {
     return null;
   }
 
@@ -512,14 +679,13 @@ export function ActionsBox({
           </div>
           {!pendingCollapsed && (
             <div className="actions-list">
-              {pendingMessages.map((msg) => renderCompactRow(msg, "pending"))}
-              {pendingEvents.map((evt) => renderEventRow(evt))}
+              {pendingItems.map((item) => renderItem(item, "pending"))}
             </div>
           )}
         </div>
       )}
 
-      {actionedMessages.length > 0 && (
+      {totalActionedAll > 0 && (
         <div className="actions-section">
           <div
             className={`actions-section-title actioned${actionedCollapsed ? " collapsed" : ""}`}
@@ -530,15 +696,72 @@ export function ActionsBox({
             >
               ▸
             </span>
-            {showRecentlyActioned ? "Recently Actioned" : "Actioned"} (
-            {actionedMessages.length})
+            {isSummary ? "Recently Actioned" : "Actioned"} ({totalActionedAll})
           </div>
           {!actionedCollapsed && (
             <>
+              {!isSummary && (
+                <div className="actions-filter-bar">
+                  <input
+                    className="actions-filter-search"
+                    type="text"
+                    placeholder="Search actioned…"
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                  />
+                  <div className="actions-filter-chips">
+                    {TYPE_OPTIONS.map((opt) => (
+                      <button
+                        key={opt.value}
+                        className={`actions-filter-chip${filterTypes.includes(opt.value) ? " active" : ""}`}
+                        onClick={() => toggleIn(setFilterTypes)(opt.value)}
+                      >
+                        {opt.label}
+                      </button>
+                    ))}
+                    <span className="actions-filter-divider" />
+                    {SOURCE_OPTIONS.map((src) => (
+                      <button
+                        key={src}
+                        className={`actions-filter-chip${filterSources.includes(src) ? " active" : ""}`}
+                        onClick={() => toggleIn(setFilterSources)(src)}
+                      >
+                        {src}
+                      </button>
+                    ))}
+                    {hasFilter && (
+                      <button
+                        className="actions-filter-chip actions-filter-clear"
+                        onClick={() => {
+                          setFilterTypes([]);
+                          setFilterSources([]);
+                          setSearch("");
+                        }}
+                      >
+                        Clear filters
+                      </button>
+                    )}
+                  </div>
+                </div>
+              )}
+
               <div className="actions-list">
-                {pagedActioned.map((msg) => renderCompactRow(msg, "actioned"))}
+                {displayedActioned.length === 0 ? (
+                  <p className="actions-empty">
+                    No actioned items match these filters.
+                  </p>
+                ) : (
+                  displayedActioned.map((item) => renderItem(item, "actioned"))
+                )}
               </div>
-              {paginateActioned && totalActioned > ACTIONED_PAGE_SIZE && (
+
+              {isSummary && totalActionedAll > RECENT_LIMIT && onViewAll && (
+                <button className="actions-view-all" onClick={onViewAll}>
+                  View all {totalActionedAll} in Actions →
+                </button>
+              )}
+
+              {!isSummary && totalActioned > ACTIONED_PAGE_SIZE && (
                 <div className="actions-pagination">
                   <button
                     className="action-row-btn"
