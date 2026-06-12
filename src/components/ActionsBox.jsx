@@ -129,6 +129,7 @@ export function ActionsBox({
   const [filterTypes, setFilterTypes] = useState([]);
   const [filterSources, setFilterSources] = useState([]);
   const [search, setSearch] = useState("");
+  const [shownSource, setShownSource] = useState({});
 
   const toggleIn = (setter) => (value) =>
     setter((prev) =>
@@ -201,6 +202,38 @@ export function ActionsBox({
         </button>
       </div>
     ) : null;
+
+  const toggleSource = (key) =>
+    setShownSource((s) => ({ ...s, [key]: !s[key] }));
+
+  // Collapsible view of the underlying source text (email body / event
+  // description / note body) at the foot of an expanded action item, so the
+  // notes + reply chain keep their context. Hidden entirely when there is no
+  // source text to show.
+  const renderSource = (recordKey, label, text) => {
+    if (!text || !text.trim()) return null;
+    const shown = !!shownSource[recordKey];
+    return (
+      <div className="action-row-source">
+        <button
+          className="action-source-toggle"
+          onClick={(e) => {
+            e.stopPropagation();
+            toggleSource(recordKey);
+          }}
+        >
+          <span
+            className={`action-source-chevron ${shown ? "open" : ""}`}
+            aria-hidden="true"
+          >
+            ▸
+          </span>
+          {shown ? `Hide ${label}` : `Show ${label}`}
+        </button>
+        {shown && <div className="action-source-body">{text}</div>}
+      </div>
+    );
+  };
 
   const formatDateRange = (linked) => {
     if (!linked || linked.length === 0) return null;
@@ -432,6 +465,7 @@ export function ActionsBox({
           >
             {renderChain(chain, msg, onDeleteComment)}
             {renderComposer(msg.id, msg, onAddComment)}
+            {renderSource(msg.id, "message", msg.content)}
           </div>
         )}
       </div>
@@ -535,6 +569,7 @@ export function ActionsBox({
           >
             {renderChain(chain, evt, onDeleteEventComment)}
             {renderComposer(rowKey, evt, onAddEventComment)}
+            {renderSource(rowKey, "event", evt.description)}
           </div>
         )}
       </div>
@@ -638,6 +673,7 @@ export function ActionsBox({
           >
             {renderChain(chain, note, onDeleteNoteReply)}
             {renderComposer(rowKey, note, onAddNoteReply)}
+            {renderSource(rowKey, "note", note.body)}
           </div>
         )}
       </div>
@@ -675,7 +711,7 @@ export function ActionsBox({
             >
               ▸
             </span>
-            Action Required ({totalPending})
+            Needs your attention ({totalPending})
           </div>
           {!pendingCollapsed && (
             <div className="actions-list">

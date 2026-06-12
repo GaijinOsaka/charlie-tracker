@@ -1,35 +1,35 @@
+/* Container is a plain wrapper now — the visual units are the separated
+   action cards below, not one bordered box. */
 .actions-box {
-  background: var(--ct-surface);
-  border: 1px solid var(--ct-line);
-  border-radius: var(--ct-radius-xl);
   margin-bottom: 20px;
-  overflow: hidden;
 }
 
 .actions-section {
-  border-bottom: 1px solid var(--ct-line-soft);
+  margin-bottom: 16px;
 }
 
 .actions-section:last-child {
-  border-bottom: none;
+  margin-bottom: 0;
 }
 
+/* Section heading above a list of separated action cards. */
 .actions-section-title {
-  padding: 12px 16px;
+  padding: 6px 4px 12px;
   font-family: var(--ct-font-body);
-  font-size: 13px;
-  font-weight: 600;
+  font-size: 15px;
+  font-weight: 700;
   cursor: pointer;
   user-select: none;
   display: flex;
   align-items: center;
-  gap: 6px;
-  color: var(--ct-ink-muted);
-  transition: background var(--ct-dur-fast);
+  gap: 8px;
+  color: var(--ct-ink);
+  letter-spacing: -0.005em;
+  transition: color var(--ct-dur-fast);
 }
 
 .actions-section-title:hover {
-  background: var(--ct-surface-soft);
+  color: var(--ct-accent);
 }
 
 .actions-chevron {
@@ -44,54 +44,37 @@
   transform: rotate(90deg);
 }
 
-.actions-section-title.pending {
-  background: var(--ct-surface-warn);
-  color: var(--ct-warn-ink);
-  border-bottom: 1px solid var(--ct-line-soft);
-}
-
-.actions-section-title.pending.collapsed {
-  border-bottom: none;
-}
-
-.actions-section-title.pending:hover {
-  background: var(--ct-accent-soft);
-}
-
-.actions-section-title.actioned {
-  background: var(--ct-success-soft);
-  color: var(--ct-success);
-  border-bottom: 1px solid var(--ct-line-soft);
-}
-
-.actions-section-title.actioned.collapsed {
-  border-bottom: none;
-}
-
-.actions-section-title.actioned:hover {
-  background: var(--ct-success-soft);
-  opacity: 0.85;
-}
-
+/* Pending/actioned headings share the neutral heading style; the cards below
+   carry the terracotta / green status colour. */
 .actions-list {
   display: flex;
   flex-direction: column;
+  gap: 12px;
 }
 
+/* Separated action card with a status-coloured left edge. */
 .action-row {
-  padding: 12px 16px;
-  border-bottom: 1px solid var(--ct-line-soft);
+  padding: 16px 18px;
+  background: var(--ct-surface);
+  border: 1px solid var(--ct-line);
+  border-left-width: 3px;
+  border-radius: var(--ct-radius-xl);
+  box-shadow: var(--ct-shadow-sm);
   cursor: pointer;
-  transition: background var(--ct-dur-fast);
+  transition: box-shadow var(--ct-dur-base) var(--ct-ease);
   user-select: none;
 }
 
-.action-row:last-child {
-  border-bottom: none;
+.action-row-pending {
+  border-left-color: var(--ct-warn);
+}
+
+.action-row-actioned {
+  border-left-color: var(--ct-success);
 }
 
 .action-row:hover {
-  background: var(--ct-surface-soft);
+  box-shadow: var(--ct-shadow-md);
 }
 
 .action-row-header {
@@ -101,21 +84,9 @@
   gap: 10px;
 }
 
+/* The card's status-coloured left edge replaces the old per-row status dot. */
 .action-row-status-dot {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  flex-shrink: 0;
-  align-self: center;
-  display: inline-block;
-}
-
-.action-row-pending .action-row-status-dot {
-  background: var(--ct-accent);
-}
-
-.action-row-actioned .action-row-status-dot {
-  background: var(--ct-success);
+  display: none;
 }
 
 .action-row-info {
@@ -419,7 +390,7 @@
   justify-content: center;
   gap: 12px;
   padding: 10px 16px;
-  border-top: 1px solid var(--ct-line-soft);
+  margin-top: 12px;
   font-size: 12px;
   color: var(--ct-ink-muted);
 }
@@ -556,8 +527,10 @@
   display: flex;
   flex-direction: column;
   gap: 8px;
-  padding: 10px 16px;
-  border-bottom: 1px solid var(--ct-line-soft);
+  padding: 10px 12px;
+  margin-bottom: 12px;
+  border: 1px solid var(--ct-line);
+  border-radius: var(--ct-radius-lg);
   background: var(--ct-surface-soft);
 }
 
@@ -631,21 +604,73 @@
 .actions-view-all {
   display: block;
   width: 100%;
-  padding: 10px 16px;
+  padding: 10px 4px 0;
+  margin-top: 4px;
   border: none;
-  border-top: 1px solid var(--ct-line-soft);
-  background: var(--ct-surface);
+  background: none;
   color: var(--ct-accent);
   font-size: 13px;
   font-weight: 600;
   font-family: var(--ct-font-body);
   cursor: pointer;
-  transition: background var(--ct-dur-fast);
+  transition: color var(--ct-dur-fast);
   text-align: left;
 }
 
 .actions-view-all:hover {
+  color: var(--ct-accent-hover);
+  text-decoration: underline;
+}
+
+/* Source toggle: original message / event / note body shown at the foot of an
+   expanded action item, beneath the notes + reply chain. */
+.action-row-source {
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid var(--ct-line-soft);
+}
+
+.action-source-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 0;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-family: var(--ct-font-body);
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--ct-ink);
+  transition: color var(--ct-dur-fast);
+}
+
+.action-source-toggle:hover {
+  color: var(--ct-accent);
+}
+
+.action-source-chevron {
+  display: inline-block;
+  transition: transform var(--ct-dur-fast);
+}
+
+.action-source-chevron.open {
+  transform: rotate(90deg);
+}
+
+.action-source-body {
+  margin-top: 8px;
+  padding: 10px 12px;
   background: var(--ct-surface-soft);
+  border-radius: var(--ct-radius-sm);
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--ct-ink-muted);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  max-height: 260px;
+  overflow-y: auto;
 }
 
 @media (max-width: 768px) {
