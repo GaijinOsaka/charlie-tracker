@@ -3,20 +3,54 @@
   display: inline-block;
 }
 
-.action-button {
-  background: none;
-  border: none;
-  font-size: 14px;
-  line-height: 1;
+/* Labelled action chip — replaces the legacy lightning bolt. Sits immediately
+   left of the message subject and carries the action state in its label. */
+.ct-action-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 9px 3px 8px;
+  border-radius: var(--ct-radius-pill);
+  font-family: var(--ct-font-body);
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.2;
   cursor: pointer;
-  padding: 2px 5px;
-  border-radius: var(--ct-radius-sm);
-  transition: background-color var(--ct-dur-fast);
+  border: 1px solid var(--ct-line);
+  background: var(--ct-surface);
+  color: var(--ct-muted);
+  white-space: nowrap;
+  transition: all var(--ct-dur-fast) var(--ct-ease);
   flex-shrink: 0;
 }
 
-.action-button:hover {
-  background-color: var(--ct-surface-soft);
+.ct-action-chip:hover {
+  border-color: var(--ct-accent);
+  color: var(--ct-accent);
+}
+
+.ct-action-chip-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  flex-shrink: 0;
+}
+
+.ct-action-chip.is-action-required {
+  background: var(--ct-surface-warn);
+  color: var(--ct-warn-ink);
+  border-color: var(--ct-accent-line);
+}
+
+.ct-action-chip.is-action-required:hover {
+  border-color: var(--ct-accent);
+}
+
+.ct-action-chip.is-actioned {
+  background: var(--ct-success-soft);
+  color: var(--ct-success);
+  border-color: var(--ct-success-line);
 }
 
 .action-popover {

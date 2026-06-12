@@ -2054,11 +2054,6 @@ function App() {
                               {msg.categories.name}
                             </span>
                           )}
-                          <ActionButton
-                            message={msg}
-                            onStatusChange={toggleActionStatus}
-                            onShowActionModal={handleShowActionModal}
-                          />
                           {msg.indexed_for_rag && (
                             <span
                               className="indexed-badge"
@@ -2072,14 +2067,14 @@ function App() {
                             {new Date(msg.received_at).toLocaleString()}
                           </span>
                         </div>
-                        <h3 className="message-subject">
-                          {msg.subject}
-                          {msg.action_status && (
-                            <span
-                              className={`message-action-indicator ${msg.action_status}`}
-                            />
-                          )}
-                        </h3>
+                        <div className="message-subject-row">
+                          <ActionButton
+                            message={msg}
+                            onStatusChange={toggleActionStatus}
+                            onShowActionModal={handleShowActionModal}
+                          />
+                          <h3 className="message-subject">{msg.subject}</h3>
+                        </div>
                       </div>
 
                       <div

@@ -24,6 +24,8 @@
   --ct-warn:         #C96442;
   --ct-danger:       #B5413A;
   --ct-danger-soft:  #F4E1DF;
+  --ct-accent-line:  rgba(201, 100, 66, 0.22);  /* faint accent border (e.g. action chip) */
+  --ct-success-line: rgba(90, 125, 90, 0.22);   /* faint success border (e.g. actioned chip) */
 
   /* === Type === */
   --ct-font-display: "Source Serif 4", "Tiempos Headline", Georgia, serif;
@@ -296,7 +298,16 @@ header h1 {
   min-width: 0;
 }
 
+.message-subject-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  min-width: 0;
+}
+
 .message-subject {
+  flex: 1;
+  min-width: 0;
   font-size: 15px;
   font-weight: 600;
   color: var(--ct-ink);
@@ -3832,23 +3843,6 @@ header h1 {
   .actions-box {
     margin-top: 1rem;
   }
-}
-
-.message-action-indicator {
-  display: inline-block;
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  margin-left: 8px;
-  vertical-align: middle;
-}
-
-.message-action-indicator.pending {
-  background: var(--ct-warn);
-}
-
-.message-action-indicator.actioned {
-  background: var(--ct-success);
 }
 
 /* ── Notes Tab ─────────────────────────────── */

@@ -30,15 +30,30 @@ export function ActionButton({ message, onStatusChange, onShowActionModal }) {
     setIsOpen(false);
   };
 
+  const status = message.action_status;
+  const isRequired = status === ACTION_STATUS.REQUIRED;
+  const isActioned = status === ACTION_STATUS.ACTIONED;
+  const chipClass = isRequired
+    ? "ct-action-chip is-action-required"
+    : isActioned
+      ? "ct-action-chip is-actioned"
+      : "ct-action-chip";
+  const chipLabel = isRequired
+    ? "Needs action"
+    : isActioned
+      ? "Actioned"
+      : "Action";
+
   return (
     <div className="action-button-container" ref={popoverRef}>
       <button
-        className="action-button"
+        className={chipClass}
         onClick={() => setIsOpen(!isOpen)}
         title="Set action status"
         aria-label="Set action status"
       >
-        ⚡
+        {isActioned ? "✓" : <span className="ct-action-chip-dot" aria-hidden="true" />}
+        {chipLabel}
       </button>
 
       {isOpen && (
